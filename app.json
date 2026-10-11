@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "ona-app",
+    "slug": "ona-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.ona"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#4F9B82",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "app.ona"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#17150F"
+        }
+      ],
+      "expo-secure-store",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ona uses your photo library to attach a book-page photo to a saved quote.",
+          "cameraPermission": "Ona uses your camera to photograph a book page for a saved quote."
+        }
+      ],
+      "expo-audio",
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/alarms/chime.wav",
+            "./assets/sounds/alarms/ping.wav",
+            "./assets/sounds/alarms/ascend.wav"
+          ]
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Ona uses Face ID to unlock your journal or the app, if you turn that on."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "92f92cdd-20fa-4060-bfba-eb24f5b543c1"
+      }
+    },
+    "owner": "mohamed667"
+  }
+}
