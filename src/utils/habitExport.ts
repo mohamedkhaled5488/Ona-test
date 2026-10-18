@@ -36,7 +36,7 @@ const PDF_STYLE = `
   .stats { color: #6B6455; font-size: 13px; margin: 12px 0 24px; }
   .entry { margin: 18px 0; padding-left: 14px; border-left: 3px solid #8A8577; }
   .entry.done { border-left-color: #6E7F91; }
-  .entry.missed, .entry.relapse { border-left-color: #B3413A; }
+  .entry.missed, .entry.relapse { border-left-color: #A39E94; }
   .entry.resisted { border-left-color: #E8B23D; }
   .meta { font-size: 12px; color: #6B6455; margin: 0 0 4px; }
   .line { font-size: 14px; margin: 2px 0; }
@@ -70,7 +70,7 @@ export function buildHabitReportText(habit: Habit, checkIns: HabitCheckIn[], fee
   ].filter(Boolean);
   const body = sortedCheckIns(habit.id, checkIns)
     .map((c) => {
-      const lines = [`${formatDisplayDate(c.date)} — ${c.done ? 'Done' : 'Missed'}${c.durationMinutes ? ` · ${c.durationMinutes} min session` : ''}`];
+      const lines = [`${formatDisplayDate(c.date)} — ${c.done ? (c.minimum ? 'Done (minimum version)' : 'Done') : 'Missed'}${c.durationMinutes ? ` · ${c.durationMinutes} min session` : ''}`];
       const feeling = feelingByDate.get(c.date);
       if (feeling) lines.push(`Felt ${zoneMeta(feeling.zone).label}`);
       if (c.reasonTags?.length) lines.push(`What got in the way: ${c.reasonTags.join(', ')}`);
@@ -93,7 +93,7 @@ export function buildHabitReportHtml(habit: Habit, checkIns: HabitCheckIn[], fee
       const feeling = feelingByDate.get(c.date);
       return `
         <div class="entry ${c.done ? 'done' : 'missed'}">
-          <p class="meta">${escapeHtml(formatDisplayDate(c.date))} · ${c.done ? 'Done' : 'Missed'}${c.durationMinutes ? ` · ${c.durationMinutes} min session` : ''}</p>
+          <p class="meta">${escapeHtml(formatDisplayDate(c.date))} · ${c.done ? (c.minimum ? 'Done (minimum version)' : 'Done') : 'Missed'}${c.durationMinutes ? ` · ${c.durationMinutes} min session` : ''}</p>
           ${feeling ? `<p class="line">Felt ${escapeHtml(zoneMeta(feeling.zone).label)}</p>` : ''}
           ${c.reasonTags?.length ? `<p class="line">What got in the way: ${escapeHtml(c.reasonTags.join(', '))}</p>` : ''}
           ${c.photoUri ? `<img src="${c.photoUri}" class="photo" />` : ''}
@@ -118,7 +118,8 @@ export function exportHabitReportAsPdf(habit: Habit, checkIns: HabitCheckIn[], f
 
 // --- Quit habit: the whole Journey, every track ---
 
-function feelingName(id: string, personal: PersonalFeeling[]): string {
+function feelingName(id: string | undefined, personal: PersonalFeeling[]): string {
+  if (!id) return '';
   return findFeeling(id)?.name ?? personal.find((p) => p.id === id)?.name ?? 'Feeling';
 }
 
@@ -138,7 +139,8 @@ function describeEvent(e: QuitLogEvent, personal: PersonalFeeling[]): { cls: str
     };
   }
   const entry = e.entry;
-  const lines = [`Felt ${feelingName(entry.feelingId, personal)}`];
+  const felt = feelingName(entry.feelingId, personal) || (entry.zone ? zoneMeta(entry.zone).label : '');
+  const lines = felt ? [`Felt ${felt}`] : [];
   if (entry.isResistedUrge && entry.approach) {
     lines.push(`${entry.approach}${entry.urgePassed === true ? ' — the urge passed' : entry.urgePassed === false ? " — didn't act on it" : ''}`);
   }

@@ -11,7 +11,6 @@ import {
   tagTrend,
   tagCooccurrences,
   tagPrimaryZone,
-  describeTagHeadline,
   analysisMinCount,
   tagFeelingBreakdown,
 } from '../feelingsStats';
@@ -284,7 +283,7 @@ describe('tagCooccurrences', () => {
   });
 });
 
-describe('tagPrimaryZone and describeTagHeadline (bold "Biggest impact" cards)', () => {
+describe('tagPrimaryZone (the zone on a tag card)', () => {
   it('picks the dominant zone and a concrete recent count, not a raw percentage', () => {
     const entries: FeelingCheckIn[] = [
       checkIn('2026-09-01', 'tense', ['Work']),
@@ -310,11 +309,6 @@ describe('tagPrimaryZone and describeTagHeadline (bold "Biggest impact" cards)',
     expect(tagPrimaryZone([checkIn('2026-09-01', 'okay')], 'Money')).toBeUndefined();
   });
 
-  it('states the headline confidently but never as causation', () => {
-    const headline = describeTagHeadline('Work', { tag: 'Work', zone: 'tense', recentCount: 8, recentOf: 10 });
-    expect(headline).toBe('Work is your strongest link to feeling Tense.');
-    expect(headline.toLowerCase()).not.toMatch(/causes|makes you|is why/);
-  });
 });
 
 describe('analysisMinCount (flat 3-repeat bar for Week/Month/Custom/All)', () => {

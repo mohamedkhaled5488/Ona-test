@@ -38,6 +38,8 @@ import { sensitiveScreen } from '../hooks/useScreenPrivacy';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { getStartScreen } from './startScreen';
 import { navigationRef } from './navigationRef';
+import { DiscoverScreen } from '../screens/DiscoverScreen';
+import { DiscoverTourScreen } from '../screens/DiscoverTourScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const LockedJournalWrite = sensitiveScreen(JournalWriteScreen, 'journalWrite', true);
@@ -186,6 +188,8 @@ export function RootNavigator() {
           );
         })}
         <Stack.Screen name="habitsHub" component={HabitsHubScreen} options={{ title: 'Habits' }} />
+        <Stack.Screen name="discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
+        <Stack.Screen name="discoverTour" component={DiscoverTourScreen} options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="journalWrite" component={LockedJournalWrite} options={{ headerShown: false }} />
         <Stack.Screen name="planDetail" component={PlanDetailScreen} options={{ title: 'Plan' }} />
         <Stack.Screen name="planningInsights" component={PlanningInsightsScreen} options={{ title: 'Insights' }} />

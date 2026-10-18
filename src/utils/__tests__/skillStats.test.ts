@@ -1,4 +1,4 @@
-import { sessionFeelingZone, leastPracticedWeekday, minutesByTimeOfDay } from '../skillStats';
+import { leastPracticedWeekday, minutesByTimeOfDay } from '../skillStats';
 import type { PracticeSession, FeelingCheckIn } from '../../types/sections';
 
 const SKILL_ID = 'skill-1';
@@ -24,20 +24,6 @@ function feelingCheckIn(date: string, zone: FeelingCheckIn['zone']): FeelingChec
     source: { kind: 'skill', refId: SKILL_ID },
   };
 }
-
-describe('sessionFeelingZone', () => {
-  it('finds the zone most associated with feelings logged after practicing this skill', () => {
-    const entries = [feelingCheckIn('2026-09-01', 'lively'), feelingCheckIn('2026-09-02', 'lively'), feelingCheckIn('2026-09-03', 'calm')];
-    expect(sessionFeelingZone(entries, SKILL_ID)).toEqual({ zone: 'lively', count: 2, total: 3 });
-  });
-
-  it('ignores feelings logged against a different skill', () => {
-    const entries: FeelingCheckIn[] = [
-      { id: 'a', zone: 'calm', feelingIds: ['okay-okay'], date: '2026-09-01', createdAt: '2026-09-01T12:00:00Z', source: { kind: 'skill', refId: 'other-skill' } },
-    ];
-    expect(sessionFeelingZone(entries, SKILL_ID)).toBeUndefined();
-  });
-});
 
 describe('leastPracticedWeekday', () => {
   it('names a weekday with a real gap below the other days once there is enough spread', () => {

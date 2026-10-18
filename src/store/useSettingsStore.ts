@@ -91,9 +91,16 @@ export interface SettingsData {
   // 'auto' = after medium/high priority or tagged tasks, never quick ones.
   taskFeelingMode: TaskFeelingMode;
   taskFeelingBefore: boolean; // also ask before starting a task (off by default)
+  // Habits, Skills and Quit: when to offer the optional "How do you feel?" sheet.
+  habitFeelingAsk: FeelingAsk; // after a Build habit is done
+  skillFeelingAsk: FeelingAsk; // after a practice session
+  quitFeelingAsk: FeelingAsk; // after a resisted urge or a slip (offered softly, never a required step)
   dailyDefaultView: 'list' | 'timeline';
   taskPageMoreOpen: boolean; // the task page's "More options", as the user last left it
   welcomeSeen: boolean; // the first-run screen has been passed (or this isn't a fresh install)
+  // Discover tour, on this phone only: the last slide seen (to resume) and whether it was finished.
+  discoverLastSlide: string;
+  discoverTourDone: boolean;
   dailyViewPrefs: DayViewPrefs; // the day list's group, sort and filters, as last left
   dailyAvailableMinutes: number; // "Plan my day": how much time a day usually has for tasks
   dailyDefaultReminder: number | null; // minutes before; added when a new task gets a start time (null = none)
@@ -155,9 +162,14 @@ export const DEFAULT_SETTINGS: SettingsData = {
 
   taskFeelingMode: 'auto',
   taskFeelingBefore: false,
+  habitFeelingAsk: 'always',
+  skillFeelingAsk: 'always',
+  quitFeelingAsk: 'never',
   dailyDefaultView: 'list',
   taskPageMoreOpen: false,
   welcomeSeen: false,
+  discoverLastSlide: '',
+  discoverTourDone: false,
   dailyViewPrefs: DEFAULT_DAY_VIEW,
   dailyAvailableMinutes: 480,
   dailyDefaultReminder: null,
@@ -194,6 +206,8 @@ export const DEFAULT_SETTINGS: SettingsData = {
 export const SETTINGS_VERSION = 3;
 
 export type TaskFeelingMode = 'auto' | 'always' | 'tagged' | 'never';
+// 'sometimes' = only when nothing has been noted for that item in the last few days.
+export type FeelingAsk = 'always' | 'sometimes' | 'never';
 
 type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
 export const SETTINGS_MIGRATIONS: Record<number, Migration> = {

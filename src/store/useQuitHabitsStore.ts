@@ -17,8 +17,8 @@ interface QuitHabitsState {
 
   addFeelingEntry: (
     trackId: string,
-    feelingId: string,
-    zone: FeelingZone,
+    feelingId: string | undefined,
+    zone: FeelingZone | undefined,
     note: string | undefined,
     isRelapseMoment?: boolean,
     isResistedUrge?: boolean,
@@ -26,6 +26,8 @@ interface QuitHabitsState {
     urgePassed?: boolean
   ) => string;
   deleteFeelingEntry: (id: string) => void;
+  // Attaches (or, with undefined, removes) the feeling noted for an urge or slip.
+  setEntryFeeling: (id: string, feeling: { feelingEntryId: string; zone: FeelingZone; feelingId?: string; note?: string } | undefined) => void;
 
   // Archives the current track (marks it ended, with an optional
   // reflection) — documents this chapter without deciding anything about
@@ -90,6 +92,16 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
     deleteFeelingEntry: (id) =>
       set((state) => {
         state.feelingEntries = state.feelingEntries.filter((e) => e.id !== id);
+      }),
+
+    setEntryFeeling: (id, feeling) =>
+      set((state) => {
+        const e = state.feelingEntries.find((x) => x.id === id);
+        if (!e) return;
+        e.feelingEntryId = feeling?.feelingEntryId;
+        e.zone = feeling?.zone;
+        e.feelingId = feeling?.feelingId;
+        if (feeling && feeling.note !== undefined) e.note = feeling.note.trim() || undefined;
       }),
 
     archiveTrack: (trackId, reflection, reasonTags) =>

@@ -8,7 +8,10 @@ import { StatRow, InsightCard, DashboardSectionLabel } from '../components/Analy
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useUi } from '../components/UiProvider';
 import { shareQuitJourneyAsText, exportQuitJourneyAsPdf } from '../utils/habitExport';
-import type { PositionedPoint } from '../components/FeelingsGraph';
+import { patternRange, quitDayStatuses, type PatternRange, type QuitDayStatus } from '../utils/habitPattern';
+import { quitTiming } from '../utils/habitTimeOfDay';
+import { DayStrip, RangeChips, SOFT_MISSED } from './habits/HabitPattern';
+import { withAlpha } from '../utils/color';
 import { colors, fonts, radii, spacing } from '../theme';
 import { sectionAccents } from '../theme/accents';
 import { findFeeling, zoneMeta } from '../data/feelingsWheel';
@@ -21,28 +24,27 @@ import {
   quitAnalysisSummary,
   quitHeaderStats,
   quitJourneyLog,
-  quitJourneySeries,
   relapseTriggerRanking,
   resistedUrgeTrend,
-  urgeTimeOfDayPattern,
   type QuitLogEvent,
 } from '../utils/habitStats';
 import { themedStyles } from '../theme/runtime';
 
 // Lazy for the same reason as in MoodCheckScreen: Skia's web backend must not
 // evaluate before App.tsx has loaded CanvasKit.
-const FeelingsGraph = React.lazy(() => import('../components/FeelingsGraph').then((m) => ({ default: m.FeelingsGraph })));
 
 const accent = sectionAccents.quitHabit;
-const RELAPSE = '#B3413A';
-
-
-const DAY_PART_RANGES: Record<string, string> = {
-  morning: 'morning (5–11am)',
-  afternoon: 'afternoon (11am–5pm)',
-  evening: 'evening (5–9pm)',
-  night: 'night (9pm–5am)',
+const QUIT_LABEL: Record<QuitDayStatus, string> = { clean: 'Clean day', resisted: 'Resisted an urge', slip: 'Slip', between: 'Between tries', future: '', before: '' };
+const QUIT_LOOKS: Record<QuitDayStatus, () => { fill: string; outline?: boolean } | null> = {
+  clean: () => ({ fill: withAlpha(accent, 0.45) }),
+  resisted: () => ({ fill: accent }),
+  slip: () => ({ fill: SOFT_MISSED }),
+  between: () => ({ fill: colors.line, outline: true }),
+  future: () => ({ fill: withAlpha(colors.line, 0.5), outline: true }),
+  before: () => null,
 };
+
+
 
 // The Analysis dashboard for one Quit habit — its own screen, opened from
 // the habit's Journey. Same five-part skeleton as the Build dashboard, but
@@ -54,6 +56,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   const personalFeelings = useFeelingsStore((s) => s.personalFeelings);
   const { showToast } = useUi();
   const [search, setSearch] = useState('');
+  const [range, setRange] = useState<PatternRange>('month');
 
   const habit = habits.find((h) => h.id === habitId);
   const today = todayISO();
@@ -80,31 +83,16 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   // --- 1. Header stats ---
   const header = quitHeaderStats(tracks, feelingEntries, habitId, today);
 
-  // --- 3. Chart: the whole journey ---
-  const series = quitJourneySeries(tracks, feelingEntries, habitId, today);
-  const labels = domainLabels(journeyStart, chartSlots, 'day');
-  const maxDay = series.reduce((m, d) => Math.max(m, d.dayCount), 0);
-  const points: PositionedPoint[] = series.map((d) => {
-    const parts = [`Track ${d.trackNumber} · day ${d.dayCount}`];
-    if (d.resistedCount > 0) parts.push(`${d.resistedCount} resisted ${d.resistedCount === 1 ? 'urge' : 'urges'}`);
-    if (d.relapse) parts.push('went back to it');
-    return {
-      key: d.date,
-      date: d.date,
-      score: d.dayCount,
-      domainIndex: daysBetweenISO(journeyStart, d.date),
-      color: d.relapse ? RELAPSE : d.resistedCount > 0 ? colors.amber : accent,
-      radius: d.relapse ? 6 : d.resistedCount > 0 ? 5 : 0,
-      label: parts.join(' · '),
-    };
-  });
+  // --- 3. The journey, day by day (a slip stays part of it; nothing drops to zero) ---
+  const period = patternRange(range, today, journeyStart);
+  const days = quitDayStatuses(habitId, tracks, feelingEntries, period.start, period.end, today);
 
   // --- 4. Insights ---
   const bestApproach = bestApproachForHabit(feelingEntries, tracks, habitId);
   const triggers = relapseTriggerRanking(tracks, habitId);
-  const timeOfDay = urgeTimeOfDayPattern(feelingEntries, tracks, habitId);
+  const timing = quitTiming(feelingEntries, tracks, habitId);
   const trend = resistedUrgeTrend(feelingEntries, tracks, habitId, today);
-  const hasInsights = bestApproach || triggers.length > 0 || timeOfDay || trend.direction;
+  const hasInsights = bestApproach || triggers.length > 0 || timing || trend.direction;
 
   // --- 5. Full log ---
   const q = search.trim().toLowerCase();
@@ -138,25 +126,19 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
 
       <DashboardSectionLabel>Your journey over time</DashboardSectionLabel>
       <Card style={styles.chartCard}>
-        <React.Suspense fallback={<View style={styles.chartLoading} />}>
-          <FeelingsGraph
-            points={points}
-            domainSlots={chartSlots}
-            formatLabel={(i) => labels[i] ?? ''}
-            yDomain={[0, Math.max(7, maxDay) + 1]}
-            baselineAt={null}
-            lineColor={accent}
-            height={220}
-            emptyText="Nothing to chart yet."
-          />
-        </React.Suspense>
-        <View style={styles.legendRow}>
-          <View style={[styles.legendDot, { backgroundColor: colors.amber }]} />
-          <Caption style={styles.legend}>Resisted an urge</Caption>
-          <View style={[styles.legendDot, { backgroundColor: RELAPSE }]} />
-          <Caption style={styles.legend}>Went back to it</Caption>
-        </View>
-        <Caption style={styles.legend}>The line climbs one step a day through each track. Pinch to zoom, drag with two fingers to pan.</Caption>
+        <RangeChips value={range} onChange={setRange} />
+        <DayStrip
+          days={days}
+          colorFor={(st) => QUIT_LOOKS[st]()}
+          labelFor={(st) => QUIT_LABEL[st]}
+          legend={[
+            { key: 'clean', label: 'Clean day', color: withAlpha(accent, 0.45) },
+            { key: 'resisted', label: 'Resisted an urge', color: accent },
+            { key: 'slip', label: 'Slip (part of the journey)', color: SOFT_MISSED },
+            { key: 'between', label: 'Between tries', color: colors.line, outline: true },
+          ]}
+        />
+        <Caption style={styles.legend}>Each square is a day. A slip is part of the story, not a reset: every day before it still counts.</Caption>
       </Card>
 
       <DashboardSectionLabel>Every track</DashboardSectionLabel>
@@ -215,19 +197,14 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
       {triggers.slice(0, 3).map((t, i) => (
         <InsightCard
           key={t.tag}
-          kind="Relapse trigger"
-          accent={RELAPSE}
-          headline={i === 0 ? `${t.tag} is your strongest link to going back to it.` : `${t.tag} also shows up when a track ends.`}
-          evidence={`Tagged when ${t.count} tracks ended`}
+          kind="What was going on"
+          accent={SOFT_MISSED}
+          headline={i === 0 ? `${t.tag} was often going on when a try ended.` : `${t.tag} also shows up when a try ends.`}
+          evidence={`Tagged when ${t.count} of your tries ended`}
         />
       ))}
-      {timeOfDay && (
-        <InsightCard
-          kind="Time of day"
-          accent={accent}
-          headline={`Most cravings and relapses happen in the ${DAY_PART_RANGES[timeOfDay.bucket]}.`}
-          evidence={`${timeOfDay.count} documented moments in that window`}
-        />
+      {timing && (
+        <InsightCard kind="Time of day" accent={accent} headline={timing.lines[0]} evidence={`Based on ${timing.n} logged ${timing.n === 1 ? 'moment' : 'moments'} (urges resisted and slips).`} />
       )}
       {trend.direction && trend.currentRatio != null && (
         <InsightCard
@@ -261,7 +238,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
 
       <DashboardSectionLabel>Export</DashboardSectionLabel>
       <Card style={styles.exportCard}>
-        <Caption style={styles.legend}>The whole journey — every track, relapse, resisted urge, feeling and note.</Caption>
+        <Caption style={styles.legend}>The whole journey: every track, slip, resisted urge, feeling and note.</Caption>
         <View style={styles.exportRow}>
           <PrimaryButton
             label="Share as text"
@@ -284,7 +261,8 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   );
 }
 
-function feelingName(id: string, personal: { id: string; name: string }[]): string {
+function feelingName(id: string | undefined, personal: { id: string; name: string }[]): string {
+  if (!id) return '';
   return findFeeling(id)?.name ?? personal.find((p) => p.id === id)?.name ?? 'Feeling';
 }
 
@@ -312,9 +290,9 @@ function LogRow({ event: e, personalFeelings }: { event: QuitLogEvent; personalF
   }
   if (e.kind === 'trackEnd') {
     return (
-      <Card style={[styles.logCard, { borderLeftColor: RELAPSE }]}>
+      <Card style={[styles.logCard, { borderLeftColor: SOFT_MISSED }]}>
         <View style={styles.logHeader}>
-          <Body style={{ color: RELAPSE }}>Went back to it</Body>
+          <Body style={{ color: SOFT_MISSED }}>Went back to it</Body>
           <Caption>{formatDisplayDate(e.date)}</Caption>
         </View>
         <Caption>
@@ -326,15 +304,15 @@ function LogRow({ event: e, personalFeelings }: { event: QuitLogEvent; personalF
     );
   }
   const entry = e.entry;
-  const meta = zoneMeta(entry.zone);
+  const meta = entry.zone ? zoneMeta(entry.zone) : undefined;
   const kindLabel = entry.isResistedUrge ? 'Resisted an urge' : entry.isRelapseMoment ? 'Felt, as the track ended' : 'Checked in';
   return (
-    <Card style={[styles.logCard, { borderLeftColor: entry.isResistedUrge ? colors.amber : meta.accent }]}>
+    <Card style={[styles.logCard, { borderLeftColor: entry.isResistedUrge ? colors.amber : meta?.accent ?? colors.line }]}>
       <View style={styles.logHeader}>
         <Body style={entry.isResistedUrge ? { color: colors.amber } : undefined}>{kindLabel}</Body>
         <Caption>{formatDisplayDate(e.date)}</Caption>
       </View>
-      <Caption style={{ color: meta.accent }}>Felt {feelingName(entry.feelingId, personalFeelings)}</Caption>
+      {meta && <Caption style={{ color: meta.accent }}>Felt {feelingName(entry.feelingId, personalFeelings) || meta.label}</Caption>}
       {entry.isResistedUrge && entry.approach && (
         <Caption>
           {entry.approach}

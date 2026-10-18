@@ -8,7 +8,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDataSpace } from '../hooks/useDataSpace';
 import { useDemoActions } from './useDemoActions';
 import { fonts } from '../theme';
-import { DemoTour } from './DemoTour';
 
 // Fixed colors on purpose: the bar must look the same in every theme and be
 // clearly different from anything else in the app (and from Expo's dev menu).
@@ -57,7 +56,6 @@ export function DemoFrame({ children }: { children: React.ReactNode }) {
       <DemoBanner />
       <SafeAreaInsetsContext.Provider value={{ ...insets, top: 0 }}>
         <View style={{ flex: 1 }}>{children}</View>
-        <DemoTour />
       </SafeAreaInsetsContext.Provider>
     </View>
   );

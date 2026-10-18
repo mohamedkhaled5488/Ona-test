@@ -224,14 +224,14 @@ export function generateDemoData(opts: GenerateOptions): DemoSections {
     if (n > 0 || chance(0.5)) {
       const r = rand();
       if (r < 0.74) check('habit-demo-walk', date, true, chance(0.3) ? { durationMinutes: int(15, 40) } : {});
-      else if (r < 0.84) check('habit-demo-walk', date, true, { note: 'Minimum version today: just to the end of the street.' });
+      else if (r < 0.84) check('habit-demo-walk', date, true, { minimum: true, note: 'Minimum version today: just to the end of the street.' });
       else if (r < 0.95) check('habit-demo-walk', date, false, { reasonTags: [pick(['Weather', 'Sleep', 'Work'])] });
     }
     // Read 10 pages: weekdays, a bit patchier.
     if (n <= 50 && wd >= 1 && wd <= 5) {
       const r = rand();
       if (r < 0.66) check('habit-demo-read', date, true, chance(0.4) ? { durationMinutes: int(10, 30) } : {});
-      else if (r < 0.76) check('habit-demo-read', date, true, { note: 'Minimum version: one page, then bed.' });
+      else if (r < 0.76) check('habit-demo-read', date, true, { minimum: true, note: 'Minimum version: one page, then bed.' });
       else if (r < 0.85) check('habit-demo-read', date, false, { reasonTags: ['Sleep'] });
     }
     // Stretch: about three times a week.

@@ -62,7 +62,6 @@ import {
   tagZoneDistribution,
   tagFeelingBreakdown,
   tagPrimaryZone,
-  describeTagHeadline,
   tagTrend,
   tagCooccurrences,
   analysisMinCount,
@@ -79,8 +78,11 @@ import type { FeelingZone, FeelingCheckIn } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { deleteFeelingEntry, logTaskFeeling } from '../utils/taskFeelings';
+import { logItemFeeling, mirrorFeelingEdit } from '../utils/itemFeelings';
 import { spaceKey } from '../utils/dataSpace';
 import { useDailyPlanningStore } from '../store/useDailyPlanningStore';
+import { basedOn, filterBySource, overviewInsight, sourceBreakdown, tagInsight, SOURCE_GROUP_LABEL, type SourceGroup } from '../utils/feelingsInsights';
+import { CONFIDENCE_NOTE } from '../config/feelingsAnalysis';
 import { useUi } from '../components/UiProvider';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'moodCheck'>;
@@ -582,6 +584,7 @@ function EntryEditSheet({ entry, onClose }: { entry: FeelingCheckIn | null; onCl
   const save = () => {
     // Changing the zone drops words from the old zone (they no longer fit).
     useFeelingsStore.getState().updateEntry(entry.id, { zone, note, ...(zone !== entry.zone ? { feelingIds: [], intensities: undefined } : {}) });
+    mirrorFeelingEdit(entry.id); // a linked Quit moment shows the same feeling
     onClose();
   };
 
@@ -1395,10 +1398,11 @@ function TagFeelingList({ tag, entries }: { tag: string; entries: FeelingCheckIn
 // deadline) could be the actual driver behind both the tag and the feeling.
 function TagImpactCard({ impact, entries, onPress }: { impact: TagImpact; entries: FeelingCheckIn[]; onPress: () => void }) {
   const primary = tagPrimaryZone(entries, impact.tag);
-  if (!primary) return null;
+  const insight = tagInsight(entries, impact.tag);
+  if (!primary || !insight) return null;
   const meta = zoneMeta(primary.zone);
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityHint="Opens what came up with this tag">
       <Card style={[styles.impactCard, { borderLeftColor: meta.accent }]}>
         <View style={styles.impactCardHeader}>
           <SectionHeading style={styles.impactCardTag}>{impact.tag}</SectionHeading>
@@ -1407,10 +1411,10 @@ function TagImpactCard({ impact, entries, onPress }: { impact: TagImpact; entrie
             <Body style={{ color: meta.accent }}>{meta.label}</Body>
           </View>
         </View>
+        <ScreenTitle style={styles.impactCardHeadline}>{insight.headline}</ScreenTitle>
         <Caption style={styles.impactCardStat}>
-          {meta.label} on {primary.recentCount} of the last {primary.recentOf} "{impact.tag}" days
+          {describeTagImpact(impact)} {basedOn(insight.n)}.
         </Caption>
-        <ScreenTitle style={styles.impactCardHeadline}>{describeTagHeadline(impact.tag, primary)}</ScreenTitle>
       </Card>
     </Pressable>
   );
@@ -1495,88 +1499,139 @@ function AnalysisRangePicker({
   );
 }
 
+// Analysis from the very first entry: facts first, "so far" with a few,
+// "tends to" with more (config/feelingsAnalysis.ts). Every card says how many
+// entries it's based on. Nothing is locked.
 function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (tag: string, start: string, end: string) => void }) {
   const allEntries = useFeelingsStore((s) => s.entries);
+  const personalFeelings = useFeelingsStore((s) => s.personalFeelings);
   const [showAllImpact, setShowAllImpact] = useState(false);
-  // "All" by default — Week or Month windows are frequently too narrow to
-  // clear the minimum count for any single tag, which made this
-  // partition look empty even for someone with real tagged history. Week/
-  // Month/Custom stay available for narrowing when that's actually wanted.
+  const [showAllTags, setShowAllTags] = useState(false);
+  const [group, setGroup] = useState<SourceGroup>('all');
+  // "All" by default, so a short history isn't split into empty windows.
   const [view, setView] = useState<AnalysisView>('all');
   const [customRange, setCustomRange] = useState({ start: addDaysISO(todayISO(), -13), end: todayISO() });
 
   const earliestDate = allEntries.reduce((min, e) => (e.date < min ? e.date : min), todayISO());
   const { start, end } = analysisRange(view, customRange, todayISO(), earliestDate);
-  const entries = allEntries.filter((e) => e.date >= start && e.date <= end);
+  const inRange = allEntries.filter((e) => e.date >= start && e.date <= end);
+  const groups = sourceBreakdown(inRange);
+  const entries = filterBySource(inRange, group);
   const minCount = analysisMinCount(daysBetweenISO(start, end) + 1);
+  const nameOf = (id: string) => findAnyFeeling(id, personalFeelings)?.name;
 
-  const taggedCount = entries.filter((e) => (e.reasonTags ?? []).length > 0).length;
+  const overview = overviewInsight(entries, nameOf);
   const ranking = tagImpactRanking(entries, minCount);
   const cooccurrences = tagCooccurrences(entries, minCount);
   const visibleRanking = showAllImpact ? ranking : ranking.slice(0, 4);
 
-  // Raw counts, no minimum — shown underneath the gated "Biggest impact"
-  // section so a tag the user just added is always visibly acknowledged,
-  // even on day one, before it has enough repeats to earn a confident,
-  // bold claim. Only the claim is gated; the fact that it was tagged never is.
-  const rawTagCounts = new Map<string, number>();
-  entries.forEach((e) => (e.reasonTags ?? []).forEach((t) => rawTagCounts.set(t, (rawTagCounts.get(t) ?? 0) + 1)));
-  const rawTagList = Array.from(rawTagCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .filter(([tag]) => !ranking.some((r) => r.tag === tag));
+  // Every tag, from its first use: facts at first, a pattern only later.
+  const tagCounts = new Map<string, number>();
+  entries.forEach((e) => (e.reasonTags ?? []).forEach((t) => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
+  const tagList = Array.from(tagCounts.entries())
+    .sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]))
+    .map(([tag]) => tag);
+  const visibleTags = showAllTags ? tagList : tagList.slice(0, 6);
+  const rangeWord = view === 'all' ? '' : view === 'custom' ? ' in this range' : ` this ${view}`;
 
   return (
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>Analysis</ScreenTitle>
-        <Pressable onPress={onBack} style={styles.headerLink}>
+        <Pressable onPress={onBack} style={styles.headerLink} accessibilityRole="button" accessibilityLabel="Close Analysis">
           <Ionicons name="close" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>
-      <Caption style={styles.subtitle}>What tends to go with what — tagged alongside, never the cause</Caption>
+      <Caption style={styles.subtitle}>What came up together. Never what caused what.</Caption>
 
       <AnalysisRangePicker view={view} setView={setView} customRange={customRange} setCustomRange={setCustomRange} />
 
-      {taggedCount < minCount ? (
+      {groups.length > 2 && (
+        <View style={styles.sourceChips} accessibilityRole="radiogroup" accessibilityLabel="Where the feeling was logged">
+          {groups.map((g) => (
+            <Pressable
+              key={g.group}
+              onPress={() => setGroup(g.group)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: group === g.group }}
+              style={[styles.sourceChip, group === g.group && styles.sourceChipActive]}
+            >
+              <Caption style={group === g.group ? styles.sourceChipTextActive : undefined}>
+                {SOURCE_GROUP_LABEL[g.group]} {g.count}
+              </Caption>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {!overview ? (
         <Card style={styles.statsCard}>
-          <Body>Keep logging — Analysis gets more useful the more check-ins you tag with a reason.</Body>
-          <Caption style={styles.emptyText}>
-            {view === 'all'
-              ? taggedCount === 0
-                ? "You haven't tagged a reason yet."
-                : `${taggedCount} tagged so far — a few more and patterns start to show.`
-              : taggedCount === 0
-                ? `No reasons tagged in this ${view === 'custom' ? 'range' : view} yet — try "All" to see your full history.`
-                : `${taggedCount} tagged in this ${view === 'custom' ? 'range' : view} — try a wider range to see more.`}
-          </Caption>
-          {rawTagList.length > 0 && (
-            <View style={styles.rawTagList}>
-              {rawTagList.map(([tag, count]) => (
-                <Caption key={tag}>
-                  {tag} — {count} {count === 1 ? 'time' : 'times'} (needs {minCount} to show a confident pattern)
-                </Caption>
-              ))}
-            </View>
+          {allEntries.length === 0 ? (
+            <>
+              <Body>Your first check-in shows up here.</Body>
+              <Caption style={styles.emptyText}>What you felt, how strongly, and any tags. There's nothing to unlock: it starts with one entry.</Caption>
+            </>
+          ) : (
+            <>
+              <Body>
+                Nothing logged{rangeWord}
+                {group !== 'all' ? ` from "${SOURCE_GROUP_LABEL[group]}"` : ''} yet.
+              </Body>
+              <Caption style={styles.emptyText}>Try "All" to see your full history.</Caption>
+            </>
           )}
         </Card>
       ) : (
         <>
-          <Eyebrow style={styles.impactSectionLabel}>Biggest impact</Eyebrow>
-          {ranking.length === 0 ? (
-            <Card style={styles.statsCard}>
-              <Caption style={styles.emptyText}>No single tag stands out yet — keep tagging to find one.</Caption>
-              {rawTagList.length > 0 && (
-                <View style={styles.rawTagList}>
-                  {rawTagList.map(([tag, count]) => (
-                    <Caption key={tag}>
-                      {tag} — {count} {count === 1 ? 'time' : 'times'} (needs {minCount} to show a confident pattern)
+          <Card style={styles.statsCard}>
+            <Eyebrow>Your feelings</Eyebrow>
+            <Body style={styles.insightHeadline}>{overview.headline}</Body>
+            {!!overview.detail && <Caption>{overview.detail}</Caption>}
+            {overview.level === 'facts' && (
+              <View style={styles.rawTagList}>
+                {[...entries].reverse().map((e) => {
+                  const words = e.feelingIds
+                    .map((id) => {
+                      const name = nameOf(id);
+                      const level = e.intensities?.[id];
+                      return name ? `${name.toLowerCase()}${level ? ` (${level} of 5)` : ''}` : undefined;
+                    })
+                    .filter(Boolean);
+                  const tags = e.reasonTags ?? [];
+                  return (
+                    <Caption key={e.id}>
+                      {`${formatDisplayDate(e.date)}: ${zoneMeta(e.zone).label}${words.length ? `, ${words.join(' & ')}` : ''}${tags.length ? ` · ${tags.join(', ')}` : ''}`}
                     </Caption>
-                  ))}
-                </View>
+                  );
+                })}
+              </View>
+            )}
+            <Caption style={styles.basedOn}>{basedOn(overview.n)}</Caption>
+          </Card>
+
+          {tagList.length > 0 && (
+            <Card style={styles.statsCard}>
+              <Eyebrow>Tags</Eyebrow>
+              {visibleTags.map((tag) => {
+                const t = tagInsight(entries, tag)!;
+                return (
+                  <Pressable key={tag} onPress={() => onOpenTag(tag, start, end)} accessibilityRole="button" style={styles.tagInsightRow}>
+                    <Body>{t.headline}</Body>
+                    <Caption style={styles.basedOn}>{basedOn(t.n)}</Caption>
+                  </Pressable>
+                );
+              })}
+              {tagList.length > 6 && (
+                <Pressable onPress={() => setShowAllTags((v) => !v)} style={styles.seeAllLink}>
+                  <Caption style={{ color: colors.teal }}>{showAllTags ? 'Show fewer' : `See all ${tagList.length}`}</Caption>
+                </Pressable>
               )}
             </Card>
-          ) : (
+          )}
+
+          {ranking.length > 0 && (
             <>
+              <Eyebrow style={styles.impactSectionLabel}>Furthest from your usual</Eyebrow>
               {visibleRanking.map((impact) => (
                 <TagImpactCard key={impact.tag} impact={impact} entries={entries} onPress={() => onOpenTag(impact.tag, start, end)} />
               ))}
@@ -1585,16 +1640,6 @@ function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (
                   <Caption style={{ color: colors.teal }}>{showAllImpact ? 'Show fewer' : `See all ${ranking.length}`}</Caption>
                 </Pressable>
               )}
-              {rawTagList.length > 0 && (
-                <Card style={styles.statsCard}>
-                  <Eyebrow>Not enough repeats yet</Eyebrow>
-                  {rawTagList.map(([tag, count]) => (
-                    <Caption key={tag}>
-                      {tag} — {count} {count === 1 ? 'time' : 'times'} (needs {minCount} to show a confident pattern)
-                    </Caption>
-                  ))}
-                </Card>
-              )}
             </>
           )}
 
@@ -1602,12 +1647,15 @@ function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (
             <Card style={styles.statsCard}>
               <Eyebrow>Often tagged together</Eyebrow>
               {cooccurrences.slice(0, 5).map((pair) => (
-                <Caption key={`${pair.tagA}-${pair.tagB}`}>
-                  {pair.tagA} + {pair.tagB} — {pair.count} check-ins
-                </Caption>
+                <Caption key={`${pair.tagA}-${pair.tagB}`}>{`${pair.tagA} + ${pair.tagB}: ${pair.count} check-ins`}</Caption>
               ))}
             </Card>
           )}
+
+          <View style={styles.infoNote}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.inkSoft} />
+            <Caption style={styles.infoNoteText}>{CONFIDENCE_NOTE}</Caption>
+          </View>
         </>
       )}
     </>
@@ -1714,12 +1762,15 @@ export function MoodCheckScreen({ navigation, route }: Props) {
     reasonTags?: string[]
   ) => {
     if (leaving) return;
-    // A task's feeling is linked both ways (and carries the task's tags).
+    // A task's feeling is linked both ways (and carries the task's tags);
+    // a habit's, skill's or Quit moment's carries that item's name as a tag.
     const id =
       source?.kind === 'task'
         ? logTaskFeeling({ taskId: source.refId, date: source.date ?? todayISO(), phase: source.phase ?? 'after', zone, feelingIds, intensities, reasonTags }) ??
           addEntry(zone, feelingIds, intensities, reasonTags, source)
-        : addEntry(zone, feelingIds, intensities, reasonTags, source);
+        : source && (source.kind === 'habit' || source.kind === 'skill' || source.kind === 'quitHabit')
+          ? logItemFeeling({ source, zone, feelingIds, intensities, reasonTags: [...(route.params?.tags ?? []), ...(reasonTags ?? [])], note: route.params?.note })
+          : addEntry(zone, feelingIds, intensities, reasonTags, source);
     if (source) {
       setLeaving(true);
       return;
@@ -2424,6 +2475,23 @@ const styles = themedStyles(() => ({
   impactSectionLabel: {
     marginBottom: spacing.xs,
   },
+  insightHeadline: {
+    fontFamily: fonts.bodyMedium,
+    marginTop: spacing.xs,
+  },
+  basedOn: {
+    color: colors.inkSoft,
+    marginTop: 2,
+  },
+  tagInsightRow: {
+    paddingVertical: spacing.xs,
+  },
+  sourceChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
+  sourceChip: { paddingVertical: 6, paddingHorizontal: spacing.sm + 2, borderRadius: radii.full, borderWidth: 1, borderColor: colors.line, minHeight: 34, justifyContent: 'center' },
+  sourceChipActive: { backgroundColor: colors.teal, borderColor: colors.teal },
+  sourceChipTextActive: { color: colors.white },
+  infoNote: { flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-start', marginTop: spacing.sm, marginBottom: spacing.lg },
+  infoNoteText: { flex: 1, color: colors.inkSoft },
   rawTagList: {
     gap: 2,
     marginTop: spacing.sm,

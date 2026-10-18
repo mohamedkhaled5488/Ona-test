@@ -437,6 +437,11 @@ export interface FeelingSource {
   // Tasks: which day of the task, and whether it was felt before starting or after finishing.
   date?: string;
   phase?: 'before' | 'after';
+  // Quit: the urge or slip entry (QuitFeelingEntry) this feeling belongs to.
+  linkId?: string;
+  // Quit, when there's no entry yet: the track to add one to, and whether it's a slip.
+  trackId?: string;
+  slip?: boolean;
 }
 
 export interface FeelingCheckIn {
@@ -659,6 +664,9 @@ export interface HabitCheckIn {
   // Set when the optional "Start Session" timer was used instead of a plain
   // Done tap — habits with a real time component (meditating, reading).
   durationMinutes?: number;
+  minimum?: boolean; // done as the habit's smaller "minimum version" (still counts as done)
+  plannedTime?: string; // HH:MM the habit was planned for when logged (its reminder time), if any
+  completedAt?: string; // ISO datetime it was marked done (createdAt may be an earlier "Missed")
   createdAt: string; // ISO datetime
 }
 
@@ -723,9 +731,13 @@ export interface QuitTrack {
 export interface QuitFeelingEntry {
   id: string;
   trackId: string;
-  feelingId: string;
-  zone: FeelingZone;
+  // The feeling, when one was noted. A resisted urge counts with or without
+  // one (noting a feeling is optional since Quit stopped asking by default).
+  feelingId?: string;
+  zone?: FeelingZone;
   note?: string;
+  // The same feeling in the main Feelings log (new entries only, no backfill).
+  feelingEntryId?: string;
   isRelapseMoment: boolean;
   // A craving that was surfed rather than acted on — tracked separately from
   // a relapse so it can be counted and celebrated ("resisted 12 urges this

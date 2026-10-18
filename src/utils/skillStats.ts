@@ -1,18 +1,8 @@
 // Analysis partition logic for Skills — same honesty rules as Feelings
 // Analysis (feelingsStats.ts): correlational only, gated by a minimum
 // sample size, never diagnostic.
-import type { PracticeSession, FeelingCheckIn } from '../types/sections';
-import { ANALYSIS_MIN_TAG_COUNT, mostCommonZone } from './feelingsStats';
-
-// Which feeling most often follows a practice session for this skill — only
-// looks at feelings logged against this specific skill (via
-// FeelingCheckIn.source).
-export function sessionFeelingZone(feelingEntries: FeelingCheckIn[], skillId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT) {
-  const matches = feelingEntries.filter((e) => e.source?.kind === 'skill' && e.source.refId === skillId);
-  if (matches.length < minCount) return undefined;
-  const stat = mostCommonZone(matches);
-  return stat ? { zone: stat.zone, count: stat.count, total: matches.length } : undefined;
-}
+import type { PracticeSession } from '../types/sections';
+import { ANALYSIS_MIN_TAG_COUNT } from './feelingsStats';
 
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -58,9 +48,11 @@ export interface TimeOfDayMinutesStat {
 export function minutesByTimeOfDay(sessions: PracticeSession[], skillId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): TimeOfDayMinutesStat[] {
   const byBucket = new Map<TimeOfDayBucket, { minutes: number; count: number }>();
   sessions
-    .filter((s) => s.skillId === skillId)
+    // Sessions logged without the timer have 0 minutes: leave them out, or
+    // they'd drag the average down. Bucketed by when the session started.
+    .filter((s) => s.skillId === skillId && s.minutes > 0)
     .forEach((s) => {
-      const bucket = bucketForHour(new Date(s.createdAt).getHours());
+      const bucket = bucketForHour(new Date(s.startedAt ?? s.createdAt).getHours());
       const g = byBucket.get(bucket) ?? { minutes: 0, count: 0 };
       g.minutes += s.minutes;
       g.count += 1;

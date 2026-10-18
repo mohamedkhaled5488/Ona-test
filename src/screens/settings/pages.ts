@@ -36,9 +36,9 @@ export interface SettingsParams {
 }
 
 // Sections that have their own settings page.
-export type SettingsSectionId = Extract<SectionId, 'dailyPlanning' | 'journaling' | 'studySession' | 'sleep' | 'book' | 'moodCheck' | 'quitHabit' | 'budget' | 'recap'>;
+export type SettingsSectionId = Extract<SectionId, 'dailyPlanning' | 'journaling' | 'habitBuilder' | 'skills' | 'studySession' | 'sleep' | 'book' | 'moodCheck' | 'quitHabit' | 'budget' | 'recap'>;
 
-export const SETTINGS_SECTIONS: SettingsSectionId[] = ['dailyPlanning', 'journaling', 'moodCheck', 'quitHabit', 'studySession', 'sleep', 'book', 'budget', 'recap'];
+export const SETTINGS_SECTIONS: SettingsSectionId[] = ['dailyPlanning', 'journaling', 'moodCheck', 'habitBuilder', 'quitHabit', 'skills', 'studySession', 'sleep', 'book', 'budget', 'recap'];
 
 export const PAGE_TITLES: Record<SettingsPage, string> = {
   root: 'Settings',

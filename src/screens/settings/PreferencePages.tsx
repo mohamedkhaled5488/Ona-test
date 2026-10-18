@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Body, Caption } from '../../components/Typography';
 import { useUi } from '../../components/UiProvider';
-import { useSettingsStore, localeWeekStart, type WeekStart } from '../../store/useSettingsStore';
+import { useSettingsStore, localeWeekStart, type WeekStart, type FeelingAsk } from '../../store/useSettingsStore';
 import { useFeelingsStore } from '../../store/useFeelingsStore';
 import { sectionsMeta } from '../../data/sectionsMeta';
 import { ambientSoundOptions, studyPresets } from '../../data/studyPresets';
@@ -197,6 +197,12 @@ function SleepSoundSettings() {
     </Group>
   );
 }
+
+const FEELING_ASK_OPTIONS: { id: FeelingAsk; label: string }[] = [
+  { id: 'always', label: 'Always ask' },
+  { id: 'sometimes', label: 'Ask sometimes' },
+  { id: 'never', label: 'Never' },
+];
 
 export function SectionsPage({ openSection }: { openSection: (id: SettingsSectionId) => void }) {
   return (
@@ -400,17 +406,52 @@ export function SectionSettingsPage({
         </Group>
         </>
       );
-    case 'quitHabit':
+    case 'habitBuilder':
       return (
-        <Group>
-          <ChoiceRow
-            label="Urge timer length"
-            explain="How long the urge-surfing timer starts at"
-            options={[5, 10, 15, 20].map((m) => ({ id: m, label: `${m} min` }))}
-            value={s.quitUrgeMinutes}
-            onChange={(id) => s.set('quitUrgeMinutes', id)}
+        <Group title="Feelings" footer={`"Ask sometimes" only asks when you haven't noted a feeling for that habit in the last few days. Either way, the sheet can always be skipped.`}>
+          <ChoiceRow<FeelingAsk>
+            label='Ask "How do you feel?" after a habit is done'
+            explain="It goes into your Feelings log, tagged with the habit's name"
+            options={FEELING_ASK_OPTIONS}
+            value={s.habitFeelingAsk}
+            onChange={(id) => s.set('habitFeelingAsk', id)}
           />
         </Group>
+      );
+    case 'skills':
+      return (
+        <Group title="Feelings" footer={`"Ask sometimes" only asks when you haven't noted a feeling for that skill in the last few days. Either way, the sheet can always be skipped.`}>
+          <ChoiceRow<FeelingAsk>
+            label='Ask "How do you feel?" after a practice session'
+            explain="It goes into your Feelings log, tagged with the skill's name"
+            options={FEELING_ASK_OPTIONS}
+            value={s.skillFeelingAsk}
+            onChange={(id) => s.set('skillFeelingAsk', id)}
+          />
+        </Group>
+      );
+    case 'quitHabit':
+      return (
+        <>
+          <Group>
+            <ChoiceRow
+              label="Urge timer length"
+              explain="How long the urge-surfing timer starts at"
+              options={[5, 10, 15, 20].map((m) => ({ id: m, label: `${m} min` }))}
+              value={s.quitUrgeMinutes}
+              onChange={(id) => s.set('quitUrgeMinutes', id)}
+            />
+          </Group>
+          <Group title="Feelings" footer="Off by default. When on, it's a gentle offer at the end, never a step you have to go through. You can always note a feeling from the journey page.">
+            <ChoiceRow<FeelingAsk>
+              label="Offer to note a feeling after an urge or a slip"
+              explain="It goes into your Feelings log, tagged with the habit's name"
+              options={FEELING_ASK_OPTIONS}
+              value={s.quitFeelingAsk}
+              onChange={(id) => s.set('quitFeelingAsk', id)}
+            />
+          </Group>
+        </>
       );
     case 'budget':
       return (

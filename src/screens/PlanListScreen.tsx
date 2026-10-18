@@ -16,6 +16,7 @@ import { planColorPalette } from '../data/planStepColors';
 import type { PlanTemplate } from '../data/planTemplates';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
+import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'planBuilder'>;
 
@@ -106,6 +107,7 @@ export function PlanListScreen({ navigation }: Props) {
             {statusFilter === 'active' ? 'No active plans yet — start one below.' : 'No archived plans yet.'}
           </Body>
         )}
+        {filtered.length === 0 && statusFilter === 'active' && <SeeHowItWorks sectionId="planBuilder" />}
         {filtered.map((plan) => {
           const progress = computePlanProgress(plan.steps);
           return (

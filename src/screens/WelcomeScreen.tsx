@@ -63,6 +63,9 @@ export function WelcomeScreen({ navigation, route }: Props) {
         <Body style={styles.demoText}>Explore with sample data</Body>
         <Caption style={styles.hint}>See what Ona looks like after a few weeks of use.</Caption>
       </Pressable>
+      <Pressable onPress={() => navigation.navigate('discoverTour', {})} style={styles.demo} accessibilityRole="button">
+        <Body style={styles.demoText}>Take a 5-minute tour</Body>
+      </Pressable>
     </Screen>
   );
 }

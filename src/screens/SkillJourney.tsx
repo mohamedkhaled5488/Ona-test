@@ -24,6 +24,21 @@ const KIND_META: Record<JourneyEventKind, { label: string; icon: keyof typeof Io
 };
 const FILTERABLE: JourneyEventKind[] = ['milestone', 'level', 'breakthrough', 'plateau', 'feedback', 'resource', 'photo'];
 
+// A photo whose file is gone (deleted from the phone, or not restored) shows
+// a quiet placeholder instead of an empty box.
+function Photo({ uri, style }: { uri: string; style: any }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <View style={[style, styles.missing]} accessibilityLabel="Photo not available">
+        <Ionicons name="image-outline" size={20} color={colors.inkSoft} />
+        <Caption style={styles.muted}>Photo not available</Caption>
+      </View>
+    );
+  }
+  return <Image source={{ uri }} style={style} resizeMode="cover" onError={() => setFailed(true)} />;
+}
+
 interface Frame {
   id: string;
   date: string;
@@ -54,6 +69,9 @@ function Scrubber({ count, index, onChange, color }: { count: number; index: num
       onLayout={(e) => (width.current = Math.max(1, e.nativeEvent.layout.width))}
       accessibilityRole="adjustable"
       accessibilityLabel="Move through progress photos"
+      accessibilityValue={{ min: 1, max: count, now: index + 1, text: `Photo ${index + 1} of ${count}` }}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={(e) => onChange(Math.max(0, Math.min(count - 1, index + (e.nativeEvent.actionName === 'increment' ? 1 : -1))))}
       {...responder.panHandlers}
     >
       <View style={styles.scrubberTrack} pointerEvents="none" />
@@ -67,7 +85,7 @@ function FramePicker({ frames, selected, onSelect, color }: { frames: Frame[]; s
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.frameRow}>
       {frames.map((f) => (
-        <Pressable key={f.id} onPress={() => onSelect(f.id)} accessibilityLabel={`Photo from ${formatDisplayDate(f.date)}`}>
+        <Pressable key={f.id} onPress={() => onSelect(f.id)} accessibilityRole="button" accessibilityState={{ selected: selected === f.id }} accessibilityLabel={`Photo from ${formatDisplayDate(f.date)}`}>
           <Image source={{ uri: f.uri }} style={[styles.frameThumb, selected === f.id && { borderColor: color, borderWidth: 3 }]} />
         </Pressable>
       ))}
@@ -100,7 +118,7 @@ export function SkillJourneyStage({
   if (!skill) {
     return (
       <>
-        <Pressable onPress={onBack} style={styles.backLink}>
+        <Pressable onPress={onBack} style={styles.backLink} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
           <Caption> Back</Caption>
         </Pressable>
@@ -126,8 +144,10 @@ export function SkillJourneyStage({
     ...sessions.filter((s) => s.skillId === skillId && s.photoUri).map((s) => ({ id: `s-${s.id}`, date: s.date, uri: s.photoUri!, label: 'Session' })),
     ...skill.milestones.filter((m) => m.proofPhotoUri && m.achievedAt).map((m) => ({ id: `m-${m.id}`, date: m.achievedAt!, uri: m.proofPhotoUri!, label: m.text })),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-  const thenFrame = frames.find((f) => f.id === thenId) ?? frames[0];
-  const nowFrame = frames.find((f) => f.id === nowId) ?? frames[frames.length - 1];
+  const pickedThen = frames.find((f) => f.id === thenId) ?? frames[0];
+  const pickedNow = frames.find((f) => f.id === nowId) ?? frames[frames.length - 1];
+  // "Then" is always the earlier of the two, whichever order they were picked in.
+  const [thenFrame, nowFrame] = pickedThen && pickedNow && pickedNow.date < pickedThen.date ? [pickedNow, pickedThen] : [pickedThen, pickedNow];
   const scrubFrame = frames[Math.min(scrub, frames.length - 1)];
 
   const open = (e: JourneyEvent) => {
@@ -137,7 +157,7 @@ export function SkillJourneyStage({
 
   return (
     <>
-      <Pressable onPress={onBack} style={styles.backLink}>
+      <Pressable onPress={onBack} style={styles.backLink} accessibilityRole="button" accessibilityLabel={`Back to ${skill.name}`}>
         <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
         <Caption> {skill.name}</Caption>
       </Pressable>
@@ -147,7 +167,7 @@ export function SkillJourneyStage({
       {present.length > 0 && (
         <View style={styles.chipRow}>
           {present.map((k) => (
-            <Pressable key={k} onPress={() => toggle(k)} style={[styles.chip, !hidden.has(k) && { backgroundColor: withAlpha(color, 0.2), borderColor: color }]}>
+            <Pressable key={k} onPress={() => toggle(k)} accessibilityRole="checkbox" accessibilityState={{ checked: !hidden.has(k) }} accessibilityLabel={`Show ${KIND_META[k].label}`} style={[styles.chip, !hidden.has(k) && { backgroundColor: withAlpha(color, 0.2), borderColor: color }]}>
               <Ionicons name={KIND_META[k].icon} size={12} color={hidden.has(k) ? colors.inkSoft : color} />
               <Caption style={hidden.has(k) ? styles.muted : undefined}> {KIND_META[k].label}</Caption>
             </Pressable>
@@ -175,7 +195,7 @@ export function SkillJourneyStage({
                   </Caption>
                   <Body style={isNext ? styles.muted : styles.eventTitle}>{e.title}</Body>
                   {e.detail && <Caption numberOfLines={3} style={styles.muted}>{e.detail}</Caption>}
-                  {e.photoUri && <Image source={{ uri: e.photoUri }} style={styles.eventPhoto} resizeMode="cover" />}
+                  {!!e.photoUri && <Photo uri={e.photoUri} style={styles.eventPhoto} />}
                 </Card>
               </Pressable>
             </View>
@@ -191,7 +211,7 @@ export function SkillJourneyStage({
               {[thenFrame, nowFrame].map((f, i) => (
                 <View key={i} style={styles.compareCol}>
                   <Caption style={{ color }}>{i === 0 ? 'Then' : 'Now'} — {formatDisplayDate(f.date)}</Caption>
-                  <Image source={{ uri: f.uri }} style={styles.comparePhoto} resizeMode="cover" />
+                  <Photo key={f.id} uri={f.uri} style={styles.comparePhoto} />
                 </View>
               ))}
             </View>
@@ -214,13 +234,18 @@ export function SkillJourneyStage({
           <DashboardSectionLabel>Progress over time</DashboardSectionLabel>
           <Card style={styles.compareCard}>
             <SectionHeading>{formatDisplayDate(scrubFrame.date)}</SectionHeading>
-            <Image source={{ uri: scrubFrame.uri }} style={styles.scrubPhoto} resizeMode="cover" />
+            <Photo key={scrubFrame.id} uri={scrubFrame.uri} style={styles.scrubPhoto} />
             <Scrubber count={frames.length} index={Math.min(scrub, frames.length - 1)} onChange={setScrub} color={color} />
             <Caption style={styles.muted}>
               Photo {Math.min(scrub, frames.length - 1) + 1} of {frames.length} · drag to move through time
             </Caption>
           </Card>
         </>
+      )}
+      {frames.length === 1 && (
+        <Caption style={[styles.muted, styles.onePhoto]}>
+          One progress photo so far. Add another in a later session to compare then and now.
+        </Caption>
       )}
       <View style={styles.bottomSpace} />
     </>
@@ -248,6 +273,8 @@ const styles = themedStyles(() => ({
   compareCard: { gap: spacing.sm },
   compareRow: { flexDirection: 'row', gap: spacing.sm },
   compareCol: { flex: 1, gap: 4 },
+  missing: { alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: colors.stone },
+  onePhoto: { marginTop: spacing.md },
   comparePhoto: { width: '100%', height: 140, borderRadius: radii.md, backgroundColor: colors.stone },
   frameRow: { gap: spacing.xs },
   frameThumb: { width: 56, height: 56, borderRadius: radii.sm, borderWidth: 1, borderColor: colors.line },

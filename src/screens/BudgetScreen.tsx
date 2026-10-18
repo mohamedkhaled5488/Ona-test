@@ -31,6 +31,7 @@ import type { Budget, BudgetMode, BudgetRecurrence } from '../types/sections';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'budget'>;
 
@@ -158,6 +159,7 @@ function OverviewStage({ onOpenBudget }: { onOpenBudget: (budgetId: string) => v
       <Caption style={styles.subtitle}>Spending limits and savings goals, all in one place.</Caption>
 
       {budgets.length === 0 && <Body style={styles.emptyText}>Nothing yet — create your first budget below.</Body>}
+      {budgets.length === 0 && <SeeHowItWorks sectionId="budget" />}
 
       {budgets.length > 1 && totalsByCurrency.length > 0 && (
         <Card style={styles.section}>

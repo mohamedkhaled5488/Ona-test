@@ -31,10 +31,13 @@ import { rotatingJourneyStat } from '../utils/habitStats';
 import { QuitHabitAnalysisStage } from './QuitHabitAnalysis';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { useHabitsStore } from '../store/useHabitsStore';
-import type { Feeling, FeelingZone, QuitHabit, QuitTrack } from '../types/sections';
+import type { Feeling, FeelingSource, FeelingZone, QuitHabit, QuitTrack } from '../types/sections';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { ItemFeelingPrompt } from '../components/ItemFeelingSheet';
+import { logItemFeeling, shouldAskItemFeeling } from '../utils/itemFeelings';
+import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'quitHabit'>;
 
@@ -160,6 +163,55 @@ function FeelingSheet({ visible, onClose, onSubmit }: { visible: boolean; onClos
   );
 }
 
+// After an urge or a slip: a gentle offer to note a feeling, never a step
+// you have to go through. Skip and "Note a feeling" carry the same weight.
+// With Settings on "Never", only a quiet link is shown.
+function SoftFeelingOffer({ habit, source }: { habit: QuitHabit; source: FeelingSource }) {
+  const mode = useSettingsStore((st) => st.quitFeelingAsk);
+  const feelingLog = useFeelingsStore((st) => st.entries);
+  const [ask] = useState(() => shouldAskItemFeeling(mode, feelingLog, 'quitHabit', habit.id, todayISO()));
+  const [open, setOpen] = useState(false);
+  const [noted, setNoted] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const prompt = (
+    <ItemFeelingPrompt
+      visible={open}
+      gentle
+      heading="Want to note how you're feeling?"
+      source={source}
+      context={habit.name}
+      onSaved={() => setNoted(true)}
+      onDone={() => {
+        setOpen(false);
+        setDismissed(true);
+      }}
+    />
+  );
+  if (noted) return <Caption style={styles.softOfferDone}>Noted in your Feelings log.</Caption>;
+  if (dismissed) return prompt;
+  if (!ask) {
+    return (
+      <>
+        <Pressable onPress={() => setOpen(true)} accessibilityRole="button" style={styles.softOfferLink}>
+          <Caption style={styles.changeFeelingLink}>Note how you're feeling (optional)</Caption>
+        </Pressable>
+        {prompt}
+      </>
+    );
+  }
+  return (
+    <Card style={styles.softOffer}>
+      <Body>Want to note how you're feeling?</Body>
+      <Caption>Only if you want to. Skipping is just as fine.</Caption>
+      <View style={styles.softOfferActions}>
+        <PrimaryButton label="Skip" variant="outline" style={styles.softOfferAction} onPress={() => setDismissed(true)} />
+        <PrimaryButton label="Note a feeling" variant="outline" style={styles.softOfferAction} onPress={() => setOpen(true)} />
+      </View>
+      {prompt}
+    </Card>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // The relapse flow — the part of this section that matters most to get
 // right. Nothing here calls it a failure; the old track is never deleted.
@@ -178,11 +230,11 @@ function RelapseStage({
   const archiveTrack = useQuitHabitsStore((s) => s.archiveTrack);
   const startNewTrack = useQuitHabitsStore((s) => s.startNewTrack);
 
-  const [phase, setPhase] = useState<'intro' | 'feeling' | 'reflect' | 'done'>('intro');
-  const [feelingResult, setFeelingResult] = useState<{ feeling: PickedFeeling; zone: FeelingZone; note: string } | null>(null);
+  // No feeling step: how you feel is a gentle offer inside "reflect".
+  const [phase, setPhase] = useState<'intro' | 'reflect' | 'done'>('intro');
   const [reflection, setReflection] = useState('');
   // Same reasonTagOptions list as Feelings/Habits — what was going on when
-  // this track ended, for the "relapse trigger" ranking in Analysis.
+  // this track ended, for the "What was going on" card in Analysis.
   const [reasonTags, setReasonTags] = useState<string[]>([]);
   const toggleReasonTag = (tag: string) =>
     setReasonTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -192,9 +244,6 @@ function RelapseStage({
   // Documents this chapter and archives it — but doesn't decide what
   // happens next. Starting a new track is a separate, later choice.
   const document = () => {
-    if (feelingResult) {
-      addFeelingEntry(track.id, feelingResult.feeling.id, feelingResult.zone, feelingResult.note, true);
-    }
     archiveTrack(track.id, reflection, reasonTags.length > 0 ? reasonTags : undefined);
     setPhase('done');
   };
@@ -221,19 +270,8 @@ function RelapseStage({
               <Body>{habit.why}</Body>
             </Card>
           )}
-          <PrimaryButton label="Continue" onPress={() => setPhase('feeling')} style={styles.sheetSubmit} />
+          <PrimaryButton label="Continue" onPress={() => setPhase('reflect')} style={styles.sheetSubmit} />
         </>
-      )}
-
-      {phase === 'feeling' && (
-        <FeelingCapture
-          intro={<Caption style={styles.subtitle}>First, how are you feeling right now?</Caption>}
-          noteLabel="Say as much or as little as you want (optional)"
-          onSubmit={(feeling, zone, note) => {
-            setFeelingResult({ feeling, zone, note });
-            setPhase('reflect');
-          }}
-        />
       )}
 
       {phase === 'reflect' && (
@@ -255,6 +293,7 @@ function RelapseStage({
             style={styles.notesInput}
             multiline
           />
+          <SoftFeelingOffer habit={habit} source={{ kind: 'quitHabit', refId: habit.id, trackId: track.id, slip: true }} />
           <PrimaryButton label="Save this chapter" onPress={document} style={styles.sheetSubmit} />
         </>
       )}
@@ -427,34 +466,22 @@ function UrgeStage({ habit, track, onDone }: { habit: QuitHabit; track: QuitTrac
   const feelingEntries = useQuitHabitsStore((s) => s.feelingEntries);
   const tracks = useQuitHabitsStore((s) => s.tracks);
 
-  const [phase, setPhase] = useState<'feeling' | 'menu' | 'approach' | 'outcome' | 'done'>('feeling');
-  const [feelingResult, setFeelingResult] = useState<{ feeling: PickedFeeling; zone: FeelingZone; note: string } | null>(null);
+  // Straight to what might help; noting a feeling is offered at the end.
+  const [phase, setPhase] = useState<'menu' | 'approach' | 'outcome' | 'done'>('menu');
+  const [urgeEntryId, setUrgeEntryId] = useState<string | null>(null);
   const [approach, setApproach] = useState<UrgeApproach | null>(null);
   const [approachDetail, setApproachDetail] = useState<string | null>(null);
 
   const finish = (urgePassed: boolean) => {
-    if (feelingResult) {
-      const label = approachDetail ?? (approach ? APPROACH_LABELS[approach] : undefined);
-      addFeelingEntry(track.id, feelingResult.feeling.id, feelingResult.zone, feelingResult.note, false, true, label, urgePassed);
-    }
+    const label = approachDetail ?? (approach ? APPROACH_LABELS[approach] : undefined);
+    setUrgeEntryId(addFeelingEntry(track.id, undefined, undefined, undefined, false, true, label, urgePassed));
     setPhase('done');
   };
 
-  const resistedCount = resistedUrgeEntriesForHabit(feelingEntries, tracks, habit.id).length + (phase === 'done' ? 1 : 0);
+  const resistedCount = resistedUrgeEntriesForHabit(feelingEntries, tracks, habit.id).length;
 
   return (
     <>
-      {phase === 'feeling' && (
-        <FeelingCapture
-          intro={<Caption style={styles.subtitle}>First, what's the craving feel like right now?</Caption>}
-          noteLabel="Say as much or as little as you want (optional)"
-          onSubmit={(feeling, zone, note) => {
-            setFeelingResult({ feeling, zone, note });
-            setPhase('menu');
-          }}
-        />
-      )}
-
       {phase === 'menu' && (
         <>
           <SectionHeading>What would help right now?</SectionHeading>
@@ -522,6 +549,7 @@ function UrgeStage({ habit, track, onDone }: { habit: QuitHabit; track: QuitTrac
           <Body style={styles.relapseIntroText}>
             You've resisted {resistedCount} {resistedCount === 1 ? 'urge' : 'urges'} on {habit.name.toLowerCase()} so far.
           </Body>
+          {urgeEntryId && <SoftFeelingOffer habit={habit} source={{ kind: 'quitHabit', refId: habit.id, linkId: urgeEntryId }} />}
           <PrimaryButton label="Done" onPress={onDone} style={styles.sheetSubmit} />
         </>
       )}
@@ -633,7 +661,7 @@ function JourneyStage({
 
   const removeHabit = () => {
     requestDelete({
-      message: `Delete "${habit.name}" and its whole journey — every track, every documented feeling? This can't be undone.`,
+      message: `Delete "${habit.name}" and its whole journey, every track and urge? This can't be undone. Feelings you noted stay in your Feelings log.`,
       perform: () => {
         deleteQuitHabit(habitId);
         onBack();
@@ -648,7 +676,7 @@ function JourneyStage({
           <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
           <Caption> Quit a Habit</Caption>
         </Pressable>
-        <Pressable onPress={removeHabit} hitSlop={8}>
+        <Pressable onPress={removeHabit} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete quit habit">
           <Ionicons name="trash-outline" size={18} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -764,7 +792,7 @@ function JourneyStage({
         <FeelingSheet
           visible={feelingSheetOpen}
           onClose={() => setFeelingSheetOpen(false)}
-          onSubmit={(feeling, zone, note) => addFeelingEntry(active.id, feeling.id, zone, note, false)}
+          onSubmit={(feeling, zone, note) => logItemFeeling({ source: { kind: 'quitHabit', refId: habitId, trackId: active.id }, zone, feelingIds: [feeling.id], note })}
         />
       )}
     </>
@@ -815,12 +843,13 @@ function TrackDetailStage({ habitId, trackId, onBack }: { habitId: string; track
       <View style={styles.list}>
         {entries.length === 0 && <Body style={styles.emptyText}>Nothing documented in this track yet.</Body>}
         {entries.map((e) => {
-          const feeling = findFeeling(e.feelingId) ?? personalFeelings.find((p) => p.id === e.feelingId);
-          const meta = zoneMeta(e.zone);
+          const feeling = e.feelingId ? findFeeling(e.feelingId) ?? personalFeelings.find((p) => p.id === e.feelingId) : undefined;
+          const meta = e.zone ? zoneMeta(e.zone) : undefined;
+          const title = feeling?.name ?? meta?.label ?? (e.isResistedUrge ? 'Resisted an urge' : 'Noted');
           return (
-            <Card key={e.id} style={[styles.timelineCard, { borderLeftColor: meta.accent, borderLeftWidth: 3 }]}>
+            <Card key={e.id} style={[styles.timelineCard, { borderLeftColor: meta?.accent ?? colors.amber, borderLeftWidth: 3 }]}>
               <View style={styles.trackHeader}>
-                <Body style={{ color: meta.accent }}>{feeling?.name ?? 'Feeling'}</Body>
+                <Body style={{ color: meta?.accent ?? colors.amber }}>{title}</Body>
                 <Caption>{formatDisplayDate(e.createdAt.slice(0, 10))}</Caption>
               </View>
               {e.isRelapseMoment && <Caption style={styles.relapseTag}>Documented as this track ended</Caption>}
@@ -853,6 +882,7 @@ function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void
       <Caption style={styles.subtitle}>A journey, not a single unbroken streak.</Caption>
 
       {habits.length === 0 && <Body style={styles.emptyText}>Nothing yet — start below, whenever you're ready.</Body>}
+      {habits.length === 0 && <SeeHowItWorks sectionId="quitHabit" />}
 
       <View style={styles.list}>
         {habits.map((h) => {
@@ -880,7 +910,7 @@ function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void
 }
 
 // ---------------------------------------------------------------------------
-export function QuitHabitScreen({ route }: Props) {
+export function QuitHabitScreen({ route, header }: Props & { header?: React.ReactNode }) {
   const { openHabitId } = route.params ?? {};
   const [stack, setStack] = useState<ScreenState[]>(() =>
     openHabitId ? [{ kind: 'overview' }, { kind: 'journey', habitId: openHabitId }] : [{ kind: 'overview' }]
@@ -893,6 +923,7 @@ export function QuitHabitScreen({ route }: Props) {
 
   return (
     <Screen>
+      {header}
       {current.kind === 'overview' && <OverviewStage onOpenHabit={(habitId) => push({ kind: 'journey', habitId })} />}
       {current.kind === 'journey' && (
         <JourneyStage
@@ -909,6 +940,11 @@ export function QuitHabitScreen({ route }: Props) {
 }
 
 const styles = themedStyles(() => ({
+  softOffer: { marginTop: spacing.md, gap: spacing.xs },
+  softOfferActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  softOfferAction: { flex: 1 },
+  softOfferLink: { marginTop: spacing.md, minHeight: 40, justifyContent: 'center' },
+  softOfferDone: { marginTop: spacing.md, color: colors.inkSoft },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

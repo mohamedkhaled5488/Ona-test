@@ -60,7 +60,13 @@ const inRange = (date: string, r: DateRange) => date >= r.start && date <= r.end
 // into any card, chart, highlight, story card or shared image.
 // ---------------------------------------------------------------------------
 export function withoutHidden(data: RecapData, hidden: SectionId[]): RecapData {
-  if (hidden.length === 0) return data;
+  // A check-in or session whose habit/skill was deleted on another phone
+  // (and synced in after) isn't shown anywhere else, so it isn't counted here.
+  const habitIds = new Set(data.habits.map((x) => x.id));
+  const skillIds = new Set(data.skills.map((x) => x.id));
+  const habitCheckIns = data.habitCheckIns.filter((c) => habitIds.has(c.habitId));
+  const skillSessions = data.skillSessions.filter((x) => skillIds.has(x.skillId));
+  if (hidden.length === 0) return habitCheckIns.length === data.habitCheckIns.length && skillSessions.length === data.skillSessions.length ? data : { ...data, habitCheckIns, skillSessions };
   const h = new Set(hidden);
   const keep = <T>(section: SectionId, arr: T[]): T[] => (h.has(section) ? [] : arr);
   return {
@@ -78,9 +84,9 @@ export function withoutHidden(data: RecapData, hidden: SectionId[]): RecapData {
     quotes: keep('book', data.quotes),
     plans: keep('planBuilder', data.plans),
     skills: keep('skills', data.skills),
-    skillSessions: keep('skills', data.skillSessions),
+    skillSessions: keep('skills', skillSessions),
     habits: keep('habitBuilder', data.habits),
-    habitCheckIns: keep('habitBuilder', data.habitCheckIns),
+    habitCheckIns: keep('habitBuilder', habitCheckIns),
     budgets: keep('budget', data.budgets),
     budgetEntries: keep('budget', data.budgetEntries),
     quitHabits: keep('quitHabit', data.quitHabits),

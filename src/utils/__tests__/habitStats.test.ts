@@ -2,7 +2,6 @@ import {
   mostSkippedWeekday,
   mostSkippedReasonTag,
   completionFeelingZone,
-  completionByTimeOfDay,
   relapseTriggerRanking,
   urgeTimeOfDayPattern,
   resistedUrgeTrend,
@@ -58,7 +57,7 @@ describe('mostSkippedWeekday', () => {
       habitCheckIn('2026-10-05', false),
       habitCheckIn('2026-09-22', true),
     ];
-    expect(mostSkippedWeekday(checkIns, HABIT_ID)).toEqual({ weekday: 'Monday', count: 3 });
+    expect(mostSkippedWeekday(checkIns, HABIT_ID)).toEqual({ weekday: 'Monday', count: 3, logged: 3 });
   });
 
   it('stays undefined below the minimum sample size', () => {
@@ -75,7 +74,7 @@ describe('mostSkippedReasonTag', () => {
       habitCheckIn('2026-09-03', false, { reasonTags: ['Tired', 'Work'] }),
       habitCheckIn('2026-09-04', false, { reasonTags: ['Work'] }),
     ];
-    expect(mostSkippedReasonTag(checkIns, HABIT_ID)).toEqual({ tag: 'Tired', count: 3 });
+    expect(mostSkippedReasonTag(checkIns, HABIT_ID)).toEqual({ tag: 'Tired', count: 3, missedTotal: 4 });
   });
 });
 
@@ -91,22 +90,6 @@ describe('completionFeelingZone', () => {
       { id: 'a', zone: 'calm', feelingIds: ['okay-okay'], date: '2026-09-01', createdAt: '2026-09-01T12:00:00Z', source: { kind: 'habit', refId: 'other-habit' } },
     ];
     expect(completionFeelingZone(entries, HABIT_ID)).toBeUndefined();
-  });
-});
-
-describe('completionByTimeOfDay', () => {
-  it('reports a completion rate per time-of-day bucket once each clears the minimum', () => {
-    const checkIns = [
-      habitCheckIn('2026-09-01', true, { hour: 7 }),
-      habitCheckIn('2026-09-02', true, { hour: 8 }),
-      habitCheckIn('2026-09-03', false, { hour: 8 }),
-      habitCheckIn('2026-09-04', false, { hour: 20 }),
-      habitCheckIn('2026-09-05', false, { hour: 21 }),
-      habitCheckIn('2026-09-06', false, { hour: 22 }),
-    ];
-    const stats = completionByTimeOfDay(checkIns, HABIT_ID);
-    expect(stats.find((s) => s.bucket === 'before 9am')).toEqual({ bucket: 'before 9am', completionRate: 67, count: 3 });
-    expect(stats.find((s) => s.bucket === 'after 6pm')).toEqual({ bucket: 'after 6pm', completionRate: 0, count: 3 });
   });
 });
 
@@ -325,7 +308,16 @@ describe('Quit dashboard builders', () => {
       HABIT_ID,
       '2026-10-01'
     );
-    expect(three).toContain('most often in the night');
+    // Three isn't enough to say when urges tend to come (needs 5, mostly at one time).
+    expect(three).not.toMatch(/often at night|most often/);
+    const five = quitAnalysisSummary(
+      tracks,
+      [22, 23, 22, 23, 21].map((hour, i) => quitFeelingEntry({ hour, isResistedUrge: true, daysAgo: i })),
+      HABIT_ID,
+      '2026-10-01'
+    );
+    expect(five).toContain('often at night');
+    expect(five).not.toContain('most often');
   });
 
   it('the Build summary only says "most often skipped" once the weekday clears the minimum', () => {

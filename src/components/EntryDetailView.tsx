@@ -62,7 +62,7 @@ export function EntryDetailView({
 
       {children}
 
-      {photoUri && <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />}
+      {!!photoUri && <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />}
 
       {notes && (
         <Card style={styles.notesCard}>

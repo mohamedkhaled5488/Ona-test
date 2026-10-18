@@ -19,6 +19,7 @@ import type { SettingsPage } from './pages';
 import { useDataSpace } from '../../hooks/useDataSpace';
 import { useDemoActions } from '../../demo/useDemoActions';
 import { appVersion, diagnostics } from '../../utils/diagnostics';
+import { navigateWhenReady } from '../../navigation/navigationRef';
 
 type Go = (page: SettingsPage) => void;
 
@@ -78,6 +79,11 @@ export function HelpPage({ go, openSleepHelp }: { go: Go; openSleepHelp: () => v
         ))}
         <NavRow label="Sleep help" explain="Wind-down ideas, sounds and the bedtime routine" onPress={openSleepHelp} />
         {LEGAL.helpCenterUrl && <NavRow label="Help center" external onPress={() => open(LEGAL.helpCenterUrl, '')} />}
+      </Group>
+
+      <Group title="Discover">
+        <NavRow icon="compass-outline" label="Discover Ona" explain="The demo, the tour, and each section explained" onPress={() => navigateWhenReady('discover')} />
+        <NavRow icon="albums-outline" label="Replay tour" explain="From the beginning" onPress={() => navigateWhenReady('discoverTour', {})} />
       </Group>
 
       <DemoModeGroup />

@@ -35,7 +35,7 @@ export type RootStackParamList = {
   // the screen skips its own result/guidance detour and returns straight to
   // the caller once logged, since this is a light add-on step, not a
   // destination in itself.
-  moodCheck: { source?: FeelingSource; startZone?: FeelingZone } | undefined;
+  moodCheck: { source?: FeelingSource; startZone?: FeelingZone; note?: string; tags?: string[] } | undefined; // note/tags: carried over from a quick sheet's "Be more specific"
   sleep: undefined;
   book: { openEntryId?: string } | undefined;
   skills: { openSkillId?: string; openSessionId?: string } | undefined;
@@ -43,6 +43,9 @@ export type RootStackParamList = {
   budget: { openBudgetId?: string } | undefined;
   quitHabit: { openHabitId?: string } | undefined;
   habitsHub: { initialMode?: 'build' | 'quit' } | undefined;
+  discover: undefined;
+  // Start at a section, resume where it was left, or from the beginning.
+  discoverTour: { sectionId?: string; resume?: boolean } | undefined;
   journalWrite: { date: string };
   planDetail: { planId: string };
   planStepDetail: { planId: string; path: string[] };

@@ -8,6 +8,7 @@ import type { DailyTask, FeelingCheckIn, FeelingZone, TaskTag } from '../types/s
 import type { TaskFeelingMode } from '../store/useSettingsStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { useDailyPlanningStore } from '../store/useDailyPlanningStore';
+import { unlinkDeletedFeeling } from './itemFeelings';
 
 export type FeelingPhase = 'before' | 'after';
 
@@ -96,6 +97,7 @@ export function clearTaskFeeling(taskId: string, date: string, phase: FeelingPha
 export function deleteFeelingEntry(entryId: string): void {
   const entry = useFeelingsStore.getState().entries.find((e) => e.id === entryId);
   useFeelingsStore.getState().deleteEntry(entryId);
+  if (entry?.source?.kind === 'quitHabit') unlinkDeletedFeeling(entryId);
   if (entry?.source?.kind !== 'task') return;
   const plan = useDailyPlanningStore.getState();
   const task = plan.tasks.find((t) => t.id === entry.source!.refId);

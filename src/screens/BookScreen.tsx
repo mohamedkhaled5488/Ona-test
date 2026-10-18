@@ -40,6 +40,7 @@ import type { Quote, ReadingListEntry, ReadingStatus } from '../types/sections';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'book'>;
 
@@ -227,7 +228,10 @@ function MyBooksListStage({
       )}
 
       {entries.length === 0 && (
-        <Body style={styles.emptyText}>Nothing here yet — add a book below to start tracking it.</Body>
+        <>
+          <Body style={styles.emptyText}>Nothing here yet — add a book below to start tracking it.</Body>
+          <SeeHowItWorks sectionId="book" />
+        </>
       )}
 
       {groups.map((g) => {

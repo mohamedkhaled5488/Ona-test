@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '../components/Screen';
 import { ScreenTitle, Caption, Body } from '../components/Typography';
 import { colors, radii, spacing, fonts } from '../theme';
 import { HabitBuilderScreen } from './HabitBuilderScreen';
@@ -21,8 +20,10 @@ type Mode = 'build' | 'quit';
 export function HabitsHubScreen({ route }: Props) {
   const [mode, setMode] = useState<Mode>(route.params?.initialMode ?? 'build');
 
-  return (
-    <Screen>
+  // The title and the Build/Quit switch go inside the chosen screen, so the
+  // page has one scrolling area (not one scroll view inside another).
+  const header = (
+    <>
       <ScreenTitle>Habits</ScreenTitle>
       <Caption style={styles.subtitle}>Build a new habit, or work on quitting one.</Caption>
 
@@ -35,19 +36,13 @@ export function HabitsHubScreen({ route }: Props) {
           </Pressable>
         ))}
       </View>
+    </>
+  );
 
-      {mode === 'build' ? (
-        <HabitBuilderScreen
-          navigation={undefined as any}
-          route={{ key: 'habitBuilder-in-hub', name: 'habitBuilder', params: undefined }}
-        />
-      ) : (
-        <QuitHabitScreen
-          navigation={undefined as any}
-          route={{ key: 'quitHabit-in-hub', name: 'quitHabit', params: undefined }}
-        />
-      )}
-    </Screen>
+  return mode === 'build' ? (
+    <HabitBuilderScreen navigation={undefined as any} route={{ key: 'habitBuilder-in-hub', name: 'habitBuilder', params: undefined }} header={header} />
+  ) : (
+    <QuitHabitScreen navigation={undefined as any} route={{ key: 'quitHabit-in-hub', name: 'quitHabit', params: undefined }} header={header} />
   );
 }
 

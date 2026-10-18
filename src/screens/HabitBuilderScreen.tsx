@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps, NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,6 +24,8 @@ import { todayISO, formatDisplayDate, formatClockTime } from '../utils/date';
 import { durationPresets, starterHabitIdeas } from '../data/habitPresets';
 import { reasonTagOptions } from '../data/feelingsWheel';
 import { BuildHabitAnalysisStage } from './BuildHabitAnalysis';
+import { HabitLogDetail, type LeaveGuard } from './habits/HabitLogDetail';
+import { SOFT_MISSED } from './habits/HabitPattern';
 import { useQuitHabitsStore } from '../store/useQuitHabitsStore';
 import { habitChain, needsReentry, isReviewDue, daysSinceLastActivity } from '../utils/habitStats';
 import { frequencyLabel, isScheduledDay, weekStart } from '../utils/habitFrequency';
@@ -39,6 +41,11 @@ import {
 import type { Habit, HabitFrequency } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
 import { successFeedback } from '../utils/haptics';
+import { ItemFeelingPrompt } from '../components/ItemFeelingSheet';
+import { shouldAskItemFeeling } from '../utils/itemFeelings';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { useFeelingsStore } from '../store/useFeelingsStore';
+import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
 const accent = sectionAccents.habitBuilder;
 
@@ -300,6 +307,7 @@ function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void
       <Caption style={styles.subtitle}>Small, consistent steps — grounded in how habits actually form, not the 21-day myth alone.</Caption>
 
       {habits.length === 0 && <Body style={styles.emptyText}>Nothing yet — build your first habit below.</Body>}
+      {habits.length === 0 && <SeeHowItWorks sectionId="habitBuilder" />}
 
       {active.length > 0 && (
         <View style={styles.group}>
@@ -350,6 +358,11 @@ function CheckInSheet({
   const setCheckIn = useHabitsStore((s) => s.setCheckIn);
   const clearCheckIn = useHabitsStore((s) => s.clearCheckIn);
   const [done, setDone] = useState(true);
+  const [minimum, setMinimum] = useState(false);
+  const minimumVersion = useHabitsStore((s) => s.habits.find((h) => h.id === habitId)?.minimumVersion);
+  const habitName = useHabitsStore((s) => s.habits.find((h) => h.id === habitId)?.name);
+  const feelingAsk = useSettingsStore((s) => s.habitFeelingAsk);
+  const feelingEntries = useFeelingsStore((s) => s.entries);
   const [note, setNote] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
   // Only asked when marking Missed — reuses the same reasonTagOptions as
@@ -365,6 +378,7 @@ function CheckInSheet({
   React.useEffect(() => {
     if (!visible) return;
     setDone(existing?.done ?? initialDone ?? true);
+    setMinimum(!!existing?.minimum);
     setNote(existing?.note ?? '');
     setPhotoUri(existing?.photoUri);
     setReasonTags(existing?.reasonTags ?? []);
@@ -399,32 +413,26 @@ function CheckInSheet({
   if (!date) return null;
 
   if (justSaved) {
-    return (
-      <SheetModal visible={visible} onClose={onClose}>
-        <SectionHeading>How did that feel?</SectionHeading>
-        <Caption style={styles.feelingPromptText}>Totally optional — just documenting what this habit tends to feel like.</Caption>
-        <PrimaryButton
-          label="Log a feeling"
-          style={styles.sheetSubmit}
-          onPress={() => {
-            onClose();
-            navigation.push('moodCheck', { source: { kind: 'habit', refId: habitId } });
-          }}
-        />
-        <Pressable onPress={onClose}>
-          <Caption style={styles.clearLink}>Skip</Caption>
-        </Pressable>
-      </SheetModal>
-    );
+    return <ItemFeelingPrompt visible={visible} source={{ kind: 'habit', refId: habitId }} context={`Done: ${habitName ?? 'this habit'}`} onDone={onClose} />;
   }
 
   return (
     <SheetModal visible={visible} onClose={onClose}>
       <SectionHeading>{formatDisplayDate(date)}</SectionHeading>
       <View style={styles.doneMissedRow}>
-        <PrimaryButton label="Done" variant={done ? 'primary' : 'outline'} style={styles.doneMissedButton} onPress={() => setDone(true)} />
-        <PrimaryButton label="Missed" variant={!done ? 'primary' : 'outline'} style={styles.doneMissedButton} onPress={() => setDone(false)} />
+        <PrimaryButton label="Done" variant={done && !minimum ? 'primary' : 'outline'} style={styles.doneMissedButton} onPress={() => { setDone(true); setMinimum(false); }} />
+        <PrimaryButton label="Missed" variant={!done ? 'primary' : 'outline'} style={styles.doneMissedButton} onPress={() => { setDone(false); setMinimum(false); }} />
       </View>
+      {minimumVersion ? (
+        <PrimaryButton
+          label="Did the minimum version"
+          variant={done && minimum ? 'primary' : 'outline'}
+          style={styles.minimumButton}
+          onPress={() => { setDone(true); setMinimum(true); }}
+          accessibilityHint={`Counts as done: ${minimumVersion}`}
+        />
+      ) : null}
+      {done && minimum && minimumVersion ? <Caption style={styles.minimumVersionText}>Still counts: {minimumVersion}</Caption> : null}
 
       {!done && (
         <>
@@ -461,9 +469,11 @@ function CheckInSheet({
         label="Save"
         style={styles.sheetSubmit}
         onPress={() => {
-          setCheckIn(habitId, date, done, note, photoUri, reasonTags);
+          setCheckIn(habitId, date, done, note, photoUri, reasonTags, undefined, done && minimum);
           if (done) successFeedback();
-          if (done) {
+          // The optional feeling sheet, per Settings (only for today: a feeling
+          // logged now is about now).
+          if (done && date === todayISO() && shouldAskItemFeeling(feelingAsk, feelingEntries, 'habit', habitId, todayISO())) {
             setJustSaved(true);
           } else {
             onClose();
@@ -502,73 +512,26 @@ function HabitCalendar({
   const cellColor = (date: string) => {
     const entry = byDate[date];
     if (!entry) return undefined;
-    return entry.done ? accent : withAlpha('#B3413A', 0.6);
+    return entry.done ? (entry.minimum ? withAlpha(accent, 0.45) : accent) : SOFT_MISSED;
   };
 
   return (
     <Card style={styles.section}>
-      <Eyebrow style={{ color: accent }}>Streak calendar — don't break the chain</Eyebrow>
+      <Eyebrow style={{ color: accent }}>Your days</Eyebrow>
       <MonthCalendar
         accent={accent}
         month={month}
         onMonthChange={setMonth}
         getDayColor={cellColor}
         onDayPress={(date) => {
-          const entry = byDate[date];
-          if (entry && (entry.note || entry.photoUri)) onOpenDetail(date);
+          // A logged day opens its own page; an empty one opens the check-in.
+          if (byDate[date]) onOpenDetail(date);
           else onOpenCheckIn(date);
         }}
       />
-      <Caption>Tap any day to check in, document it, or see what you saved.</Caption>
+      <Caption>Tap a day to check in, or to see and edit what you logged. A missed day pauses a streak; it never resets it.</Caption>
       {habit?.frequency && <Caption style={styles.scheduleNote}>Scheduled: {frequencyLabel(habit.frequency)}</Caption>}
     </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
-function DayDetailStage({ habitId, date, onBack, onEdit }: { habitId: string; date: string; onBack: () => void; onEdit: () => void }) {
-  const { requestDelete } = useUi();
-  const habits = useHabitsStore((s) => s.habits);
-  const checkIns = useHabitsStore((s) => s.checkIns);
-  const clearCheckIn = useHabitsStore((s) => s.clearCheckIn);
-
-  const habit = habits.find((h) => h.id === habitId);
-  const entry = checkIns.find((c) => c.habitId === habitId && c.date === date);
-
-  if (!habit || !entry) {
-    return (
-      <>
-        <Pressable onPress={onBack} style={styles.backLink}>
-          <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
-          <Caption> Back</Caption>
-        </Pressable>
-        <Body>Nothing logged for this day anymore.</Body>
-      </>
-    );
-  }
-
-  const remove = () => {
-    requestDelete({
-      message: 'Clear this check-in?',
-      perform: () => {
-        clearCheckIn(habitId, date);
-        onBack();
-      },
-    });
-  };
-
-  return (
-    <EntryDetailView
-      accent={accent}
-      title={formatDisplayDate(date)}
-      subtitle={entry.done ? 'Done' : 'Missed'}
-      backLabel={habit.name}
-      notes={entry.note}
-      photoUri={entry.photoUri}
-      onBack={onBack}
-      onEdit={onEdit}
-      onDelete={remove}
-    />
   );
 }
 
@@ -835,6 +798,8 @@ function FolderStage({
   // After a timed session ends, offer the same optional feeling check as the
   // plain Done flow — the session is already saved by this point.
   const [postSessionPrompt, setPostSessionPrompt] = useState(false);
+  const feelingAsk = useSettingsStore((s) => s.habitFeelingAsk);
+  const feelingEntries = useFeelingsStore((s) => s.entries);
 
   if (!habit) {
     return (
@@ -867,7 +832,7 @@ function FolderStage({
 
   const removeHabit = () => {
     requestDelete({
-      message: `Delete "${habit.name}" and its whole history? This can't be undone.`,
+      message: `Delete "${habit.name}" and its whole history? This can't be undone. Feelings you logged with it stay in your Feelings log.`,
       perform: () => {
         deleteHabit(habitId);
         onBack();
@@ -947,7 +912,7 @@ function FolderStage({
           <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
           <Caption> Habits</Caption>
         </Pressable>
-        <Pressable onPress={removeHabit} hitSlop={8}>
+        <Pressable onPress={removeHabit} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete habit">
           <Ionicons name="trash-outline" size={18} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -1079,25 +1044,16 @@ function FolderStage({
           setCheckIn(habitId, today, true, note, undefined, undefined, minutes);
           successFeedback();
           setSessionOpen(false);
-          setPostSessionPrompt(true);
+          if (shouldAskItemFeeling(feelingAsk, feelingEntries, 'habit', habitId, today)) setPostSessionPrompt(true);
         }}
       />
 
-      <SheetModal visible={postSessionPrompt} onClose={() => setPostSessionPrompt(false)}>
-        <SectionHeading>How did that feel?</SectionHeading>
-        <Caption style={styles.feelingPromptText}>Totally optional — just documenting what this habit tends to feel like.</Caption>
-        <PrimaryButton
-          label="Log a feeling"
-          style={styles.sheetSubmit}
-          onPress={() => {
-            setPostSessionPrompt(false);
-            navigation.push('moodCheck', { source: { kind: 'habit', refId: habitId } });
-          }}
-        />
-        <Pressable onPress={() => setPostSessionPrompt(false)}>
-          <Caption style={styles.clearLink}>Skip</Caption>
-        </Pressable>
-      </SheetModal>
+      <ItemFeelingPrompt
+        visible={postSessionPrompt}
+        source={{ kind: 'habit', refId: habitId }}
+        context={`Done: ${habit.name}`}
+        onDone={() => setPostSessionPrompt(false)}
+      />
 
       <HabitCalendar
         habitId={habitId}
@@ -1139,8 +1095,11 @@ function FolderStage({
 }
 
 // ---------------------------------------------------------------------------
-export function HabitBuilderScreen({ route }: Props) {
+// `header`: the Habits hub's title and Build/Quit switch, drawn inside this
+// screen's own scroll so there is only one scrolling area.
+export function HabitBuilderScreen({ route, header }: Props & { header?: React.ReactNode }) {
   const { openHabitId, openDate } = route.params ?? {};
+  const { showDialog } = useUi();
   const [stack, setStack] = useState<ScreenState[]>(() => {
     if (openHabitId && openDate) {
       return [{ kind: 'overview' }, { kind: 'folder', habitId: openHabitId }, { kind: 'dayDetail', habitId: openHabitId, date: openDate }];
@@ -1156,29 +1115,65 @@ export function HabitBuilderScreen({ route }: Props) {
   // day's detail view can reopen the exact same sheet those two screens share.
   const [checkInTarget, setCheckInTarget] = useState<{ habitId: string; date: string; initialDone: boolean } | null>(null);
 
-  useBackHandler({ stepBack: stack.length > 1 ? stepBack : undefined });
+  // A day's page with unsaved edits asks Save / Discard / Keep editing.
+  const [guard, setGuard] = useState<LeaveGuard | null>(null);
+  useBackHandler({ stepBack: stack.length > 1 ? stepBack : undefined, dirty: !!guard?.dirty, onSave: () => guard?.save() });
+
+  // Coming back to a list (the logs) lands where you were.
+  const scrollRef = React.useRef<ScrollView>(null);
+  const scrollY = React.useRef(0);
+  const saved = React.useRef<number[]>([]);
+  const depth = React.useRef(stack.length);
+  React.useEffect(() => {
+    const was = depth.current;
+    depth.current = stack.length;
+    if (stack.length > was) {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+      return;
+    }
+    const y = saved.current[stack.length] ?? 0;
+    const id = setTimeout(() => scrollRef.current?.scrollTo({ y, animated: false }), 50);
+    return () => clearTimeout(id);
+  }, [stack.length]);
+  const pushKeepingScroll = (st: ScreenState) => {
+    saved.current[stack.length] = scrollY.current;
+    push(st);
+  };
 
   return (
-    <Screen>
+    <Screen scrollRef={scrollRef} onScroll={(y) => (scrollY.current = y)}>
+      {header}
       {current.kind === 'overview' && <OverviewStage onOpenHabit={(habitId) => push({ kind: 'folder', habitId })} />}
       {current.kind === 'folder' && (
         <FolderStage
           habitId={current.habitId}
           onBack={stepBack}
-          onOpenDetail={(date) => push({ kind: 'dayDetail', habitId: current.habitId, date })}
-          onOpenAnalysis={() => push({ kind: 'analysis', habitId: current.habitId })}
+          onOpenDetail={(date) => pushKeepingScroll({ kind: 'dayDetail', habitId: current.habitId, date })}
+          onOpenAnalysis={() => pushKeepingScroll({ kind: 'analysis', habitId: current.habitId })}
           onRequestCheckIn={(date, initialDone) => setCheckInTarget({ habitId: current.habitId, date, initialDone })}
         />
       )}
-      {current.kind === 'analysis' && <BuildHabitAnalysisStage habitId={current.habitId} onBack={stepBack} />}
+      {current.kind === 'analysis' && (
+        <BuildHabitAnalysisStage habitId={current.habitId} onBack={stepBack} onOpenLog={(date) => pushKeepingScroll({ kind: 'dayDetail', habitId: current.habitId, date })} />
+      )}
       {current.kind === 'dayDetail' && (
-        <DayDetailStage
+        <HabitLogDetail
           habitId={current.habitId}
           date={current.date}
-          onBack={stepBack}
-          onEdit={() => {
-            setCheckInTarget({ habitId: current.habitId, date: current.date, initialDone: true });
-            stepBack();
+          accent={accent}
+          setGuard={setGuard}
+          onBack={() => {
+            // The on-screen back link asks too, like the header's.
+            if (guard?.dirty) {
+              showDialog({
+                title: 'Save your changes before leaving?',
+                actions: [
+                  { label: 'Keep editing', style: 'cancel' },
+                  { label: 'Discard', style: 'destructive', onPress: () => { setGuard(null); stepBack(); } },
+                  { label: 'Save', style: 'default', onPress: () => { guard.save(); setGuard(null); stepBack(); } },
+                ],
+              });
+            } else stepBack();
           }}
         />
       )}
@@ -1450,6 +1445,7 @@ const styles = themedStyles(() => ({
   doneMissedButton: {
     flex: 1,
   },
+  minimumButton: { marginTop: spacing.sm },
   minimumVersionText: {
     fontStyle: 'italic',
   },

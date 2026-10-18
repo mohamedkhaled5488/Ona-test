@@ -23,6 +23,11 @@ export const ALLOWED_EVENTS = [
   'purchase_completed',
   'purchase_canceled',
   'restore_clicked',
+  // Discover: generic only, never which slide or anything the user wrote.
+  'discover_opened',
+  'tour_started',
+  'tour_completed',
+  'demo_started',
 ] as const;
 export type AnalyticsEvent = (typeof ALLOWED_EVENTS)[number];
 

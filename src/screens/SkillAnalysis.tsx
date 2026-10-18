@@ -18,7 +18,9 @@ import { zoneMeta } from '../data/feelingsWheel';
 import { sessionTagOptions } from '../data/skillPresets';
 import { useSkillsStore } from '../store/useSkillsStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
-import { sessionFeelingZone, minutesByTimeOfDay } from '../utils/skillStats';
+import { minutesByTimeOfDay } from '../utils/skillStats';
+import { basedOn, itemFeelingInsight, zoneTally } from '../utils/feelingsInsights';
+import { sessionLengthLines } from '../utils/habitStats';
 import { shareSkillPortfolioAsText, exportSkillPortfolioAsPdf } from '../utils/skillExport';
 import {
   DIFFICULTY_LABELS,
@@ -197,11 +199,13 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
   const effort = metric ? effortAndProgress(allSessions, skillId, series, metric.direction) : undefined;
   const neglected = neglectedSubSkills(skill, allSessions, today).slice(0, 2);
   const struggle = mostFrequentStruggle(skill, allSessions);
-  const feeling = sessionFeelingZone(feelings, skillId);
+  const skillFeelings = feelings.filter((f) => f.source?.kind === 'skill' && f.source.refId === skillId);
+  const feeling = itemFeelingInsight(skillFeelings, 'after practicing');
+  const feelingTop = zoneTally(skillFeelings)[0];
   const feelingBySub = feelingBySubSkill(skill, allSessions, feelings);
-  const timeOfDay = minutesByTimeOfDay(allSessions, skillId);
+  const timeOfDay = sessionLengthLines(minutesByTimeOfDay(allSessions, skillId));
   const thisMonth = monthlyRecap(skill, allSessions, today.slice(0, 7));
-  const hasInsights = plateau || sweet || effort || neglected.length || struggle || feeling || timeOfDay.length;
+  const hasInsights = plateau || sweet || effort || neglected.length || struggle || feeling || !!timeOfDay;
 
   // --- Log ---
   const q = search.trim().toLowerCase();
@@ -385,24 +389,15 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
       )}
       {feeling && (
         <InsightCard
-          kind="Feeling after practice"
-          accent={zoneMeta(feeling.zone).accent}
-          headline={`You usually feel ${zoneMeta(feeling.zone).label} after practicing.`}
-          evidence={[`${feeling.count} of ${feeling.total} feelings logged after a session`, ...feelingBySub.map((f) => `${f.subSkill.name}: mostly ${zoneMeta(f.zone).label}`)].join(' · ')}
+          kind="Feelings after"
+          accent={feelingTop ? zoneMeta(feelingTop.zone).accent : color}
+          headline={feeling.headline}
+          evidence={[feeling.detail, ...feelingBySub.map((f) => `${f.subSkill.name}: mostly ${zoneMeta(f.zone).label} (${f.count} of ${f.total})`), `${basedOn(feeling.n)} logged after a session.`]
+            .filter(Boolean)
+            .join(' · ')}
         />
       )}
-      {timeOfDay.length > 0 && (
-        <InsightCard
-          kind="Time of day"
-          accent={color}
-          headline={
-            timeOfDay.length > 1
-              ? `Your ${timeOfDay[0].bucket} sessions tend to run longest — ${timeOfDay[0].averageMinutes} min on average.`
-              : `Your ${timeOfDay[0].bucket} sessions run ${timeOfDay[0].averageMinutes} min on average.`
-          }
-          evidence={timeOfDay.map((t) => `${t.bucket}: ${t.averageMinutes} min over ${t.count}`).join(' · ')}
-        />
-      )}
+      {timeOfDay && <InsightCard kind="Time of day" accent={color} headline={timeOfDay.headline} evidence={timeOfDay.evidence} />}
       <InsightCard
         kind="This month"
         accent={color}
@@ -462,7 +457,7 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
                   {s.tag && <Caption style={{ color }}>{s.tag}</Caption>}
                   {s.notes && <Caption numberOfLines={2}>{s.notes}</Caption>}
                   <SessionDetails skill={skill} session={s} compact />
-                  {s.photoUri && <Image source={{ uri: s.photoUri }} style={styles.logPhoto} resizeMode="cover" />}
+                  {!!s.photoUri && <Image source={{ uri: s.photoUri }} style={styles.logPhoto} resizeMode="cover" />}
                 </Card>
               </Pressable>
             ))}

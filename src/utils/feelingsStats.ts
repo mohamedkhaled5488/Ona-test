@@ -414,6 +414,9 @@ export function analysisMinCount(_spanDays: number): number {
   return ANALYSIS_MIN_TAG_COUNT;
 }
 
+// On the Lively +2 ... Low -2 scale: below this, a tag's days are about the same as usual.
+export const MIN_IMPACT_DELTA = 0.25;
+
 export interface TagImpact {
   tag: string;
   count: number;
@@ -446,6 +449,8 @@ export function tagImpactRanking(entries: FeelingCheckIn[], minCount: number = A
       const avgScore = g.sum / g.count;
       return { tag, count: g.count, avgScore, baselineScore, delta: avgScore - baselineScore };
     })
+    // A tiny difference isn't worth ranking (or calling "higher").
+    .filter((t) => Math.abs(t.delta) >= MIN_IMPACT_DELTA)
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 }
 
@@ -544,16 +549,6 @@ export function tagPrimaryZone(entries: FeelingCheckIn[], tag: string, recentWin
     .slice(0, recentWindow);
   const recentCount = recent.filter((e) => e.zone === zone).length;
   return { tag, zone, recentCount, recentOf: recent.length };
-}
-
-// The bold, one-line headline for a "Biggest impact" card — confident and
-// specific, but never causal: "your strongest link to feeling X," not
-// "causes X" or "makes you feel X." A real third factor (poor sleep on
-// workdays, a deadline, something unrelated) could be the actual driver
-// behind both the tag and the feeling — this only ever states what was
-// observed together.
-export function describeTagHeadline(tag: string, primaryZone: TagPrimaryZone): string {
-  return `${tag} is your strongest link to feeling ${zoneMeta(primaryZone.zone).label}.`;
 }
 
 export interface TagTrend {

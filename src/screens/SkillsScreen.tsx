@@ -47,6 +47,11 @@ import { SkillJourneyStage } from './SkillJourney';
 import { MilestoneAchieveSheet, ProgressRing, SessionDetails } from './SkillParts';
 import type { FeedbackSource, SessionDifficulty, Skill, SkillMilestone, SkillType } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
+import { ItemFeelingPrompt } from '../components/ItemFeelingSheet';
+import { shouldAskItemFeeling } from '../utils/itemFeelings';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { useFeelingsStore } from '../store/useFeelingsStore';
+import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
 const accent = sectionAccents.skills;
 
@@ -112,8 +117,8 @@ function AddSkillSheet({ visible, onClose, onCreated }: { visible: boolean; onCl
 
       <Eyebrow style={styles.fieldLabel}>Color</Eyebrow>
       <View style={styles.swatchRow}>
-        {skillColorOptions.map((c) => (
-          <Pressable key={c} onPress={() => setColor(c)} style={[styles.colorSwatch, { backgroundColor: c }, color === c && styles.swatchActive]} />
+        {skillColorOptions.map((c, i) => (
+          <Pressable key={c} onPress={() => setColor(c)} accessibilityRole="radio" accessibilityState={{ selected: color === c }} accessibilityLabel={`Color ${i + 1} of ${skillColorOptions.length}`} style={[styles.colorSwatch, { backgroundColor: c }, color === c && styles.swatchActive]} />
         ))}
       </View>
 
@@ -193,6 +198,7 @@ function OverviewStage({ onOpenSkill }: { onOpenSkill: (skillId: string, setUp?:
       <Caption style={styles.subtitle}>Am I getting better? Track practice, progress and the milestones along the way.</Caption>
 
       {skills.length === 0 && <Body style={styles.emptyText}>Nothing yet — add the first skill you're practicing.</Body>}
+      {skills.length === 0 && <SeeHowItWorks sectionId="skills" />}
 
       <View style={styles.skillList}>{active.map(renderCard)}</View>
 
@@ -220,11 +226,12 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
   // After saving, offer the optional "how did that feel" step rather than
   // forcing it — the session is already saved by this point.
   const [justSaved, setJustSaved] = useState(false);
+  const feelingAsk = useSettingsStore((s) => s.skillFeelingAsk);
+  const feelingEntries = useFeelingsStore((s) => s.entries);
   const [minutesText, setMinutesText] = useState('');
   const [notes, setNotes] = useState('');
   const [tag, setTag] = useState<string | undefined>(undefined);
   const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
-  const [hasVoiceMemo, setHasVoiceMemo] = useState(false);
 
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerPaused, setTimerPaused] = useState(false);
@@ -248,7 +255,6 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
     setNotes('');
     setTag(undefined);
     setPhotoUri(undefined);
-    setHasVoiceMemo(false);
     setTimerRunning(false);
     setTimerPaused(false);
     setElapsedSeconds(0);
@@ -327,23 +333,7 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
   const hasDetails = focus.length || difficulty || Object.keys(metricValues).length || struggled.length || struggledText.trim() || breakthrough || feedbackText.trim();
 
   if (justSaved) {
-    return (
-      <SheetModal visible={visible} onClose={close}>
-        <SectionHeading>How did that practice feel?</SectionHeading>
-        <Caption style={styles.promptHint}>Totally optional — just documenting what this practice tends to feel like.</Caption>
-        <PrimaryButton
-          label="Log a feeling"
-          style={styles.sheetSubmit}
-          onPress={() => {
-            close();
-            navigation.push('moodCheck', { source: { kind: 'skill', refId: skill.id } });
-          }}
-        />
-        <Pressable onPress={close}>
-          <Caption style={styles.removePhotoText}>Skip</Caption>
-        </Pressable>
-      </SheetModal>
-    );
+    return <ItemFeelingPrompt visible={visible} source={{ kind: 'skill', refId: skill.id }} context={`Practiced: ${skill.name}`} onDone={close} />;
   }
 
   return (
@@ -414,17 +404,6 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
           <PrimaryButton label="Choose from library" variant="outline" onPress={() => pickPhoto('library')} />
         </View>
       )}
-
-      <Pressable
-        style={styles.voiceStub}
-        onPress={() => {
-          setHasVoiceMemo(true);
-          showToast({ message: 'Voice capture arrives once microphone access is wired up — marked as a spoken reflection for now.' });
-        }}
-      >
-        <Ionicons name={hasVoiceMemo ? 'mic' : 'mic-outline'} size={16} color={hasVoiceMemo ? accent : colors.inkSoft} />
-        <Caption style={hasVoiceMemo ? { color: accent } : undefined}> {hasVoiceMemo ? 'Voice memo noted (coming soon)' : 'Voice memo (coming soon)'}</Caption>
-      </Pressable>
 
       <Pressable onPress={() => setShowDetails((v) => !v)} style={styles.detailsToggle} accessibilityRole="button">
         <Ionicons name={showDetails ? 'chevron-up' : 'chevron-down'} size={16} color={skill.color} />
@@ -510,7 +489,8 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
             minutes: Number(minutesText) || 0,
             notes,
             photoUri,
-            hasVoiceMemo,
+            // No voice recording yet, so nothing claims one is attached.
+            hasVoiceMemo: false,
             tag,
             startedAt,
             focusSubSkillIds: focus,
@@ -521,7 +501,9 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
             breakthrough,
             feedback: feedbackFrom && feedbackText.trim() ? { from: feedbackFrom, text: feedbackText } : undefined,
           });
-          setJustSaved(true);
+          // The optional feeling sheet, per Settings.
+          if (shouldAskItemFeeling(feelingAsk, feelingEntries, 'skill', skill.id, todayISO())) setJustSaved(true);
+          else close();
         }}
         style={styles.sheetSubmit}
       />
@@ -611,7 +593,7 @@ function FolderStage({
 
   const removeSkill = () => {
     requestDelete({
-      message: `Delete "${skill.name}" and every session logged for it? This can't be undone. (Archiving keeps everything instead.)`,
+      message: `Delete "${skill.name}" and every session logged for it? This can't be undone. Feelings you logged with it stay in your Feelings log. (Archiving keeps everything instead.)`,
       perform: () => {
         deleteSkill(skillId);
         onBack();
@@ -840,7 +822,7 @@ function FolderStage({
           <Card style={[styles.resurfaceCard, { borderLeftColor: color }]}>
             <Eyebrow style={{ color }}>A while back in your practice…</Eyebrow>
             <Caption>{formatDisplayDate(resurfaced.date)}</Caption>
-            {resurfaced.photoUri && <Image source={{ uri: resurfaced.photoUri }} style={styles.resurfacePhoto} resizeMode="cover" />}
+            {!!resurfaced.photoUri && <Image source={{ uri: resurfaced.photoUri }} style={styles.resurfacePhoto} resizeMode="cover" />}
             {resurfaced.notes && <Body style={styles.resurfaceText} numberOfLines={3}>{resurfaced.notes}</Body>}
           </Card>
         </Pressable>
@@ -946,7 +928,7 @@ function SessionDetailStage({ skillId, sessionId, onBack }: { skillId: string; s
       backLabel={skill.name}
       notes={session.notes}
       photoUri={session.photoUri}
-      hasVoiceMemo={session.hasVoiceMemo}
+      hasVoiceMemo={false}
       onBack={onBack}
       onDelete={() =>
         requestDelete({
@@ -1106,7 +1088,6 @@ const styles = themedStyles(() => ({
   photoButtons: { gap: spacing.sm },
   photoPreview: { width: '100%', height: 160, borderRadius: radii.md, backgroundColor: colors.stone },
   removePhotoText: { color: colors.inkSoft, textDecorationLine: 'underline' },
-  voiceStub: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, marginBottom: spacing.xs },
   detailsToggle: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', paddingVertical: spacing.sm, marginTop: spacing.xs },
   details: { gap: spacing.xs },
   nudge: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderLeftWidth: 3, marginBottom: spacing.sm },

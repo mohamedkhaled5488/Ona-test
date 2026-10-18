@@ -34,9 +34,14 @@ interface HabitsState {
     note?: string,
     photoUri?: string,
     reasonTags?: string[],
-    durationMinutes?: number
+    durationMinutes?: number,
+    minimum?: boolean
   ) => void;
   clearCheckIn: (habitId: string, date: string) => void;
+  // The log detail page: change a day's status or comment, delete it, undo.
+  updateCheckIn: (id: string, patch: { done?: boolean; minimum?: boolean; note?: string }) => void;
+  deleteCheckIn: (id: string) => HabitCheckIn | undefined;
+  restoreCheckIn: (checkIn: HabitCheckIn) => void;
 
   setReminder: (habitId: string, time: string | undefined, enabled: boolean) => Promise<void>;
 
@@ -85,11 +90,19 @@ export const useHabitsStore = create<HabitsState>()(
       });
     },
 
-    setCheckIn: (habitId, date, done, note, photoUri, reasonTags, durationMinutes) =>
+    setCheckIn: (habitId, date, done, note, photoUri, reasonTags, durationMinutes, minimum) =>
       set((state) => {
         const existing = state.checkIns.find((c) => c.habitId === habitId && c.date === date);
+        const habit = state.habits.find((h) => h.id === habitId);
+        // The time it was planned for, so "which time works best" can compare like with like.
+        const plannedTime = habit?.reminderEnabled && habit.reminderTime ? habit.reminderTime : undefined;
+        const now = new Date().toISOString();
         if (existing) {
+          if (done && !existing.done) existing.completedAt = now;
+          if (!done) delete existing.completedAt;
           existing.done = done;
+          existing.minimum = done && minimum ? true : undefined;
+          if (plannedTime && !existing.plannedTime) existing.plannedTime = plannedTime;
           existing.note = note?.trim() || undefined;
           if (photoUri !== undefined) existing.photoUri = photoUri;
           existing.reasonTags = done ? undefined : reasonTags;
@@ -104,9 +117,42 @@ export const useHabitsStore = create<HabitsState>()(
             photoUri,
             reasonTags: done ? undefined : reasonTags,
             durationMinutes,
-            createdAt: new Date().toISOString(),
+            ...(done && minimum ? { minimum: true } : {}),
+            ...(plannedTime ? { plannedTime } : {}),
+            ...(done ? { completedAt: now } : {}),
+            createdAt: now,
           });
         }
+      }),
+
+    updateCheckIn: (id, patch) =>
+      set((state) => {
+        const c = state.checkIns.find((x) => x.id === id);
+        if (!c) return;
+        if (patch.done !== undefined) {
+          if (patch.done && !c.done) c.completedAt = new Date().toISOString();
+          if (!patch.done) {
+            delete c.completedAt;
+            c.minimum = undefined;
+          }
+          c.done = patch.done;
+          if (patch.done) c.reasonTags = undefined;
+        }
+        if (patch.minimum !== undefined) c.minimum = c.done && patch.minimum ? true : undefined;
+        if (patch.note !== undefined) c.note = patch.note.trim() || undefined;
+      }),
+
+    deleteCheckIn: (id) => {
+      const removed = get().checkIns.find((c) => c.id === id);
+      set((state) => {
+        state.checkIns = state.checkIns.filter((c) => c.id !== id);
+      });
+      return removed;
+    },
+
+    restoreCheckIn: (checkIn) =>
+      set((state) => {
+        if (!state.checkIns.some((c) => c.id === checkIn.id || (c.habitId === checkIn.habitId && c.date === checkIn.date))) state.checkIns.push(checkIn);
       }),
 
     clearCheckIn: (habitId, date) =>

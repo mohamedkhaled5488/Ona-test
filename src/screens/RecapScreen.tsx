@@ -903,6 +903,9 @@ export function RecapScreen({ navigation }: Props) {
               >
                 <Ionicons name="options-outline" size={20} color={colors.inkSoft} />
               </Pressable>
+              <Pressable hitSlop={8} onPress={() => navigation.navigate('discover')} accessibilityRole="button" accessibilityLabel="Discover Ona" testID="home-discover">
+                <Ionicons name="compass-outline" size={22} color={colors.teal} />
+              </Pressable>
               <Pressable hitSlop={8} onPress={() => navigation.navigate('settings')} accessibilityLabel="Settings" testID="home-settings">
                 <Ionicons name="settings-outline" size={22} color={colors.inkSoft} />
               </Pressable>

@@ -1,15 +1,25 @@
 // Entering and leaving Demo mode from anywhere in the UI.
 import { useUi } from '../components/UiProvider';
-import { hasRealData, resetDemoData, switchDataSpace, readDemoMeta, updateDemoMeta } from '../utils/dataSpaceController';
+import { hasRealData, resetDemoData, switchDataSpace, readDemoMeta, updateDemoMeta, type DemoMeta } from '../utils/dataSpaceController';
 import { setStartScreen } from '../navigation/startScreen';
 import { useAuthStore } from '../store/useAuthStore';
 import { resetNavigationState } from '../navigation/RootNavigator';
-import { shouldOfferTour, useTourStore } from './tour';
+import { navigateWhenReady } from '../navigation/navigationRef';
+import { track } from '../utils/analytics';
+import { t } from '../discover/content';
+
+// The Discover tour is offered once on entering the demo: only if it hasn't
+// been offered (or taken) before. Kept in the demo's meta, which survives
+// "Reset demo data".
+export const shouldOfferTour = (meta: Pick<DemoMeta, 'tourDone'> | null): boolean => !!meta && !meta.tourDone;
 
 export function useDemoActions() {
   const { showDialog, showToast } = useUi();
 
-  const enter = async () => {
+  // `offerTour: false` when arriving from the tour itself ("Try it").
+  const enter = async (opts: { offerTour?: boolean } = {}) => {
+    // Sent before switching: nothing is sent from inside the demo.
+    track('demo_started');
     resetNavigationState();
     setStartScreen('Main');
     await switchDataSpace('demo');
@@ -19,12 +29,25 @@ export function useDemoActions() {
       showToast({ message: 'Changes here stay in the demo. Your own data is untouched.' });
       await updateDemoMeta({ noteSeen: true });
     }
-    // The optional tour, offered once.
-    if (shouldOfferTour(meta)) useTourStore.getState().show();
+    if (opts.offerTour === false) {
+      if (meta && !meta.tourDone) await updateDemoMeta({ tourDone: true });
+      return;
+    }
+    // The Discover tour, offered once.
+    if (shouldOfferTour(meta)) {
+      await updateDemoMeta({ tourDone: true });
+      showDialog({
+        title: t('demoOffer'),
+        message: t('demoOfferBody'),
+        actions: [
+          { label: t('notNow'), style: 'cancel' },
+          { label: t('takeTour'), style: 'default', onPress: () => navigateWhenReady('discoverTour', {}) },
+        ],
+      });
+    }
   };
 
   const exit = async () => {
-    useTourStore.getState().close();
     resetNavigationState();
     if (!useAuthStore.getState().session) setStartScreen('welcome', await hasRealData());
     await switchDataSpace('real');

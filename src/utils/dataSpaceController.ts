@@ -195,6 +195,12 @@ export async function decideStartScreen(signedIn: boolean, storage: Storage = As
   return 'welcome';
 }
 
+// For tests: write every pending save now, instead of waiting a fixed time.
+export async function __flushForTests(): Promise<void> {
+  await persistence?.flushAll();
+  await new Promise((r) => setTimeout(r, 0)); // settings' own async write
+}
+
 // For tests: forget the saver (a fresh app start).
 export function __resetForTests(): void {
   persistence?.stop();

@@ -54,7 +54,7 @@ jest.mock('../network', () => ({ isOnline: async () => true }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEMO_META_KEY, SPACE_KEY, getDataSpace, isDemo, setDataSpace } from '../dataSpace';
-import { __resetForTests, readDemoMeta, resetDemoData, startAppData, switchDataSpace } from '../dataSpaceController';
+import { __flushForTests, __resetForTests, readDemoMeta, resetDemoData, startAppData, switchDataSpace } from '../dataSpaceController';
 import { LOCAL_DATA } from '../localData';
 import { storageKey, startLocalPersistence } from '../localPersistence';
 import { useSettingsStore, SETTINGS_KEY } from '../../store/useSettingsStore';
@@ -97,7 +97,7 @@ async function fillRealData() {
   useSettingsStore.getState().setConsent({ storeData: true, analytics: true });
   // Let saving catch up.
   await switchDataSpace('real');
-  await new Promise((r) => setTimeout(r, 500));
+  await __flushForTests();
 }
 
 // Changes to every section while in demo: add, edit, delete.
@@ -138,7 +138,7 @@ describe('isolation of the data', () => {
     const before = await dump(realKeys);
     expect(before).toContain('My real task');
     changeEverything();
-    await new Promise((r) => setTimeout(r, 500)); // demo saves happen
+    await __flushForTests(); // demo saves happen
     await switchDataSpace('real');
 
     expect(await dump(realKeys)).toBe(before);
@@ -157,7 +157,7 @@ describe('isolation of the data', () => {
     };
     await switchDataSpace('demo');
     changeEverything();
-    await new Promise((r) => setTimeout(r, 500));
+    await __flushForTests();
     storage.setItem = original;
     expect(written.length).toBeGreaterThan(5);
     for (const k of written) expect(k.startsWith('ona.demo.') || k === SPACE_KEY).toBe(true);
@@ -221,7 +221,7 @@ describe('restarting', () => {
     await switchDataSpace('demo');
     useDailyPlanningStore.getState().addTask(todayISO(), 'Demo task before restart');
     await switchDataSpace('demo'); // no-op
-    await new Promise((r) => setTimeout(r, 500));
+    await __flushForTests();
     __resetForTests(); // the app is killed
     expect(await startAppData(storage, false)).toBe('demo');
     expect(useDailyPlanningStore.getState().tasks.some((t) => t.title === 'Demo task before restart')).toBe(true);

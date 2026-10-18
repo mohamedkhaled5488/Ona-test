@@ -18,8 +18,8 @@ const kindWords: Record<FeelingSource['kind'], { prefix: string; noun: string }>
   task: { prefix: 'After a task', noun: 'task' },
   book: { prefix: 'After reading', noun: 'book' },
   habit: { prefix: 'Habit', noun: 'habit' },
-  quitHabit: { prefix: 'Quit habit', noun: 'quit habit' },
-  skill: { prefix: 'Skill practice', noun: 'skill' },
+  quitHabit: { prefix: 'Quit', noun: 'quit habit' },
+  skill: { prefix: 'Skill', noun: 'skill' },
   study: { prefix: 'Study session', noun: 'study session' },
 };
 

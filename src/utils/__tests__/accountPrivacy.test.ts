@@ -230,7 +230,7 @@ describe('analytics', () => {
 
   test('the allowlist holds only generic events', () => {
     expect([...ALLOWED_EVENTS].sort()).toEqual(
-      ['install', 'paywall_viewed', 'plan_selected', 'purchase_canceled', 'purchase_completed', 'purchase_started', 'restore_clicked', 'signup', 'trial_ended', 'trial_started']
+      ['demo_started', 'discover_opened', 'install', 'paywall_viewed', 'plan_selected', 'purchase_canceled', 'purchase_completed', 'purchase_started', 'restore_clicked', 'signup', 'tour_completed', 'tour_started', 'trial_ended', 'trial_started']
     );
   });
 

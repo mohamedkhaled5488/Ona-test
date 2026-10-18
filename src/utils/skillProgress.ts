@@ -142,7 +142,7 @@ export function describeMetricChange(metric: SkillMetric, change: MetricChange):
   if (change.improvement > 0) {
     return metric.direction === 'higher' ? `${head} · +${amount} since you began` : `${head} · ${amount} better since you began`;
   }
-  if (change.improvement < 0) return `${head} · not above where you began yet`;
+  if (change.improvement < 0) return `${head} · not past where you began yet`;
   return `${head} · level with where you began`;
 }
 
@@ -320,6 +320,15 @@ export function detectPlateau(series: MetricPoint[], direction: SkillMetric['dir
   // Only a genuinely flat stretch counts — a clear decline isn't "steady",
   // and saying so would be inaccurate.
   if (Math.abs(change) > noise) return undefined;
+  // A zigzag that keeps climbing (lows and highs both rising) can have edge
+  // medians within the swing. So the trend line's change across the window
+  // must also stay within the typical scatter around that line.
+  const trend = linearTrend(w);
+  if (trend) {
+    const span = daysBetweenISO(w[0].date, w[w.length - 1].date);
+    const scatter = median(w.map((p) => Math.abs(p.value - (trend.intercept + trend.slope * daysBetweenISO(w[0].date, p.date)))));
+    if (Math.abs(trend.slope * span) > scatter + 1e-9) return undefined;
+  }
   const days = daysBetweenISO(w[0].date, w[w.length - 1].date) + 1;
   return { start: w[0].date, end: w[w.length - 1].date, entries: w.length, weeks: Math.max(1, Math.round(days / 7)) };
 }
