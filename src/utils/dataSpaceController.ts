@@ -11,7 +11,8 @@
 // refuses to write once the space has changed (localPersistence.ts).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateStorage } from 'zustand/middleware';
-import { DEMO_META_KEY, SPACE_KEY, getDataSpace, isDemo, setDataSpace, spaceKey, type DataSpace } from './dataSpace';
+import { purgeDemoLeftovers } from './demoLeftovers';
+import { DEMO_META_KEY, SPACE_KEY, getDataSpace, isDemo, setDataSpace, setSwitchingDataSpace, spaceKey, type DataSpace } from './dataSpace';
 import { hydrateLocalData, startLocalPersistence, storageKey, DATA_FORMAT_VERSION } from './localPersistence';
 import { LOCAL_DATA } from './localData';
 import { DEFAULT_SETTINGS, SETTINGS_KEY, SETTINGS_VERSION, migrateSettings, useSettingsStore, type SettingsData } from '../store/useSettingsStore';
@@ -104,6 +105,8 @@ async function load(space: DataSpace, storage: Storage, keepSamples: boolean): P
   else if (space === 'real') await storage.removeItem(spaceKey(SETTINGS_KEY, space));
   await hydrateLocalData(storage, keepSamples);
   persistence = startLocalPersistence(storage);
+  // After saving starts, so the cleaned data is what gets stored.
+  purgeDemoLeftovers();
 }
 
 // At app start. Reopens in Demo mode if that's where the app was; if the
@@ -123,6 +126,7 @@ export async function startAppData(storage: Storage = AsyncStorage, keepSamplesO
     // The settings store has already loaded the real settings by itself.
     await hydrateLocalData(storage, keepSamplesOnFirstRun);
     persistence = startLocalPersistence(storage);
+    purgeDemoLeftovers();
   }
   return space;
 }
@@ -130,17 +134,24 @@ export async function startAppData(storage: Storage = AsyncStorage, keepSamplesO
 export function switchDataSpace(target: DataSpace, storage: Storage = AsyncStorage): Promise<void> {
   const run = queue.then(async () => {
     if (target === getDataSpace()) return;
-    await syncInFlight();
-    if (persistence) {
-      // Everything in memory is saved to the space it belongs to, so coming
-      // back finds it exactly as it was.
-      await persistence.flushAll();
-      persistence.stop();
-      persistence = null;
+    // No sync may start until the target space is fully loaded: otherwise it
+    // reads the stores mid-switch and uploads one space's data as the other's.
+    setSwitchingDataSpace(true);
+    try {
+      await syncInFlight();
+      if (persistence) {
+        // Everything in memory is saved to the space it belongs to, so coming
+        // back finds it exactly as it was.
+        await persistence.flushAll();
+        persistence.stop();
+        persistence = null;
+      }
+      if (target === 'demo' && !(await readDemoMeta(storage))) await writeDemoSeed(storage);
+      await storage.setItem(SPACE_KEY, target);
+      await load(target, storage, false);
+    } finally {
+      setSwitchingDataSpace(false);
     }
-    if (target === 'demo' && !(await readDemoMeta(storage))) await writeDemoSeed(storage);
-    await storage.setItem(SPACE_KEY, target);
-    await load(target, storage, false);
   });
   queue = run.catch(() => {});
   return run;

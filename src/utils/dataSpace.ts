@@ -39,6 +39,15 @@ export function setDataSpace(space: DataSpace): void {
   listeners.forEach((fn) => fn(space));
 }
 
+// True while the data-space controller is loading a space: the stores may
+// still hold the other space's data even though the space has changed, so
+// nothing may sync until it's done.
+let switching = false;
+export const isSwitchingDataSpace = (): boolean => switching;
+export function setSwitchingDataSpace(on: boolean): void {
+  switching = on;
+}
+
 export function onDataSpaceChange(fn: (space: DataSpace) => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);

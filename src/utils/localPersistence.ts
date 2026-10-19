@@ -56,10 +56,13 @@ export async function hydrateLocalData(storage: Storage = AsyncStorage, keepSamp
       try {
         const env = JSON.parse(raw) as Envelope;
         const allowed = new Set(savedKeys(section));
-        // Preferences not in the saved copy start from the defaults, not from
-        // whatever is in memory (which may belong to the other data space).
+        // Anything not in the saved copy (a field added in a later version)
+        // starts empty, and preferences from the defaults: never from
+        // whatever is in memory, which may belong to the other data space.
+        const state = store.getState() as Record<string, unknown>;
         const patch = {
           ...INITIAL_PREFS[section],
+          ...Object.fromEntries(keys.map((k) => [k, emptyLike(state[k])])),
           ...Object.fromEntries(
             Object.entries(env.state ?? {})
               .filter(([k]) => allowed.has(k))

@@ -14,7 +14,8 @@ import { computeEntitlement } from '../utils/entitlement';
 import { syncGate, type SyncGate } from '../utils/sync';
 import { resyncFeature } from '../utils/reminders';
 import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type RemoteRow, type SyncServer } from './engine';
-import { DemoModeError, isDemo } from '../utils/dataSpace';
+import { DemoModeError, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
+import { withoutDemoItems } from '../utils/demoLeftovers';
 
 const AFTER_CHANGE_MS = 15_000;
 const EVERY_MS = 5 * 60_000;
@@ -27,8 +28,10 @@ export const localData: LocalData = {
   write: (collection, value) => {
     if (isDemo()) throw new DemoModeError('Sync');
     const [section, field] = collection.split('.');
-    // Another device may still run an older version of Ona.
-    LOCAL_DATA[section].store.setState({ [field]: normalizeField(section, field, value) });
+    // Another device may still run an older version of Ona. Demo items that
+    // leaked into the account (before FIX-14) are dropped; the next push
+    // then deletes them from the account.
+    LOCAL_DATA[section].store.setState({ [field]: withoutDemoItems(normalizeField(section, field, value)) });
   },
 };
 
@@ -69,7 +72,8 @@ export function currentSyncGate(): SyncGate {
   const owner = useSyncStore.getState().owner;
   const snapshot = userId ? useEntitlementStore.getState().snapshots[userId] : undefined;
   return syncGate({
-    demo: isDemo(),
+    // Mid-switch the stores may still hold the other space's data.
+    demo: isDemo() || isSwitchingDataSpace(),
     configured: isSupabaseConfigured,
     signedIn: !!session,
     otherAccount: !!userId && !!owner && owner !== userId,
