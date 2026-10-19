@@ -37,7 +37,7 @@ tags:
     timeout: 10000
 - tapOn: "Mark \"Buy running shoes\" done"
 - assertVisible: "Mark \"Buy running shoes\" not done"
-- tapOn: "How do you feel\?"
+- tapOn: 'How do you feel\?'
 - tapOn: "Calm: Pleasant, quiet"
 - tapOn: "Save"
 - assertVisible: "Felt calm"

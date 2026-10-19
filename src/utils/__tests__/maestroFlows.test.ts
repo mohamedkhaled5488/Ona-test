@@ -39,28 +39,59 @@ const DYNAMIC: Record<string, string> = {
   '(Home|Check .* for a confirmation link, then come back and sign in.)':'for a confirmation link, then come back and sign in.',
 };
 
-// YAML's escapes first (a doubled backslash, an escaped quote), then the
-// regex escapes Maestro itself sees (\? and \.).
-const unescape = (s: string) => s.replace(/\\(["\\])/g, '$1').replace(/\\([?.])/g, '$1');
+const yaml = require('js-yaml') as { loadAll: (s: string) => unknown[] };
 
-// Positive selectors only: assertNotVisible text is meant to be absent.
-function selectors(yaml: string): { text: string[]; ids: string[]; typed: string[] } {
+// Each flow parsed as Maestro parses it: a config document, then commands.
+const commandsOf = (f: string) => (yaml.loadAll(read(f))[1] ?? []) as unknown[];
+
+// The regex escapes Maestro itself sees (\? and \.), for comparing with the source.
+const unescape = (s: string) => s.replace(/\\([?.])/g, '$1');
+
+// Positive selectors only: assertNotVisible / notVisible text is meant to be absent.
+function selectors(f: string): { text: string[]; ids: string[]; typed: string[] } {
   const text: string[] = [];
   const ids: string[] = [];
   const typed: string[] = [];
-  for (const line of yaml.split(/\r?\n/)) {
-    if (/^\s*#/.test(line) || /assertNotVisible|notVisible/.test(line)) continue;
-    const m = line.match(/^\s*-?\s*(tapOn|assertVisible|visible|element|text|id|inputText):\s*"((?:[^"\\]|\\.)*)"\s*$/);
-    if (!m) continue;
-    const value = unescape(m[2]);
-    if (m[1] === 'id') ids.push(value);
-    else if (m[1] === 'inputText') typed.push(value);
-    else text.push(value);
-  }
+  const selector = (sel: unknown) => {
+    if (typeof sel === 'string') text.push(unescape(sel));
+    else if (sel && typeof sel === 'object') {
+      const o = sel as { text?: string; id?: string };
+      if (o.text) text.push(unescape(o.text));
+      if (o.id) ids.push(o.id);
+    }
+  };
+  const walk = (cmds: unknown[]) => {
+    for (const c of cmds) {
+      if (!c || typeof c !== 'object') continue;
+      for (const [name, arg] of Object.entries(c as Record<string, unknown>)) {
+        const a = arg as Record<string, unknown>;
+        if (name === 'tapOn' || name === 'assertVisible') selector(arg);
+        else if (name === 'inputText' && typeof arg === 'string') typed.push(arg);
+        else if (name === 'extendedWaitUntil' && a?.visible) selector(a.visible);
+        else if (name === 'scrollUntilVisible') selector(a?.element);
+        else if (name === 'runFlow' && typeof arg === 'object') {
+          const flow = arg as { when?: { visible?: unknown }; commands?: unknown[] };
+          if (flow.when?.visible) selector(flow.when.visible);
+          if (flow.commands) walk(flow.commands);
+        }
+      }
+    }
+  };
+  walk(commandsOf(f));
   return { text, ids, typed };
 }
 
 describe('E2E-GUARD: the Maestro flows match the app', () => {
+  // A file Maestro can't parse stops every flow (the first CI run did exactly
+  // this: "\." inside a double-quoted YAML string is not a valid escape).
+  test('E2E-GUARD-000 every flow is valid YAML with a list of commands', () => {
+    for (const f of flowFiles) {
+      let commands: unknown;
+      expect(() => (commands = commandsOf(f))).not.toThrow();
+      expect({ f, isList: Array.isArray(commands) && (commands as unknown[]).length > 0 }).toEqual({ f, isList: true });
+    }
+  });
+
   test('E2E-GUARD-001 every flow targets the app\'s Android package and every journey has a tag', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'app.json'), 'utf8')).expo.android.package;
     for (const f of flowFiles) {
@@ -80,7 +111,7 @@ describe('E2E-GUARD: the Maestro flows match the app', () => {
   test('E2E-GUARD-003 every text a flow taps or waits for is in the app (or is what the flow typed)', () => {
     const missing: string[] = [];
     for (const f of flowFiles) {
-      const { text, typed } = selectors(read(f));
+      const { text, typed } = selectors(f);
       for (const t of text) {
         if (typed.includes(t)) continue;
         // "write one journal line" is typed and also the placeholder's example.
@@ -93,7 +124,7 @@ describe('E2E-GUARD: the Maestro flows match the app', () => {
 
   test('E2E-GUARD-004 every id a flow taps is a testID in the app', () => {
     for (const f of flowFiles) {
-      for (const id of selectors(read(f)).ids) expect({ f, id, found: SOURCE.includes(`testID="${id}"`) }).toEqual({ f, id, found: true });
+      for (const id of selectors(f).ids) expect({ f, id, found: SOURCE.includes(`testID="${id}"`) }).toEqual({ f, id, found: true });
     }
   });
 

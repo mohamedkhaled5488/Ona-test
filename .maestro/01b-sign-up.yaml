@@ -23,5 +23,5 @@ tags:
 # With email confirmation off (the local stack's default) you land in the
 # app; with it on, Ona asks you to confirm your email.
 - extendedWaitUntil:
-    visible: "(Home|Check .* for a confirmation link, then come back and sign in\.)"
+    visible: '(Home|Check .* for a confirmation link, then come back and sign in\.)'
     timeout: 20000
