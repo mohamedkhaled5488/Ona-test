@@ -15,12 +15,13 @@ import { withAlpha } from '../utils/color';
 import { useDietStore } from '../store/useDietStore';
 import type { MealInput } from '../store/useDietStore';
 import { mealSlots, mealSlotLabels, mealSourceLabels, mealSourceIcons, mealSourceOrder } from '../data/dietMeta';
-import { totalCost, costBySource, mostRepeatedMeals } from '../utils/dietStats';
+import { totalCost, costBySource, repeatedMeals } from '../utils/dietStats';
 import { addDaysISO, formatDisplayDate, formatMonthLabel, todayISO } from '../utils/date';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { weekStartFor } from '../utils/feelingsStats';
 import type { MealSlot, MealSource, PlannedMeal } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
+import { parseNumberInput } from '../utils/numberInput';
 
 type ViewMode = 'week' | 'grocery' | 'summary';
 type SummaryPeriod = 'day' | 'week' | 'month';
@@ -75,7 +76,8 @@ function MealFormModal({
   const commit = () => {
     onSave({
       name,
-      cost: cost.trim() ? Number(cost) : undefined,
+      // A cost that isn't a number is left empty, never saved as NaN.
+      cost: cost.trim() && Number.isFinite(parseNumberInput(cost)) ? parseNumberInput(cost) : undefined,
       source,
       notes: notes.trim() || undefined,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
@@ -100,7 +102,7 @@ function MealFormModal({
       <>
             <View style={styles.modalHeader}>
               <SectionHeading>{initial ? 'Edit meal' : `Add ${slotLabel}`}</SectionHeading>
-              <Pressable hitSlop={8} onPress={requestClose}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={requestClose}>
                 <Ionicons name="close" size={22} color={colors.inkSoft} />
               </Pressable>
             </View>
@@ -203,7 +205,7 @@ function FavoritesModal({ visible, onClose, currency }: { visible: boolean; onCl
     <SheetModal visible={visible} onClose={onClose}>
       <View style={styles.modalHeader}>
         <SectionHeading>Favorite meals</SectionHeading>
-        <Pressable hitSlop={8} onPress={onClose}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={onClose}>
           <Ionicons name="close" size={22} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -213,7 +215,7 @@ function FavoritesModal({ visible, onClose, currency }: { visible: boolean; onCl
           <Ionicons name="star" size={14} color={colors.amber} />
           <Body style={styles.favoriteRowText}> {f.name}</Body>
           {f.cost !== undefined && <Caption>{formatMoney(f.cost, currency)}</Caption>}
-          <Pressable hitSlop={8} onPress={() => confirmDelete(f.id, f.name)}>
+          <Pressable hitSlop={8} onPress={() => confirmDelete(f.id, f.name)} accessibilityRole="button" accessibilityLabel={`Remove ${f.name} from favorites`}>
             <Ionicons name="trash-outline" size={16} color={colors.inkSoft} />
           </Pressable>
         </View>
@@ -309,7 +311,7 @@ export function DietPlanningScreen() {
   };
 
   const sourceBreakdown = costBySource(periodMeals);
-  const repeated = mostRepeatedMeals(plannedMeals);
+  const repeated = repeatedMeals(plannedMeals);
 
   return (
     <Screen>
@@ -393,11 +395,11 @@ export function DietPlanningScreen() {
             {groceryItems.length === 0 && <Body style={styles.emptyText}>No grocery items yet.</Body>}
             {groceryItems.map((item) => (
               <View key={item.id} style={styles.groceryRow}>
-                <Pressable hitSlop={8} onPress={() => toggleGroceryItem(item.id)}>
+                <Pressable hitSlop={8} onPress={() => toggleGroceryItem(item.id)} accessibilityRole="checkbox" accessibilityState={{ checked: item.checked }} accessibilityLabel={item.label}>
                   <Ionicons name={item.checked ? 'checkbox' : 'square-outline'} size={20} color={item.checked ? colors.teal : colors.inkSoft} />
                 </Pressable>
                 <Body style={[styles.groceryLabel, item.checked && styles.groceryLabelChecked]}>{item.label}</Body>
-                <Pressable hitSlop={8} onPress={() => confirmDeleteGrocery(item.id, item.label)}>
+                <Pressable hitSlop={8} onPress={() => confirmDeleteGrocery(item.id, item.label)} accessibilityRole="button" accessibilityLabel={`Remove ${item.label}`}>
                   <Ionicons name="close" size={16} color={colors.inkSoft} />
                 </Pressable>
               </View>
@@ -482,7 +484,7 @@ export function DietPlanningScreen() {
           </Card>
 
           <Card style={styles.section}>
-            <Eyebrow>Most repeated meals</Eyebrow>
+            <Eyebrow>Meals you repeated</Eyebrow>
             {repeated.length === 0 && <Caption>Nothing repeated yet.</Caption>}
             {repeated.map((r) => (
               <View key={r.name} style={styles.sourceBreakdownRow}>

@@ -590,7 +590,7 @@ function TaskRow({
                 />
               </Pressable>
               <Body style={[styles.subtaskText, sub.done && styles.taskInputDone]}>{sub.title}</Body>
-              <Pressable hitSlop={8} onPress={() => confirmDeleteSubtask(sub.id, sub.title)}>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Remove subtask ${sub.title}`} hitSlop={8} onPress={() => confirmDeleteSubtask(sub.id, sub.title)}>
                 <Ionicons name="close" size={14} color={colors.inkSoft} />
               </Pressable>
             </View>
@@ -662,7 +662,7 @@ function TimelineBlock({
         resolved.done && styles.timelineBlockDone,
       ]}
     >
-      <Pressable hitSlop={6} onPress={() => onToggle(task)}>
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!(resolved.done) }} accessibilityLabel="Done" hitSlop={6} onPress={() => onToggle(task)}>
         <Ionicons
           name={resolved.done ? 'checkbox' : 'square-outline'}
           size={16}
@@ -805,7 +805,7 @@ function UnscheduledRow({ task, date, onToggle, onOpen }: { task: DailyTask; dat
   const resolved = useResolvedTask(task, date);
   return (
     <Pressable style={styles.unscheduledRow} onPress={() => onOpen(task)}>
-      <Pressable hitSlop={8} onPress={() => onToggle(task)}>
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!(resolved.done) }} accessibilityLabel="Done" hitSlop={8} onPress={() => onToggle(task)}>
         <Ionicons name={resolved.done ? 'checkbox' : 'square-outline'} size={18} color={resolved.done ? colors.teal : colors.inkSoft} />
       </Pressable>
       <Body style={[styles.unscheduledText, resolved.done && styles.taskInputDone]}>{resolved.title}</Body>
@@ -1136,7 +1136,7 @@ export function DailyPlanningScreen() {
       <ScreenTitle>Daily Planning</ScreenTitle>
 
       <View style={styles.dateNav}>
-        <Pressable hitSlop={8} onPress={() => setSelectedDate((d) => addDaysISO(d, -1))}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Previous day" hitSlop={8} onPress={() => setSelectedDate((d) => addDaysISO(d, -1))}>
           <Ionicons name="chevron-back" size={22} color={colors.ink} />
         </Pressable>
         <View style={styles.dateLabelWrap}>
@@ -1149,7 +1149,7 @@ export function DailyPlanningScreen() {
           )}
           <SectionHeading>{formatDisplayDate(selectedDate)}</SectionHeading>
         </View>
-        <Pressable hitSlop={8} onPress={() => setSelectedDate((d) => addDaysISO(d, 1))}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Next day" hitSlop={8} onPress={() => setSelectedDate((d) => addDaysISO(d, 1))}>
           <Ionicons name="chevron-forward" size={22} color={colors.ink} />
         </Pressable>
       </View>
@@ -1405,7 +1405,7 @@ export function DailyPlanningScreen() {
       <SheetModal visible={templatesVisible} onClose={() => setTemplatesVisible(false)}>
         <View style={styles.modalHeader}>
           <SectionHeading>Day templates</SectionHeading>
-          <Pressable hitSlop={8} onPress={() => setTemplatesVisible(false)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={() => setTemplatesVisible(false)}>
             <Ionicons name="close" size={22} color={colors.inkSoft} />
           </Pressable>
         </View>

@@ -272,22 +272,22 @@ export function suggestedFocus(skill: Skill, sessions: PracticeSession[]): Sugge
   return { subSkill: sorted[0].subSkill, reason: 'leastRecent', lastDate: sorted[0].lastDate };
 }
 
-export interface FrequentStruggle {
-  subSkill: SubSkill;
-  count: number;
+export interface StruggleCounts {
+  counts: { subSkill: SubSkill; count: number }[]; // in sub-skill order
   of: number; // how many recent "struggled with" entries were looked at
 }
 
-export function mostFrequentStruggle(skill: Skill, sessions: PracticeSession[], cfg: Config = SKILL_ANALYSIS): FrequentStruggle | undefined {
+// Each sub-skill marked "struggled with" in the recent entries, with its
+// count, in the skill's own sub-skill order. Never "the most frequent".
+export function struggleCounts(skill: Skill, sessions: PracticeSession[], cfg: Config = SKILL_ANALYSIS): StruggleCounts | undefined {
   const recent = skillSessionsChrono(sessions, skill.id)
     .filter((s) => (s.struggledSubSkillIds ?? []).length > 0)
     .slice(-cfg.struggleLookback);
   const counts = new Map<string, number>();
   recent.forEach((s) => new Set(s.struggledSubSkillIds).forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1)));
-  const top = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
-  if (!top || top[1] < cfg.struggleMinCount) return undefined;
-  const sub = (skill.subSkills ?? []).find((s) => s.id === top[0]);
-  return sub ? { subSkill: sub, count: top[1], of: recent.length } : undefined;
+  if (Math.max(0, ...counts.values()) < cfg.struggleMinCount) return undefined;
+  const list = (skill.subSkills ?? []).filter((s) => counts.has(s.id)).map((subSkill) => ({ subSkill, count: counts.get(subSkill.id)! }));
+  return list.length ? { counts: list, of: recent.length } : undefined;
 }
 
 // --- Plateau ---
@@ -440,16 +440,15 @@ export function weeklyDifficulty(sessions: PracticeSession[], skillId: string, f
 
 // Feelings are logged against the skill, not a session, so a feeling is
 // matched to the sub-skills focused on in that day's sessions.
-export function feelingBySubSkill(skill: Skill, sessions: PracticeSession[], feelings: FeelingCheckIn[], minCount: number = SKILL_ANALYSIS.minSamples): { subSkill: SubSkill; zone: FeelingZone; count: number; total: number }[] {
+// Feelings after sessions that focused on each sub-skill, as counts per zone.
+export function feelingBySubSkill(skill: Skill, sessions: PracticeSession[], feelings: FeelingCheckIn[], minCount: number = SKILL_ANALYSIS.minSamples): { subSkill: SubSkill; entries: FeelingCheckIn[] }[] {
   const mine = feelings.filter((f) => f.source?.kind === 'skill' && f.source.refId === skill.id);
   return (skill.subSkills ?? [])
     .map((sub) => {
       const dates = new Set(sessions.filter((s) => s.skillId === skill.id && (s.focusSubSkillIds ?? []).includes(sub.id)).map((s) => s.date));
-      const matched = mine.filter((f) => dates.has(f.date));
-      const top = mostCommonZone(matched);
-      return top && matched.length >= minCount ? { subSkill: sub, zone: top.zone, count: top.count, total: matched.length } : undefined;
+      return { subSkill: sub, entries: mine.filter((f) => dates.has(f.date)) };
     })
-    .filter((x): x is { subSkill: SubSkill; zone: FeelingZone; count: number; total: number } => !!x);
+    .filter((x) => x.entries.length >= minCount);
 }
 
 // --- Monthly recap (Recap can read this too) ---
@@ -478,8 +477,7 @@ export function skillSummary(skill: Skill, sessions: PracticeSession[], today: s
   }
   const times = subSkillTime(skill, sessions).filter((t) => !t.subSkill.archivedAt);
   if (times.length >= 2 && times.some((t) => t.minutes > 0)) {
-    const sorted = [...times].sort((a, b) => b.minutes - a.minutes);
-    parts.push(`${sorted[0].subSkill.name} has had the most attention; ${sorted[sorted.length - 1].subSkill.name.toLowerCase()} the least.`);
+    parts.push(`Time per sub-skill: ${times.map((t) => `${t.subSkill.name} ${formatHours(t.minutes)}`).join(' · ')}.`);
   }
   return parts.join(' ');
 }

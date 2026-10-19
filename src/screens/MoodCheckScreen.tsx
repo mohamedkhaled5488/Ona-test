@@ -45,9 +45,6 @@ import {
   hasSustainedSafeguardPattern,
   topRepeatedFeelings,
   zoneCounts,
-  mostCommonZone,
-  longestZoneStreak,
-  compareZonePeriods,
   dailyTrendPoints,
   monthlyTrendPointsInRange,
   rollingAverageTrend,
@@ -161,7 +158,7 @@ function ZoneHeader({ onTrend, onBookmarks }: { onTrend: () => void; onBookmarks
         <ScreenTitle>Identify the Feeling</ScreenTitle>
         <View style={styles.headerLinks}>
           {bookmarks.length > 0 && (
-            <Pressable onPress={onBookmarks} style={styles.headerLink}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Bookmarked feelings" onPress={onBookmarks} style={styles.headerLink}>
               <Ionicons name="bookmark" size={16} color={colors.amber} />
             </Pressable>
           )}
@@ -424,7 +421,7 @@ function ResultStage({
 
       <View style={styles.resultTitleRow}>
         <ScreenTitle>{mode.type === 'peek' ? 'Saved for later' : 'Your reflection'}</ScreenTitle>
-        <Pressable hitSlop={8} onPress={() => toggleBookmark(primary.id)}>
+        <Pressable accessibilityRole="button" accessibilityLabel={bookmarks.includes(primary.id) ? 'Remove bookmark' : 'Bookmark this feeling'} hitSlop={8} onPress={() => toggleBookmark(primary.id)}>
           <Ionicons name={bookmarks.includes(primary.id) ? 'bookmark' : 'bookmark-outline'} size={22} color={colors.amber} />
         </Pressable>
       </View>
@@ -462,10 +459,10 @@ function ResultStage({
                 <Body style={styles.guidanceBullet}>•</Body>
                 <Body style={styles.guidanceText}>{line}</Body>
                 <View style={styles.voteCol}>
-                  <Pressable hitSlop={6} onPress={() => voteGuidance(primary.id, line, 1)}>
+                  <Pressable accessibilityRole="button" accessibilityState={{ selected: vote > 0 }} accessibilityLabel="This helps" hitSlop={6} onPress={() => voteGuidance(primary.id, line, 1)}>
                     <Ionicons name={vote > 0 ? 'thumbs-up' : 'thumbs-up-outline'} size={14} color={vote > 0 ? colors.teal : colors.inkSoft} />
                   </Pressable>
-                  <Pressable hitSlop={6} onPress={() => voteGuidance(primary.id, line, -1)}>
+                  <Pressable accessibilityRole="button" accessibilityState={{ selected: vote < 0 }} accessibilityLabel="This doesn't help" hitSlop={6} onPress={() => voteGuidance(primary.id, line, -1)}>
                     <Ionicons name={vote < 0 ? 'thumbs-down' : 'thumbs-down-outline'} size={14} color={vote < 0 ? '#B3413A' : colors.inkSoft} />
                   </Pressable>
                 </View>
@@ -654,7 +651,10 @@ function TrendStage({ onBack, onOpen }: { onBack: () => void; onOpen: (zone: Fee
   const personalFeelings = useFeelingsStore((s) => s.personalFeelings);
   const sorted = [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const sourceLookup = useFeelingSourceLookup();
-  const repeats = topRepeatedFeelings(entries, addDaysISO(todayISO(), -30));
+  // Every feeling named more than once this month, A to Z.
+  const repeats = topRepeatedFeelings(entries, addDaysISO(todayISO(), -30), 100).sort((a, b) =>
+    (findAnyFeeling(a.feelingId, personalFeelings)?.name ?? '').localeCompare(findAnyFeeling(b.feelingId, personalFeelings)?.name ?? '')
+  );
   const [editing, setEditing] = useState<FeelingCheckIn | null>(null);
 
   const weekCounts = zoneCounts(entries.filter((e) => e.date >= addDaysISO(todayISO(), -6)));
@@ -668,7 +668,7 @@ function TrendStage({ onBack, onOpen }: { onBack: () => void; onOpen: (zone: Fee
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>Feelings Log</ScreenTitle>
-        <Pressable onPress={onBack} style={styles.headerLink}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onBack} style={styles.headerLink}>
           <Ionicons name="close" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -743,7 +743,7 @@ function BookmarksStage({ onBack, onOpen }: { onBack: () => void; onOpen: (zone:
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>Bookmarked</ScreenTitle>
-        <Pressable onPress={onBack} style={styles.headerLink}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onBack} style={styles.headerLink}>
           <Ionicons name="close" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -858,7 +858,7 @@ function ReasonsBreakdownCard({
                             {r.tag} ({r.count}) — see trend
                           </Caption>
                         </Pressable>
-                        <Pressable hitSlop={8} onPress={() => onDrillReason(g.feelingId, r.tag)}>
+                        <Pressable accessibilityRole="button" accessibilityLabel={`See entries tagged ${r.tag}`} hitSlop={8} onPress={() => onDrillReason(g.feelingId, r.tag)}>
                           <Ionicons name="chevron-forward" size={13} color={colors.inkSoft} />
                         </Pressable>
                       </View>
@@ -956,7 +956,8 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
   const [isolatedZone, setIsolatedZone] = useState<FeelingZone | null>(null);
   const [reasonFilterZone, setReasonFilterZone] = useState<FeelingZone | null>(null);
   const [reasonFilter, setReasonFilter] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<'count' | 'alpha' | 'recent'>('count');
+  // A to Z by default; sorting by count is there if you choose it.
+  const [sortMode, setSortMode] = useState<'count' | 'alpha' | 'recent'>('alpha');
   const [showDimensionInfo, setShowDimensionInfo] = useState(false);
   const [showDimensionHint, setShowDimensionHint] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -1011,9 +1012,11 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
   const chartEntries = periodEntriesAll.filter(matchesFilters);
   const compareEntries = previousPeriodEntriesAll.filter(matchesFilters);
 
-  const common = mostCommonZone(periodEntriesAll);
-  const streak = longestZoneStreak(periodEntriesAll);
-  const comparison = compareZonePeriods(periodEntriesAll, previousPeriodEntriesAll);
+  // Counts per zone, this period and the one before, in the zone order (no
+  // "most common", no picking the zone that changed most).
+  const nowCounts = zoneCounts(periodEntriesAll);
+  const beforeCounts = zoneCounts(previousPeriodEntriesAll);
+  const zoneRows = feelingZones.filter((z) => nowCounts[z.id] > 0 || beforeCounts[z.id] > 0);
 
   let chartPoints =
     granularity === 'day'
@@ -1111,11 +1114,11 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
 
       {(view === 'month' || view === 'year') && (
         <View style={styles.chartNavRow}>
-          <Pressable hitSlop={8} onPress={() => setMonth(addMonthsISO(month, view === 'month' ? -1 : -12))}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous" hitSlop={8} onPress={() => setMonth(addMonthsISO(month, view === 'month' ? -1 : -12))}>
             <Ionicons name="chevron-back" size={20} color={colors.ink} />
           </Pressable>
           <SectionHeading>{view === 'month' ? formatMonthLabel(month) : month.slice(0, 4)}</SectionHeading>
-          <Pressable hitSlop={8} onPress={() => setMonth(addMonthsISO(month, view === 'month' ? 1 : 12))}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next" hitSlop={8} onPress={() => setMonth(addMonthsISO(month, view === 'month' ? 1 : 12))}>
             <Ionicons name="chevron-forward" size={20} color={colors.ink} />
           </Pressable>
         </View>
@@ -1129,7 +1132,7 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
             </Pressable>
           ))}
         </View>
-        <Pressable hitSlop={8} onPress={() => setShowDimensionInfo(true)} style={styles.dimensionInfoButton}>
+        <Pressable accessibilityRole="button" accessibilityLabel="About pleasantness and energy" hitSlop={8} onPress={() => setShowDimensionInfo(true)} style={styles.dimensionInfoButton}>
           <Ionicons name="information-circle-outline" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -1194,7 +1197,7 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>Patterns</ScreenTitle>
-        <Pressable onPress={onBack} style={styles.headerLink}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onBack} style={styles.headerLink}>
           <Ionicons name="close" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -1223,21 +1226,14 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
       </Modal>
 
       <Card style={styles.statsCard}>
-        {common ? (
-          <Caption>
-            Most common: {zoneMeta(common.zone).label} ({common.count} {common.count === 1 ? 'check-in' : 'check-ins'})
-          </Caption>
-        ) : (
+        {periodEntriesAll.length === 0 ? (
           <Caption style={styles.emptyText}>No check-ins in this period yet.</Caption>
+        ) : (
+          <Caption>This period: {feelingZones.filter((z) => nowCounts[z.id] > 0).map((z) => `${z.label} ${nowCounts[z.id]}`).join(' · ')}</Caption>
         )}
-        {streak && (
+        {previousPeriodEntriesAll.length > 0 && (
           <Caption>
-            Longest streak in one zone: {streak.days} days ({zoneMeta(streak.zone).label})
-          </Caption>
-        )}
-        {comparison && (
-          <Caption>
-            This period vs. last: {comparison.direction} {zoneMeta(comparison.zone).label} days
+            The period before: {zoneRows.map((z) => `${z.label} ${beforeCounts[z.id]}`).join(' · ')}
           </Caption>
         )}
       </Card>
@@ -1303,7 +1299,7 @@ function ReasonEntriesStage({
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>{feeling?.name ?? 'Feeling'} & {tag}</ScreenTitle>
-        <Pressable onPress={onBack} style={styles.headerLink}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onBack} style={styles.headerLink}>
           <Ionicons name="close" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -1521,16 +1517,15 @@ function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (
   const nameOf = (id: string) => findAnyFeeling(id, personalFeelings)?.name;
 
   const overview = overviewInsight(entries, nameOf);
-  const ranking = tagImpactRanking(entries, minCount);
-  const cooccurrences = tagCooccurrences(entries, minCount);
+  // A to Z, never ranked by how big the difference is.
+  const ranking = tagImpactRanking(entries, minCount).sort((x, y) => x.tag.localeCompare(y.tag));
+  const cooccurrences = tagCooccurrences(entries, minCount).sort((x, y) => `${x.tagA}${x.tagB}`.localeCompare(`${y.tagA}${y.tagB}`));
   const visibleRanking = showAllImpact ? ranking : ranking.slice(0, 4);
 
   // Every tag, from its first use: facts at first, a pattern only later.
   const tagCounts = new Map<string, number>();
   entries.forEach((e) => (e.reasonTags ?? []).forEach((t) => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
-  const tagList = Array.from(tagCounts.entries())
-    .sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]))
-    .map(([tag]) => tag);
+  const tagList = Array.from(tagCounts.keys()).sort((x, y) => x.localeCompare(y)); // A to Z
   const visibleTags = showAllTags ? tagList : tagList.slice(0, 6);
   const rangeWord = view === 'all' ? '' : view === 'custom' ? ' in this range' : ` this ${view}`;
 
@@ -1631,7 +1626,7 @@ function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (
 
           {ranking.length > 0 && (
             <>
-              <Eyebrow style={styles.impactSectionLabel}>Furthest from your usual</Eyebrow>
+              <Eyebrow style={styles.impactSectionLabel}>Compared with your usual</Eyebrow>
               {visibleRanking.map((impact) => (
                 <TagImpactCard key={impact.tag} impact={impact} entries={entries} onPress={() => onOpenTag(impact.tag, start, end)} />
               ))}
@@ -1681,7 +1676,7 @@ function AnalysisTagDetailStage({ tag, start, end, onBack }: { tag: string; star
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>{tag}</ScreenTitle>
-        <Pressable onPress={onBack} style={styles.headerLink}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onBack} style={styles.headerLink}>
           <Ionicons name="close" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>

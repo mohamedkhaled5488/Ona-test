@@ -47,6 +47,13 @@ import { useSettingsStore, DEFAULT_SETTINGS } from '../../store/useSettingsStore
 import { useFeelingsStore } from '../../store/useFeelingsStore';
 import { usePlanStore } from '../../store/usePlanStore';
 import { setAnalyticsTransport, type OutgoingEvent } from '../analytics';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 beforeEach(() => {
   useSettingsStore.setState({ ...DEFAULT_SETTINGS, consent: { ...DEFAULT_SETTINGS.consent } });

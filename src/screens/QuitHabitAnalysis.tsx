@@ -20,11 +20,11 @@ import { useFeelingsStore } from '../store/useFeelingsStore';
 import { todayISO, formatDisplayDate } from '../utils/date';
 import { daysBetweenISO, domainLabels } from '../utils/feelingsStats';
 import {
-  bestApproachForHabit,
+  approachResults,
   quitAnalysisSummary,
   quitHeaderStats,
   quitJourneyLog,
-  relapseTriggerRanking,
+  relapseReasonCounts,
   resistedUrgeTrend,
   type QuitLogEvent,
 } from '../utils/habitStats';
@@ -88,11 +88,11 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   const days = quitDayStatuses(habitId, tracks, feelingEntries, period.start, period.end, today);
 
   // --- 4. Insights ---
-  const bestApproach = bestApproachForHabit(feelingEntries, tracks, habitId);
-  const triggers = relapseTriggerRanking(tracks, habitId);
+  const approaches = approachResults(feelingEntries, tracks, habitId);
+  const triggers = relapseReasonCounts(tracks, habitId);
   const timing = quitTiming(feelingEntries, tracks, habitId);
   const trend = resistedUrgeTrend(feelingEntries, tracks, habitId, today);
-  const hasInsights = bestApproach || triggers.length > 0 || timing || trend.direction;
+  const hasInsights = approaches.length > 0 || triggers.length > 0 || timing || trend.direction;
 
   // --- 5. Full log ---
   const q = search.trim().toLowerCase();
@@ -185,24 +185,22 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
           Patterns need at least 3 matching moments before they're worth calling a pattern — they'll show up here as your journey goes on.
         </Caption>
       )}
-      {bestApproach && (
+      {approaches.length > 0 && (
         <InsightCard
-          kind="What's worked for you"
-          prominent
+          kind="How each approach went"
           accent={colors.amber}
-          headline={`${bestApproach.approach} has worked for you ${bestApproach.passedCount} of the last ${bestApproach.totalCount} times.`}
-          evidence="Counted from the times the urge actually passed after you chose it"
+          headline={approaches.map((a) => `${a.approach}: passed ${a.passedCount} of ${a.totalCount}`).join(' · ')}
+          evidence="How many times the urge passed after choosing each approach, out of the times you chose it."
         />
       )}
-      {triggers.slice(0, 3).map((t, i) => (
+      {triggers.length > 0 && (
         <InsightCard
-          key={t.tag}
           kind="What was going on"
           accent={SOFT_MISSED}
-          headline={i === 0 ? `${t.tag} was often going on when a try ended.` : `${t.tag} also shows up when a try ends.`}
-          evidence={`Tagged when ${t.count} of your tries ended`}
+          headline={triggers.map((t) => `${t.tag} ${t.count}`).join(' · ')}
+          evidence="How many times each reason was tagged when a try ended. A try can have more than one."
         />
-      ))}
+      )}
       {timing && (
         <InsightCard kind="Time of day" accent={accent} headline={timing.lines[0]} evidence={`Based on ${timing.n} logged ${timing.n === 1 ? 'moment' : 'moments'} (urges resisted and slips).`} />
       )}

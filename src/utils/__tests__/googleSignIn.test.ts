@@ -12,6 +12,13 @@ import { syncGate } from '../sync';
 import { deleteAccount } from '../accountActions';
 import { EMPTY_SYNC_STATE, syncOnce, OtherAccountError, type LocalData, type RemoteRow, type SyncServer } from '../../sync/engine';
 import type { StateStorage } from 'zustand/middleware';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 type Calls = string[];
 function fakeGoogle(behaviour: Partial<{ signIn: GoogleModule['signIn']; hasPlayServices: GoogleModule['hasPlayServices']; getTokens: GoogleModule['getTokens'] }> = {}) {

@@ -12,6 +12,13 @@ import { describeFeelingSource } from '../feelingSource';
 import { fromRecords, toRecords } from '../../sync/records';
 import { todayISO } from '../date';
 import type { DailyTask } from '../../types/sections';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 const plan = () => useDailyPlanningStore.getState();
 const feelings = () => useFeelingsStore.getState();

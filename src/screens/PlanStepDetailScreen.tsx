@@ -17,6 +17,7 @@ import { planStepColors } from '../data/planStepColors';
 import { priorityColors, priorityLabels, priorityOrder } from '../data/planPriority';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
+import { deleteStepKeepingTasks } from '../utils/planLinks';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'planStepDetail'>;
 
@@ -28,7 +29,6 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
   });
   const updateStep = usePlanStore((state) => state.updateStep);
   const toggleStepDone = usePlanStore((state) => state.toggleStepDone);
-  const deleteStep = usePlanStore((state) => state.deleteStep);
   const addStep = usePlanStore((state) => state.addStep);
   const addAlternative = usePlanStore((state) => state.addAlternative);
   const removeAlternative = usePlanStore((state) => state.removeAlternative);
@@ -118,12 +118,14 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
   };
 
   const confirmDelete = () => {
+    // If it was moved into your days, it stays there as a normal task.
+    let undo: (() => void) | undefined;
     requestDelete({
-      message: `"${step.title}" and everything nested inside it will be removed.`,
+      message: `"${step.title}" and everything nested inside it will be removed. If you moved it into your days, it stays there as a normal task.`,
       toastMessage: 'Step deleted',
-      restore: snapshotRestore(),
+      restore: () => undo?.(),
       perform: () => {
-        deleteStep(planId, path);
+        undo = deleteStepKeepingTasks(planId, path);
         navigation.goBack();
       },
     });
@@ -148,7 +150,7 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
   return (
     <Screen>
       <View style={styles.titleRow}>
-        <Pressable hitSlop={8} onPress={() => toggleStepDone(planId, path)}>
+        <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!(step.done) }} accessibilityLabel="Done" hitSlop={8} onPress={() => toggleStepDone(planId, path)}>
           <Ionicons
             name={step.done ? 'checkmark-circle' : 'ellipse-outline'}
             size={26}
@@ -255,7 +257,7 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
       <Card style={styles.section}>
         <Caption>Color tag</Caption>
         <View style={styles.colorRow}>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel="No color"
             onPress={() => updateStep(planId, path, { color: undefined })}
             style={[styles.colorSwatch, styles.noColorSwatch, !step.color && styles.colorSwatchActive]}
           >
@@ -282,7 +284,7 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
           <View key={att.id} style={styles.altRow}>
             <Ionicons name="link-outline" size={14} color={colors.teal} />
             <Body style={styles.altText}>{att.label}</Body>
-            <Pressable hitSlop={8} onPress={() => confirmRemoveAttachment(att.id, att.label)}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Remove attachment ${att.label}`} hitSlop={8} onPress={() => confirmRemoveAttachment(att.id, att.label)}>
               <Ionicons name="close-circle-outline" size={20} color={colors.inkSoft} />
             </Pressable>
           </View>
@@ -316,7 +318,7 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
         {step.alternatives.map((alt) => (
           <View key={alt.id} style={styles.altRow}>
             <Body style={styles.altText}>{alt.label}</Body>
-            <Pressable hitSlop={8} onPress={() => confirmRemoveAlternative(alt.id, alt.label)}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Remove alternative ${alt.label}`} hitSlop={8} onPress={() => confirmRemoveAlternative(alt.id, alt.label)}>
               <Ionicons name="close-circle-outline" size={20} color={colors.inkSoft} />
             </Pressable>
           </View>
@@ -352,7 +354,7 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
         </Caption>
         {step.subSteps.map((sub, i) => (
           <View key={sub.id} style={styles.subStepRow}>
-            <Pressable hitSlop={8} onPress={() => toggleStepDone(planId, [...path, sub.id])}>
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!(sub.done) }} accessibilityLabel={sub.title} hitSlop={8} onPress={() => toggleStepDone(planId, [...path, sub.id])}>
               <Ionicons
                 name={sub.done ? 'checkmark-circle' : 'ellipse-outline'}
                 size={18}
@@ -365,14 +367,14 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
             >
               <Body style={styles.subStepTitle}>{sub.title}</Body>
             </Pressable>
-            <Pressable hitSlop={8} onPress={() => setMoveTarget({ path: [...path, sub.id], title: sub.title })}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Move "${sub.title}" to a day`} hitSlop={8} onPress={() => setMoveTarget({ path: [...path, sub.id], title: sub.title })}>
               <Ionicons name="calendar-outline" size={16} color={colors.teal} />
             </Pressable>
             <View style={styles.reorderCol}>
-              <Pressable hitSlop={4} disabled={i === 0} onPress={() => moveStep(planId, [...path, sub.id], -1)}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Move up" hitSlop={4} disabled={i === 0} onPress={() => moveStep(planId, [...path, sub.id], -1)}>
                 <Ionicons name="chevron-up" size={14} color={i === 0 ? colors.line : colors.inkSoft} />
               </Pressable>
-              <Pressable
+              <Pressable accessibilityRole="button" accessibilityLabel="Move down"
                 hitSlop={4}
                 disabled={i === step.subSteps.length - 1}
                 onPress={() => moveStep(planId, [...path, sub.id], 1)}
@@ -384,7 +386,7 @@ export function PlanStepDetailScreen({ route, navigation }: Props) {
                 />
               </Pressable>
             </View>
-            <Pressable
+            <Pressable accessibilityRole="button" accessibilityLabel={`Open ${sub.title}`}
               onPress={() => navigation.push('planStepDetail', { planId, path: [...path, sub.id] })}
               hitSlop={8}
             >

@@ -19,7 +19,7 @@ import { sessionTagOptions } from '../data/skillPresets';
 import { useSkillsStore } from '../store/useSkillsStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { minutesByTimeOfDay } from '../utils/skillStats';
-import { basedOn, itemFeelingInsight, zoneTally } from '../utils/feelingsInsights';
+import { basedOn, itemFeelingInsight } from '../utils/feelingsInsights';
 import { sessionLengthLines } from '../utils/habitStats';
 import { shareSkillPortfolioAsText, exportSkillPortfolioAsPdf } from '../utils/skillExport';
 import {
@@ -34,7 +34,7 @@ import {
   linearTrend,
   metricSeries,
   monthlyRecap,
-  mostFrequentStruggle,
+  struggleCounts,
   neglectedSubSkills,
   plateauPeriods,
   primaryMetric,
@@ -76,7 +76,7 @@ function Toggle<T extends string>({ value, options, onChange, color }: { value: 
 }
 
 // Progression, not consistency: what's improving, where the time goes, and
-// what tends to go with the better stretches — correlational, gated by the
+// what went together with the stretches of more progress — correlational, gated by the
 // thresholds in config/skillAnalysis.ts.
 export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId: string; onBack: () => void; onOpenSession: (sessionId: string) => void }) {
   const skills = useSkillsStore((s) => s.skills);
@@ -198,10 +198,9 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
   const sweet = metric ? sweetSpot(allSessions, skillId, series, metric.direction) : undefined;
   const effort = metric ? effortAndProgress(allSessions, skillId, series, metric.direction) : undefined;
   const neglected = neglectedSubSkills(skill, allSessions, today).slice(0, 2);
-  const struggle = mostFrequentStruggle(skill, allSessions);
+  const struggle = struggleCounts(skill, allSessions);
   const skillFeelings = feelings.filter((f) => f.source?.kind === 'skill' && f.source.refId === skillId);
   const feeling = itemFeelingInsight(skillFeelings, 'after practicing');
-  const feelingTop = zoneTally(skillFeelings)[0];
   const feelingBySub = feelingBySubSkill(skill, allSessions, feelings);
   const timeOfDay = sessionLengthLines(minutesByTimeOfDay(allSessions, skillId));
   const thisMonth = monthlyRecap(skill, allSessions, today.slice(0, 7));
@@ -338,7 +337,7 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
                 </View>
               ))}
             </View>
-            <Caption style={styles.legend}>Learning tends to go best when practice sits near the edge of what you can do.</Caption>
+            <Caption style={styles.legend}>Research on learning suggests practice near the edge of what you can do helps you improve.</Caption>
           </>
         )}
       </Card>
@@ -365,13 +364,20 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
       )}
       {sweet && (
         <InsightCard
-          kind="Sweet spot"
+          kind="Difficulty and progress"
           accent={DIFFICULTY_COLORS.justRight}
-          headline={`Your stronger stretches tended to include more "Just right" or "Challenging" sessions.`}
-          evidence={`${Math.round(sweet.strongShare * 100)}% of rated sessions in your stronger stretches, vs. ${Math.round(sweet.weakShare * 100)}% in the others`}
+          headline={`In stretches where your measure improved more, ${Math.round(sweet.strongShare * 100)}% of rated sessions were "Just right" or "Challenging". In the other stretches, ${Math.round(sweet.weakShare * 100)}%.`}
+          evidence="A stretch is the time between two measurements. These went together; that doesn't mean one caused the other."
         />
       )}
-      {effort && <InsightCard kind="Effort and progress" accent={color} headline="Weeks with more practice time tended to show bigger gains." evidence={`Across ${effort.weeks} weeks with a measured change`} />}
+      {effort && (
+        <InsightCard
+          kind="Effort and progress"
+          accent={color}
+          headline={`Across ${effort.weeks} weeks with a measured change, more practice time and bigger gains went together.`}
+          evidence={`How closely they moved together, from 0 (not at all) to 1 (exactly): ${effort.r.toFixed(2)}. That doesn't mean one caused the other.`}
+        />
+      )}
       {neglected.map((n) => (
         <InsightCard
           key={n.subSkill.id}
@@ -382,17 +388,18 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
       ))}
       {struggle && (
         <InsightCard
-          kind="Most frequent struggle"
+          kind="Struggled with"
           accent={DIFFICULTY_COLORS.tooHard}
-          headline={`${struggle.subSkill.name} appeared in ${struggle.count} of your last ${struggle.of} "struggled with" entries.`}
+          headline={struggle.counts.map((c) => `${c.subSkill.name} ${c.count}`).join(' · ')}
+          evidence={`How often each sub-skill was marked in your last ${struggle.of} "struggled with" entries.`}
         />
       )}
       {feeling && (
         <InsightCard
           kind="Feelings after"
-          accent={feelingTop ? zoneMeta(feelingTop.zone).accent : color}
+          accent={color}
           headline={feeling.headline}
-          evidence={[feeling.detail, ...feelingBySub.map((f) => `${f.subSkill.name}: mostly ${zoneMeta(f.zone).label} (${f.count} of ${f.total})`), `${basedOn(feeling.n)} logged after a session.`]
+          evidence={[...feelingBySub.map((f) => itemFeelingInsight(f.entries, `after ${f.subSkill.name}`)!.headline), `${basedOn(feeling.n)} logged after a session.`]
             .filter(Boolean)
             .join(' · ')}
         />

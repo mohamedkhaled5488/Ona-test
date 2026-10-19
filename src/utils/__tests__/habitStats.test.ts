@@ -1,11 +1,11 @@
 import {
-  mostSkippedWeekday,
-  mostSkippedReasonTag,
+  missesByWeekday,
+  skipReasons,
   completionFeelingZone,
-  relapseTriggerRanking,
+  relapseReasonCounts,
   urgeTimeOfDayPattern,
   resistedUrgeTrend,
-  bestApproachForHabit,
+  approachResults,
   rotatingJourneyStat,
   longestHabitStreak,
   completionSeries,
@@ -48,33 +48,38 @@ function feelingCheckIn(date: string, zone: FeelingCheckIn['zone']): FeelingChec
   };
 }
 
-describe('mostSkippedWeekday', () => {
-  it('names the weekday with the most Missed check-ins once it clears the minimum', () => {
-    // 2026-09-21, 28 and Oct 5 are Mondays
+describe('missesByWeekday', () => {
+  it('lists missed out of logged for every weekday it was logged, in week order', () => {
+    // 2026-09-21, 28 and Oct 5 are Mondays; the 22nd is a Tuesday
     const checkIns = [
       habitCheckIn('2026-09-21', false),
       habitCheckIn('2026-09-28', false),
       habitCheckIn('2026-10-05', false),
       habitCheckIn('2026-09-22', true),
     ];
-    expect(mostSkippedWeekday(checkIns, HABIT_ID)).toEqual({ weekday: 'Monday', count: 3, logged: 3 });
+    expect(missesByWeekday(checkIns, HABIT_ID)).toEqual([
+      { weekday: 'Mon', missed: 3, logged: 3 },
+      { weekday: 'Tue', missed: 0, logged: 1 },
+    ]);
   });
 
   it('stays undefined below the minimum sample size', () => {
     const checkIns = [habitCheckIn('2026-09-21', false), habitCheckIn('2026-09-28', false)];
-    expect(mostSkippedWeekday(checkIns, HABIT_ID)).toBeUndefined();
+    expect(missesByWeekday(checkIns, HABIT_ID)).toBeUndefined();
   });
 });
 
-describe('mostSkippedReasonTag', () => {
-  it('names the reason tag most associated with a Missed check-in', () => {
+describe('skipReasons', () => {
+  it('counts every reason tagged on a missed day, none singled out', () => {
     const checkIns = [
       habitCheckIn('2026-09-01', false, { reasonTags: ['Tired'] }),
       habitCheckIn('2026-09-02', false, { reasonTags: ['Tired'] }),
       habitCheckIn('2026-09-03', false, { reasonTags: ['Tired', 'Work'] }),
       habitCheckIn('2026-09-04', false, { reasonTags: ['Work'] }),
     ];
-    expect(mostSkippedReasonTag(checkIns, HABIT_ID)).toEqual({ tag: 'Tired', count: 3, missedTotal: 4 });
+    const r = skipReasons(checkIns, HABIT_ID)!;
+    expect(r.missedTotal).toBe(4);
+    expect(Object.fromEntries(r.tags.map((t) => [t.tag, t.count]))).toEqual({ Tired: 3, Work: 2 });
   });
 });
 
@@ -133,11 +138,11 @@ function quitFeelingEntry(opts: {
   };
 }
 
-describe('relapseTriggerRanking', () => {
-  it('ranks reason tags by how often they show up when a track ends', () => {
+describe('relapseReasonCounts', () => {
+  it('counts each reason tagged when a track ended, in the reason list order', () => {
     const tracks = [archivedTrack(['Stress']), archivedTrack(['Stress']), archivedTrack(['Stress', 'Sleep']), archivedTrack(['Sleep'])];
-    const ranking = relapseTriggerRanking(tracks, HABIT_ID);
-    expect(ranking[0]).toEqual({ tag: 'Stress', count: 3 });
+    const counts = relapseReasonCounts(tracks, HABIT_ID);
+    expect(Object.fromEntries(counts.map((c) => [c.tag, c.count]))).toEqual({ Stress: 3, Sleep: 2 });
   });
 });
 
@@ -172,10 +177,10 @@ describe('resistedUrgeTrend', () => {
   });
 });
 
-describe('bestApproachForHabit', () => {
+describe('approachResults', () => {
   const tracks = [{ id: TRACK_ID, quitHabitId: HABIT_ID, startDate: '2026-08-01', createdAt: '2026-08-01T00:00:00Z', status: 'active' as const }];
 
-  it('surfaces the approach with the best pass rate once it has enough attempts', () => {
+  it('shows how every approach went, A to Z, without picking one', () => {
     const entries = [
       quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Step outside for a minute', urgePassed: true }),
       quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Step outside for a minute', urgePassed: true }),
@@ -184,15 +189,18 @@ describe('bestApproachForHabit', () => {
       quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Riding it out', urgePassed: false }),
       quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Riding it out', urgePassed: false }),
     ];
-    expect(bestApproachForHabit(entries, tracks, HABIT_ID)).toEqual({ approach: 'Step outside for a minute', passedCount: 2, totalCount: 3 });
+    expect(approachResults(entries, tracks, HABIT_ID)).toEqual([
+      { approach: 'Riding it out', passedCount: 0, totalCount: 3 },
+      { approach: 'Step outside for a minute', passedCount: 2, totalCount: 3 },
+    ]);
   });
 
-  it('ignores an approach below the minimum sample size', () => {
+  it('leaves out an approach below the minimum sample size', () => {
     const entries = [
       quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Reaching out', urgePassed: true }),
       quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Reaching out', urgePassed: true }),
     ];
-    expect(bestApproachForHabit(entries, tracks, HABIT_ID)).toBeUndefined();
+    expect(approachResults(entries, tracks, HABIT_ID)).toEqual([]);
   });
 });
 
@@ -209,7 +217,8 @@ describe('rotatingJourneyStat', () => {
       quitFeelingEntry({ hour: 12, isResistedUrge: true, daysAgo: 5 }),
     ];
     const stat = rotatingJourneyStat(entries, tracks, HABIT_ID, '2026-10-01');
-    expect(stat).toMatch(/longest stretch|resisted \d+ urge|tend to feel/);
+    expect(stat).toMatch(/longest stretch|resisted \d+ urge|When you checked in/);
+    expect(stat).not.toMatch(/tend|most|best/);
   });
 });
 
@@ -297,32 +306,23 @@ describe('Quit dashboard builders', () => {
     expect(dates).toEqual(['2026-09-01', '2026-09-02', '2026-09-05', '2026-09-06']);
   });
 
-  it('the summary never claims a "most often" pattern from a single moment', () => {
+  it('the summaries never rank: no "often at night", "often around" or "most often"', () => {
     const tracks = [track(TRACK_ID, '2026-09-25')];
-    const one = quitAnalysisSummary(tracks, [quitFeelingEntry({ hour: 22, isResistedUrge: true })], HABIT_ID, '2026-10-01');
-    expect(one).toContain("You've resisted 1 urge this month");
-    expect(one).not.toContain('most often');
-    const three = quitAnalysisSummary(
-      tracks,
-      [22, 23, 22].map((hour, i) => quitFeelingEntry({ hour, isResistedUrge: true, daysAgo: i })),
-      HABIT_ID,
-      '2026-10-01'
-    );
-    // Three isn't enough to say when urges tend to come (needs 5, mostly at one time).
-    expect(three).not.toMatch(/often at night|most often/);
     const five = quitAnalysisSummary(
       tracks,
       [22, 23, 22, 23, 21].map((hour, i) => quitFeelingEntry({ hour, isResistedUrge: true, daysAgo: i })),
       HABIT_ID,
       '2026-10-01'
     );
-    expect(five).toContain('often at night');
-    expect(five).not.toContain('most often');
-  });
-
-  it('the Build summary only says "most often skipped" once the weekday clears the minimum', () => {
-    const oneMiss = buildHabitAnalysisSummary([habitCheckIn('2026-09-28', false)], [], HABIT_ID, '2026-10-01');
-    expect(oneMiss).not.toContain('most often skipped');
+    expect(five).toContain("You've resisted 5 urges this month.");
+    expect(five).not.toMatch(/often|most/);
+    const build = buildHabitAnalysisSummary(
+      [habitCheckIn('2026-09-28', false), habitCheckIn('2026-09-29', true), habitCheckIn('2026-09-30', true)],
+      [],
+      HABIT_ID,
+      '2026-10-01'
+    );
+    expect(build).toBe("Over the past 30 days, you've completed this habit 2 times and marked it missed 1 time.");
   });
 
   it('quitJourneyLog merges track starts, relapses and feelings into one newest-first list', () => {

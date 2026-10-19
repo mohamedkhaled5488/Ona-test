@@ -1,14 +1,16 @@
 // Analysis partition logic for Habits (both Build and Quit mode) — same
 // honesty rules as Feelings Analysis (feelingsStats.ts): correlational only,
-// gated by a minimum sample size, never diagnostic. Reuses feelingsStats'
+// gated by a minimum sample size, never diagnostic, and never a ranking: a
+// card shows the counts behind a pattern in a fixed order (week order,
+// morning to night, the reason list's own order) for the user to read. Reuses feelingsStats'
 // own threshold and zone helpers directly rather than re-deriving them.
 import type { Habit, HabitCheckIn, HabitFrequency, FeelingCheckIn, FeelingZone, QuitFeelingEntry, QuitTrack } from '../types/sections';
 import { completionRate, isScheduledDay, longestFrequencyStreak } from './habitFrequency';
 import { ANALYSIS_MIN_TAG_COUNT, mostCommonZone } from './feelingsStats';
-import { zoneMeta } from '../data/feelingsWheel';
+import { reasonTagOptions, zoneMeta } from '../data/feelingsWheel';
+import { getCalendarWeekStart } from './date';
 import { confidenceFor } from '../config/feelingsAnalysis';
-import { addDaysISO } from './date';
-import { quitTiming } from './habitTimeOfDay';
+import { addDaysISO, dayOfYear, daysBetweenISODates } from './date';
 
 // A local equivalent of useQuitHabitsStore's tracksForHabit — duplicated
 // rather than imported so this stays a pure utility module with no zustand
@@ -18,23 +20,26 @@ function tracksForHabit(tracks: QuitTrack[], habitId: string): QuitTrack[] {
   return tracks.filter((t) => t.quitHabitId === habitId);
 }
 
-const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Reason tags in the reason list's own order, then any custom ones A to Z.
+function inReasonOrder<T extends { tag: string }>(items: T[]): T[] {
+  const order = reasonTagOptions as readonly string[];
+  const rank = (t: string) => (order.includes(t) ? order.indexOf(t) : order.length);
+  return [...items].sort((a, b) => rank(a.tag) - rank(b.tag) || a.tag.localeCompare(b.tag));
+}
 
 // --- Build mode ---
 
-export interface SkipWeekdayStat {
-  weekday: string;
-  count: number;
+export interface WeekdayMisses {
+  weekday: string; // "Mon"
+  missed: number;
   logged: number; // check-ins logged on that weekday
 }
 
-// The day of week most associated with a Missed check-in — "Skipped most
-// often on Mondays," never framed as a reason, just an observed pattern.
-// Only claimed when one weekday clearly stands out: at least `minCount`
-// misses, ahead of the next weekday by SKIP_MIN_LEAD, and the habit is logged
-// on more than one weekday (a Mondays-only habit is always missed on Mondays).
-export const SKIP_MIN_LEAD = 2;
-export function mostSkippedWeekday(checkIns: HabitCheckIn[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): SkipWeekdayStat | undefined {
+// Missed and logged check-ins per weekday, in week order. Shown once there
+// are at least `minCount` misses; never "most often skipped on".
+export function missesByWeekday(checkIns: HabitCheckIn[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): WeekdayMisses[] | undefined {
   const missed = new Array(7).fill(0);
   const logged = new Array(7).fill(0);
   checkIns
@@ -44,30 +49,28 @@ export function mostSkippedWeekday(checkIns: HabitCheckIn[], habitId: string, mi
       logged[d] += 1;
       if (!c.done) missed[d] += 1;
     });
-  if (logged.filter((n) => n > 0).length < 2) return undefined;
-  const sorted = [...missed].sort((a, b) => b - a);
-  const max = sorted[0];
-  if (max < minCount || max - sorted[1] < SKIP_MIN_LEAD) return undefined;
-  const day = missed.indexOf(max);
-  return { weekday: WEEKDAY_LABELS[day], count: max, logged: logged[day] };
+  if (missed.reduce((a, b) => a + b, 0) < minCount) return undefined;
+  const ws = getCalendarWeekStart();
+  return [0, 1, 2, 3, 4, 5, 6]
+    .map((k) => (ws + k) % 7)
+    .filter((d) => logged[d] > 0)
+    .map((d) => ({ weekday: WEEKDAY_SHORT[d], missed: missed[d], logged: logged[d] }));
 }
 
-export interface SkipReasonStat {
-  tag: string;
-  count: number;
+export interface SkipReasons {
   missedTotal: number; // missed check-ins considered
+  tags: { tag: string; count: number }[]; // the reason list's order
 }
 
-// The reason tag most associated with a Missed check-in.
-export function mostSkippedReasonTag(checkIns: HabitCheckIn[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): SkipReasonStat | undefined {
+// Reasons tagged on missed days, each with its count. Shown once reasons were
+// tagged at least `minCount` times; never "the strongest link".
+export function skipReasons(checkIns: HabitCheckIn[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): SkipReasons | undefined {
   const counts = new Map<string, number>();
   const missed = checkIns.filter((c) => c.habitId === habitId && !c.done);
   missed.forEach((c) => (c.reasonTags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)));
-  const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-  if (sorted.length === 0 || sorted[0][1] < minCount) return undefined;
-  // A tie isn't a pattern: say nothing rather than pick one.
-  if (sorted[1] && sorted[1][1] === sorted[0][1]) return undefined;
-  return { tag: sorted[0][0], count: sorted[0][1], missedTotal: missed.length };
+  const total = [...counts.values()].reduce((a, b) => a + b, 0);
+  if (total < minCount) return undefined;
+  return { missedTotal: missed.length, tags: inReasonOrder([...counts.entries()].map(([tag, count]) => ({ tag, count }))) };
 }
 
 export interface CompletionFeelingStat {
@@ -107,18 +110,16 @@ export interface RelapseTriggerStat {
   count: number;
 }
 
-// Which reason tags are most associated with "I went back to it" moments for
-// this habit — the same "biggest impact" ranking-by-count idea as Feelings
-// Analysis's reason tags, applied to archived tracks' logged triggers.
-export function relapseTriggerRanking(tracks: QuitTrack[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): RelapseTriggerStat[] {
+// What was going on when tracks ended, each reason with its count, in the
+// reason list's order (not ranked).
+export function relapseReasonCounts(tracks: QuitTrack[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): RelapseTriggerStat[] {
   const counts = new Map<string, number>();
   tracksForHabit(tracks, habitId)
     .filter((t) => t.status === 'archived')
     .forEach((t) => (t.relapseReasonTags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)));
-  return Array.from(counts.entries())
-    .map(([tag, count]) => ({ tag, count }))
-    .filter((r) => r.count >= minCount)
-    .sort((a, b) => b.count - a.count);
+  const total = [...counts.values()].reduce((a, b) => a + b, 0);
+  if (total < minCount) return [];
+  return inReasonOrder([...counts.entries()].map(([tag, count]) => ({ tag, count })));
 }
 
 export type DayPartBucket = 'morning' | 'afternoon' | 'evening' | 'night';
@@ -157,9 +158,7 @@ export function urgeTimeOfDayPattern(
 // A local equivalent of useQuitHabitsStore's daysSinceTrackStart — see the
 // note on tracksForHabit above for why this is duplicated, not imported.
 function daysSinceTrackStart(track: QuitTrack, today: string): number {
-  const start = new Date(`${track.startDate}T00:00:00`);
-  const end = new Date(`${track.endDate ?? today}T00:00:00`);
-  return Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86400000) + 1);
+  return Math.max(1, daysBetweenISODates(track.startDate, track.endDate ?? today) + 1);
 }
 
 // One short, plain-language paragraph summarizing a Build habit's last
@@ -176,13 +175,15 @@ export function buildHabitAnalysisSummary(
   const windowCheckIns = checkIns.filter((c) => c.habitId === habitId && c.date >= windowStart);
   if (windowCheckIns.length === 0) return undefined;
   const completedCount = windowCheckIns.filter((c) => c.done).length;
-  const feelingStat = completionFeelingZone(feelingEntries.filter((e) => e.date >= windowStart), habitId);
-  const skipWeekday = mostSkippedWeekday(windowCheckIns, habitId);
+  const missedCount = windowCheckIns.filter((c) => !c.done).length;
+  const feelings = feelingEntries.filter((e) => e.date >= windowStart && e.source?.kind === 'habit' && e.source.refId === habitId).length;
+  const times = (n: number) => `${n} time${n === 1 ? '' : 's'}`;
 
-  let summary = `Over the past ${windowDays} days, you've completed this habit ${completedCount} time${completedCount === 1 ? '' : 's'}`;
-  if (feelingStat) summary += `, most often feeling ${zoneMeta(feelingStat.zone).label} afterward`;
-  if (skipWeekday) summary += `, and most often skipped it on ${skipWeekday.weekday}s`;
-  return `${summary}.`;
+  const parts = [`completed this habit ${times(completedCount)}`];
+  if (missedCount) parts.push(`marked it missed ${times(missedCount)}`);
+  if (feelings) parts.push(`noted how you felt after it ${times(feelings)}`);
+  const joined = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+  return `Over the past ${windowDays} days, you've ${joined}.`;
 }
 
 // Same idea for a Quit habit — spans its whole history (every track), not
@@ -196,32 +197,24 @@ export function quitAnalysisSummary(tracks: QuitTrack[], feelingEntries: QuitFee
   const resistedThisMonth = feelingEntries.filter(
     (e) => trackIds.has(e.trackId) && e.isResistedUrge && e.createdAt.slice(0, 10) >= addDaysISO(today, -29)
   ).length;
-  // Only when one time of day clearly holds most of them (see quitTiming).
-  const timing = quitTiming(feelingEntries, tracks, habitId);
-  const tendTo = timing && /^Urges tend to come /.test(timing.lines[0]) ? timing.lines[0].replace(/^Urges tend to come /, '').replace(/ \(.*$/, '') : undefined;
-  const triggers = relapseTriggerRanking(tracks, habitId);
 
   let summary = `Across ${relevant.length} track${relevant.length === 1 ? '' : 's'}, your longest stretch was ${longest} day${longest === 1 ? '' : 's'}.`;
   if (resistedThisMonth > 0) {
-    summary += ` You've resisted ${resistedThisMonth} urge${resistedThisMonth === 1 ? '' : 's'} this month`;
-    if (tendTo) summary += `, often ${tendTo}`;
-    if (triggers[0]) summary += `, often around ${triggers[0].tag}`;
-    summary += '.';
+    summary += ` You've resisted ${resistedThisMonth} urge${resistedThisMonth === 1 ? '' : 's'} this month.`;
   }
   return summary;
 }
 
-export interface BestApproachStat {
+export interface ApproachResult {
   approach: string;
   passedCount: number;
   totalCount: number;
 }
 
-// Which craving-menu approach has actually worked best for this specific
-// user — "Going for a walk has worked for you 4 of the last 5 times." Only
-// surfaced once an approach has enough attempts to say something real about
-// it; a single lucky or unlucky try never gets singled out.
-export function bestApproachForHabit(feelingEntries: QuitFeelingEntry[], tracks: QuitTrack[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): BestApproachStat | undefined {
+// How each craving-menu approach went: how many times the urge passed, out of
+// how many tries, A to Z. Shown once an approach has `minCount` tries; never
+// "what works best".
+export function approachResults(feelingEntries: QuitFeelingEntry[], tracks: QuitTrack[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): ApproachResult[] {
   const trackIds = new Set(tracksForHabit(tracks, habitId).map((t) => t.id));
   const byApproach = new Map<string, { passed: number; total: number }>();
   feelingEntries
@@ -232,11 +225,10 @@ export function bestApproachForHabit(feelingEntries: QuitFeelingEntry[], tracks:
       if (e.urgePassed) g.passed += 1;
       byApproach.set(e.approach!, g);
     });
-  const candidates = Array.from(byApproach.entries())
+  return Array.from(byApproach.entries())
     .filter(([, g]) => g.total >= minCount)
     .map(([approach, g]) => ({ approach, passedCount: g.passed, totalCount: g.total }))
-    .sort((a, b) => b.passedCount / b.totalCount - a.passedCount / a.totalCount);
-  return candidates[0];
+    .sort((a, b) => a.approach.localeCompare(b.approach));
 }
 
 // A rotating but always-true stat about this specific habit's journey —
@@ -256,28 +248,16 @@ export function rotatingJourneyStat(feelingEntries: QuitFeelingEntry[], tracks: 
   ).length;
   if (resistedThisMonth > 0) candidates.push(`You've resisted ${resistedThisMonth} urge${resistedThisMonth === 1 ? '' : 's'} this month.`);
 
-  // Same confidence rules as Feelings: "so far" from 3 noted feelings,
-  // "tend to" from 7, and only when one zone is clearly ahead.
-  const zoneCounts = new Map<FeelingZone, number>();
+  // The feelings noted when checking in, as counts in the zone order.
   const noted = feelingEntries.filter((e) => trackIds.has(e.trackId) && !e.isRelapseMoment && e.zone);
-  noted.forEach((e) => zoneCounts.set(e.zone!, (zoneCounts.get(e.zone!) ?? 0) + 1));
-  const ranked = Array.from(zoneCounts.entries()).sort((a, b) => b[1] - a[1]);
-  const level = confidenceFor(noted.length);
-  if (ranked[0] && level !== 'facts' && !(ranked[1] && ranked[1][1] === ranked[0][1])) {
-    const z = zoneMeta(ranked[0][0]).label;
-    candidates.push(
-      level === 'tends'
-        ? `You tend to feel ${z} when you check in: ${ranked[0][1]} of ${noted.length}.`
-        : `So far, you've mostly felt ${z} when you check in: ${ranked[0][1]} of ${noted.length}.`
-    );
+  if (confidenceFor(noted.length) !== 'facts') {
+    const order: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay'];
+    const mix = order.map((z) => [z, noted.filter((e) => e.zone === z).length] as const).filter(([, n]) => n > 0);
+    candidates.push(`When you checked in (${noted.length}): ${mix.map(([z, n]) => `${zoneMeta(z).label} ${n}`).join(' · ')}.`);
   }
 
-  const bestApproach = bestApproachForHabit(feelingEntries, tracks, habitId, 2);
-  if (bestApproach) candidates.push(`${bestApproach.approach} has worked for you ${bestApproach.passedCount} of the last ${bestApproach.totalCount} times.`);
-
   if (candidates.length === 0) return undefined;
-  const dayOfYear = Math.floor((new Date(`${today}T00:00:00`).getTime() - new Date(`${today.slice(0, 4)}-01-01T00:00:00`).getTime()) / 86400000);
-  return candidates[dayOfYear % candidates.length];
+  return candidates[dayOfYear(today) % candidates.length];
 }
 
 export interface ResistedUrgeTrend {
@@ -376,7 +356,7 @@ function datesBetween(start: string, end: string): string[] {
 }
 
 function dayNumber(start: string, date: string): number {
-  return Math.round((new Date(`${date}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000) + 1;
+  return daysBetweenISODates(start, date) + 1;
 }
 
 // The longest run this habit has ever had — consecutive scheduled days, or
@@ -471,24 +451,20 @@ export function sessionMinutesByTimeOfDay(checkIns: HabitCheckIn[], habitId: str
       g.count += 1;
       byBucket.set(bucket, g);
     });
-  return Array.from(byBucket.entries())
-    .filter(([, g]) => g.count >= minCount)
-    .map(([bucket, g]) => ({ bucket, averageMinutes: Math.round(g.minutes / g.count), count: g.count }))
-    .sort((a, b) => b.averageMinutes - a.averageMinutes);
+  const order: TimeOfDayBucket[] = ['before 9am', '9am–6pm', 'after 6pm'];
+  return order
+    .filter((b) => byBucket.has(b) && byBucket.get(b)!.count >= minCount)
+    .map((bucket) => ({ bucket, averageMinutes: Math.round(byBucket.get(bucket)!.minutes / byBucket.get(bucket)!.count), count: byBucket.get(bucket)!.count }));
 }
 
-// The Session length card. "Longest" is only said when there are two or more
-// times of day and the top one is at least SESSION_MIN_GAP minutes ahead.
-export const SESSION_MIN_GAP = 5;
+// The Session length card: the average for each time of day, in the order
+// given (morning to evening). No "longest".
 export function sessionLengthLines(stats: { bucket: string; averageMinutes: number; count: number }[]): { headline: string; evidence: string } | undefined {
   if (stats.length === 0) return undefined;
   const n = stats.reduce((s, t) => s + t.count, 0);
-  const evidence = `${stats.map((t) => `${t.bucket}: ${t.averageMinutes} min over ${t.count} sessions`).join(' · ')}. Based on ${n} timed sessions.`;
-  if (stats.length === 1) return { headline: `Your ${stats[0].bucket} sessions average ${stats[0].averageMinutes} min.`, evidence };
-  if (stats[0].averageMinutes - stats[1].averageMinutes >= SESSION_MIN_GAP) {
-    return { headline: `Your ${stats[0].bucket} sessions tend to run longest: ${stats[0].averageMinutes} min on average.`, evidence };
-  }
-  return { headline: 'Your sessions run about the same length whatever the time of day.', evidence };
+  const evidence = `Each number is the average length of the sessions started at that time. Based on ${n} timed sessions.`;
+  if (stats.length === 1) return { headline: `Sessions ${stats[0].bucket}: ${stats[0].averageMinutes} min on average (${stats[0].count}).`, evidence };
+  return { headline: `Average session length: ${stats.map((t) => `${t.bucket} ${t.averageMinutes} min (${t.count})`).join(' · ')}.`, evidence };
 }
 
 export interface QuitHeaderStats {

@@ -8,6 +8,13 @@ import { useReadingListStore } from '../../store/useReadingListStore';
 import { useFeelingsStore } from '../../store/useFeelingsStore';
 import { describeFeelingSource, type FeelingSourceLookup } from '../feelingSource';
 import { todayISO } from '../date';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 // Mirrors useFeelingSourceLookup, read from the stores directly (no React).
 function lookup(): FeelingSourceLookup {

@@ -93,7 +93,7 @@ export const TOUR: TourSection[] = [
       {
         key: 'dp-3',
         title: 'What you get back',
-        body: 'If you like, note how you feel after a task. Insights show your trends and how tasks tend to feel afterward, always with how many days they are based on.',
+        body: 'If you like, note how you feel after a task. Insights show the numbers behind your days, like how many tasks you finished and how you felt after them, always with how many they are based on.',
         feature: 'planningInsights',
         mock: 'chart',
         tryIt: { route: 'dailyPlanning' },
@@ -107,7 +107,7 @@ export const TOUR: TourSection[] = [
     slides: [
       { key: 'diet-1', title: 'Plan your meals', body: 'Plan meals for each day of the week, at whatever detail suits you.', feature: 'mealPlan', mock: 'meals' },
       { key: 'diet-2', title: 'Costs, if you want them', body: 'Add an optional cost to a meal in your own currency, and note where it comes from.', feature: 'mealCost', mock: 'meals' },
-      { key: 'diet-3', title: 'What you get back', body: 'A grocery list and a summary by day, week or month: totals, and the meals you repeat most.', feature: 'mealSummary', mock: 'chart', tryIt: { route: 'dietPlanning' } },
+      { key: 'diet-3', title: 'What you get back', body: 'A grocery list and a summary by day, week or month: totals, and the meals you repeated.', feature: 'mealSummary', mock: 'chart', tryIt: { route: 'dietPlanning' } },
     ],
   },
   {
@@ -177,7 +177,7 @@ export const TOUR: TourSection[] = [
       {
         key: 'hb-3',
         title: 'What you get back',
-        body: 'A day-by-day done and missed pattern, a time-of-day view that only compares when the difference is real, logs you can open for the comment you left, and optional feelings after.',
+        body: 'A day-by-day done and missed pattern, a time-of-day view that shows how often it gets done at each time, logs you can open for the comment you left, and optional feelings after.',
         feature: 'habitPattern',
         mock: 'pattern',
         tryIt: { route: 'habitsHub', params: { initialMode: 'build' } },

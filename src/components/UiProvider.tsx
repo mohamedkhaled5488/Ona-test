@@ -96,12 +96,13 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
       <Modal visible={!!dialog} transparent animationType="fade" onRequestClose={closeDialog}>
         <View style={styles.backdrop}>
           <View style={styles.dialog}>
-            <Text style={styles.dialogTitle}>{dialog?.title}</Text>
+            <Text style={styles.dialogTitle} accessibilityRole="header">{dialog?.title}</Text>
             {dialog?.message ? <Text style={styles.dialogMessage}>{dialog.message}</Text> : null}
             <View style={styles.dialogActions}>
               {dialog?.actions.map((action) => (
                 <Pressable
                   key={action.label}
+                  accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.dialogButton,
                     action.style === 'destructive' && styles.dialogButtonDestructive,
@@ -136,6 +137,7 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
             {toast.actionLabel && (
               <Pressable
                 hitSlop={8}
+                accessibilityRole="button"
                 onPress={() => {
                   toast.onAction?.();
                   setToast(null);

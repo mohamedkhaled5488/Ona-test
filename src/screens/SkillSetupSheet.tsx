@@ -12,6 +12,7 @@ import { useSkillsStore, MAX_EXTRA_METRICS, type MetricDefinition } from '../sto
 import { LEVEL_LABELS, LEVEL_ORDER, activeMetrics } from '../utils/skillProgress';
 import type { Skill, SkillMetric, SkillResourceStatus, SkillResourceType, SubSkill } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
+import { parseNumberInput } from '../utils/numberInput';
 
 const TARGETS: { label: string; days: number | null }[] = [
   { label: 'No date', days: null },
@@ -90,7 +91,7 @@ function MetricRow({ metric, color, onChange, onRemove }: { metric: SkillMetric;
       <Pressable onPress={onChange} hitSlop={8}>
         <Caption style={{ color }}>Change</Caption>
       </Pressable>
-      <Pressable onPress={onRemove} hitSlop={8}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Remove metric" onPress={onRemove} hitSlop={8}>
         <Ionicons name="close" size={16} color={colors.inkSoft} />
       </Pressable>
     </View>
@@ -230,7 +231,7 @@ export function SkillSetupSheet({ skill, visible, onClose, hasSessions }: { skil
             setNewSub('');
           }}
         />
-        <Pressable
+        <Pressable accessibilityRole="button" accessibilityLabel="Add sub-skill"
           hitSlop={8}
           onPress={() => {
             store.addSubSkill(skill.id, newSub);
@@ -301,9 +302,9 @@ export function SkillSetupSheet({ skill, visible, onClose, hasSessions }: { skil
         <PrimaryButton
           label="Set"
           variant="outline"
-          disabled={!(Number(customMinutes) > 0)}
+          disabled={!(parseNumberInput(customMinutes) > 0)}
           onPress={() => {
-            store.updateSkill(skill.id, { weeklyGoalMinutes: Math.round(Number(customMinutes)) });
+            store.updateSkill(skill.id, { weeklyGoalMinutes: Math.round(parseNumberInput(customMinutes)) });
             setCustomMinutes('');
           }}
         />
@@ -317,7 +318,7 @@ export function SkillSetupSheet({ skill, visible, onClose, hasSessions }: { skil
             <Caption style={styles.hint}>{r.type}{r.linkOrNote ? ` · ${r.linkOrNote}` : ''}</Caption>
           </View>
           <Chip label={RESOURCE_STATUS_LABEL[r.status]} color={color} active={r.status === 'done'} onPress={() => store.setResourceStatus(skill.id, r.id, NEXT_STATUS[r.status])} />
-          <Pressable onPress={() => store.deleteResource(skill.id, r.id)} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Remove resource" onPress={() => store.deleteResource(skill.id, r.id)} hitSlop={8}>
             <Ionicons name="close" size={16} color={colors.inkSoft} />
           </Pressable>
         </View>

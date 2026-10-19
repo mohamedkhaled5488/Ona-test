@@ -213,7 +213,7 @@ describe('tagZoneDistribution', () => {
 });
 
 describe('tagFeelingBreakdown (the specific feeling words behind a tag, not just its zone)', () => {
-  it('breaks a tag down by the actual feelings chosen, most common first', () => {
+  it('breaks a tag down by the actual feelings chosen, A to Z (not ranked)', () => {
     const entries: FeelingCheckIn[] = [
       checkIn('2026-09-01', 'tense', ['Work'], ['tense-stressed']),
       checkIn('2026-09-02', 'tense', ['Work'], ['tense-stressed']),
@@ -221,8 +221,8 @@ describe('tagFeelingBreakdown (the specific feeling words behind a tag, not just
       checkIn('2026-09-04', 'tense', ['Work'], ['tense-stressed']),
     ];
     const breakdown = tagFeelingBreakdown(entries, 'Work');
-    expect(breakdown[0]).toEqual({ feeling: 'Stressed', count: 3, percentage: 75, notes: [] });
-    expect(breakdown[1]).toEqual({ feeling: 'Calm', count: 1, percentage: 25, notes: [] });
+    expect(breakdown[0]).toEqual({ feeling: 'Calm', count: 1, percentage: 25, notes: [] });
+    expect(breakdown[1]).toEqual({ feeling: 'Stressed', count: 3, percentage: 75, notes: [] });
   });
 
   it('counts a blended two-feeling check-in under both feelings', () => {

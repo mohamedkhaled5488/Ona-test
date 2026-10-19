@@ -95,7 +95,7 @@ export function CatchAThoughtScreen({ navigation }: Props) {
           const active = filter === f;
           const label = f === 'all' ? 'All' : kindMeta[f].label;
           return (
-            <Pressable key={f} onPress={() => setFilter(f)} style={[styles.filterChip, active && styles.filterChipActive]}>
+            <Pressable key={f} onPress={() => setFilter(f)} accessibilityRole="radio" accessibilityState={{ selected: active }} accessibilityLabel={label} style={[styles.filterChip, active && styles.filterChipActive]}>
               <Body style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Body>
             </Pressable>
           );
@@ -136,7 +136,7 @@ export function CatchAThoughtScreen({ navigation }: Props) {
         <>
             <View style={styles.modalHeader}>
               <SectionHeading>Catch something</SectionHeading>
-              <Pressable hitSlop={8} onPress={requestCloseCapture}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={requestCloseCapture}>
                 <Ionicons name="close" size={22} color={colors.inkSoft} />
               </Pressable>
             </View>
@@ -193,7 +193,7 @@ export function CatchAThoughtScreen({ navigation }: Props) {
                   <Ionicons name={kindMeta[selectedThought.kind].icon} size={16} color={kindMeta[selectedThought.kind].accent} />
                   <Caption style={{ color: kindMeta[selectedThought.kind].accent }}> {kindMeta[selectedThought.kind].label}</Caption>
                 </View>
-                <Pressable hitSlop={8} onPress={() => setSelectedThought(null)}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={() => setSelectedThought(null)}>
                   <Ionicons name="close" size={22} color={colors.inkSoft} />
                 </Pressable>
               </View>
@@ -215,6 +215,8 @@ export function CatchAThoughtScreen({ navigation }: Props) {
                 />
               </View>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Delete"
                 style={styles.deleteRow}
                 onPress={() => {
                   const thought = selectedThought;

@@ -1,0 +1,35 @@
+# E2E-004 Build a habit, check in today, and read its analysis: counts, no
+# rankings, no causal claims.
+appId: app.ona
+tags:
+  - core
+---
+- runFlow: subflows/fresh-start.yaml
+- runFlow: subflows/open-habits.yaml
+- tapOn: "Build a new habit"
+- tapOn: "e.g. pour my morning coffee"
+- inputText: "pour my morning coffee"
+- tapOn: "e.g. write one journal line"
+- inputText: "write one journal line"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Create habit"
+- tapOn: "Create habit"
+- tapOn: "write one journal line"
+- tapOn:
+    text: "Done"
+    index: 0
+- tapOn: "Save"
+- assertVisible: "Marked done today.*"
+- scrollUntilVisible:
+    element: "Analysis"
+- tapOn: "Analysis"
+- assertVisible: "Done and missed"
+- scrollUntilVisible:
+    element: "Milestones"
+- assertNotVisible: ".*(tends to|usually|works better|stands out|because of|makes you).*"
+# Still there after a relaunch.
+- stopApp
+- launchApp
+- runFlow: subflows/open-habits.yaml
+- assertVisible: "write one journal line"

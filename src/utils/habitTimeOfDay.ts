@@ -1,15 +1,14 @@
-// "Time of day" for a habit, without inventing a winner.
+// "Time of day" for a habit: the numbers behind it, never a ranking.
 //
 // Completion rates by time of day only mean something when there is a
 // denominator: the time the habit was *planned* for. A "Missed" tap at 9pm
 // says nothing about when it was meant to happen. So:
-// - Check-ins that carry a planned time are grouped by that time, and rates
-//   are compared only when two groups each have at least MIN_ATTEMPTS and
-//   differ by at least MIN_GAP points. Otherwise: "both work for you".
+// - Check-ins that carry a planned time are grouped by that time, and each
+//   group's rate is shown (morning to night), once a group has MIN_ATTEMPTS.
 // - Without planned times there's no "missed" to count, so the card shows
-//   only when the habit is usually completed, with no rates and no "better".
-// - Quit habits: when urges and slips happen, as counts, never a ranking.
-// Wording stays correlational ("seem to", "tends to"); counts always shown.
+//   when it was completed, as counts.
+// - Quit habits: when urges and slips were logged, as counts.
+// Nothing is called "better", "usually" or "most": the user reads the numbers.
 import type { HabitCheckIn, QuitFeelingEntry, QuitTrack } from '../types/sections';
 import { addDaysISO } from './date';
 
@@ -18,9 +17,8 @@ export const DAY_PARTS: DayPart[] = ['morning', 'afternoon', 'evening', 'night']
 export const DAY_PART_LABEL: Record<DayPart, string> = { morning: 'Mornings', afternoon: 'Afternoons', evening: 'Evenings', night: 'Nights' };
 const IN_PART: Record<DayPart, string> = { morning: 'in the morning', afternoon: 'in the afternoon', evening: 'in the evening', night: 'at night' };
 
-export const MIN_ATTEMPTS = 5; // per group, before comparing
-export const MIN_GAP = 15; // percentage points, before saying one works better
-export const MIN_COMPLETIONS = 5; // before showing when it's usually done
+export const MIN_ATTEMPTS = 5; // per group, before its rate is shown
+export const MIN_COMPLETIONS = 5; // before showing when it was completed
 
 export function dayPartForHour(hour: number): DayPart {
   if (hour >= 5 && hour < 11) return 'morning';
@@ -58,10 +56,10 @@ export interface PartRate {
 
 export type TimeOfDayInsight =
   | { kind: 'notEnough'; n: number; needed: number }
-  // No planned times: when it's usually done (no rates, no "better").
+  // No planned times: when it was completed, as counts.
   | { kind: 'whenDone'; parts: PartCount[]; n: number; lines: string[] }
-  // Planned times: rates per group, ranked only if the difference is real.
-  | { kind: 'rates'; parts: PartRate[]; n: number; clearer: boolean; lines: string[] };
+  // Planned times: each group's rate, morning to night.
+  | { kind: 'rates'; parts: PartRate[]; n: number; lines: string[] };
 
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
@@ -84,43 +82,30 @@ export function habitTimeOfDay(checkIns: HabitCheckIn[], habitId: string): TimeO
     return { part, done: g.done, attempts: g.attempts, rate: pct(g.done, g.attempts) };
   });
   const comparable = rates.filter((r) => r.attempts >= MIN_ATTEMPTS);
-  if (comparable.length >= 2) {
-    const sorted = [...comparable].sort((a, b) => b.rate - a.rate);
-    const best = sorted[0];
-    const worst = sorted[sorted.length - 1];
-    const clearer = best.rate - worst.rate >= MIN_GAP;
-    const show = (r: PartRate) => `${DAY_PART_LABEL[r.part]}: ${r.rate}% done (${r.done} of ${r.attempts})`;
-    const lines = clearer
-      ? [`${show(best)}. ${show(worst)}.`, `${DAY_PART_LABEL[best.part]} seem to work better for this habit.`]
-      : [
-          `You complete this well ${comparable.map((r) => `${IN_PART[r.part]} (${r.rate}%)`).join(' and ')}.`,
-          comparable.length === 2 ? 'Both times work for you.' : 'They all work for you.',
-        ];
-    return { kind: 'rates', parts: rates, n: planned.length, clearer, lines };
-  }
-  if (comparable.length === 1 && rates.length === 1) {
-    const r = comparable[0];
+  if (comparable.length >= 1) {
+    const show = (r: PartRate) => `${r.part} ${r.rate}% (${r.done} of ${r.attempts})`;
     return {
       kind: 'rates',
       parts: rates,
       n: planned.length,
-      clearer: false,
-      lines: [`Planned ${IN_PART[r.part]}, you've done it ${r.done} of ${r.attempts} times (${r.rate}%).`],
+      lines: [
+        comparable.length === 1
+          ? `Planned ${IN_PART[comparable[0].part]}: done ${comparable[0].done} of ${comparable[0].attempts} times (${comparable[0].rate}%).`
+          : `Done when planned for each time: ${comparable.map(show).join(' · ')}.`,
+        'Each number is how often it got done when it was planned for that time of day.',
+      ],
     };
   }
 
-  // Otherwise: when it's usually completed. No rates, no winner.
+  // Otherwise: when it was completed, as counts.
   const times = mine.map(completionTime).filter((t): t is Date => !!t);
   if (times.length < MIN_COMPLETIONS) return { kind: 'notEnough', n: times.length, needed: MIN_COMPLETIONS };
   const counts = new Map<DayPart, number>();
   for (const t of times) counts.set(dayPartForHour(t.getHours()), (counts.get(dayPartForHour(t.getHours())) ?? 0) + 1);
   const parts = DAY_PARTS.filter((p) => counts.has(p)).map((part) => ({ part, count: counts.get(part)! }));
-  const top = [...parts].sort((a, b) => b.count - a.count)[0];
   const lines = [
-    parts.length === 1
-      ? `You usually complete it ${IN_PART[top.part]} (${plural(top.count, 'time')}).`
-      : `When you complete it: ${parts.map((p) => `${IN_PART[p.part]} ${p.count}`).join(', ')}.`,
-    'Add a planned time (the cue reminder) to see which time works best.',
+    `When it was completed (${plural(times.length, 'time')}): ${parts.map((p) => `${p.part} ${p.count}`).join(' · ')}.`,
+    'Add a planned time (the cue reminder) to see how often it gets done at each time of day.',
   ];
   return { kind: 'whenDone', parts, n: times.length, lines };
 }
@@ -132,8 +117,7 @@ export interface QuitTiming {
   lines: string[];
 }
 
-// Counts per time of day. Says "tend to" only when one time clearly holds
-// most of them (at least 5, and 60% or more); never "worse" or "better".
+// Counts per time of day, morning to night. No "tend to", no ranking.
 export function quitTiming(feelingEntries: QuitFeelingEntry[], tracks: QuitTrack[], habitId: string): QuitTiming | undefined {
   const trackIds = new Set(tracks.filter((t) => t.quitHabitId === habitId).map((t) => t.id));
   const moments = feelingEntries.filter((e) => trackIds.has(e.trackId) && (e.isResistedUrge || e.isRelapseMoment));
@@ -144,10 +128,6 @@ export function quitTiming(feelingEntries: QuitFeelingEntry[], tracks: QuitTrack
     counts.set(part, (counts.get(part) ?? 0) + 1);
   }
   const parts = DAY_PARTS.filter((p) => counts.has(p)).map((part) => ({ part, count: counts.get(part)! }));
-  const top = [...parts].sort((a, b) => b.count - a.count)[0];
-  const lines =
-    top.count >= MIN_ATTEMPTS && top.count / moments.length >= 0.6
-      ? [`Urges tend to come ${IN_PART[top.part]} (${top.count} of ${moments.length}).`]
-      : [`Urges logged: ${parts.map((p) => `${IN_PART[p.part]} ${p.count}`).join(', ')}.`];
+  const lines = [`When urges and slips were logged (${moments.length}): ${parts.map((p) => `${p.part} ${p.count}`).join(' · ')}.`];
   return { n: moments.length, parts, lines };
 }

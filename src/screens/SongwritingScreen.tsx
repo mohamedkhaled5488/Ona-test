@@ -230,7 +230,7 @@ function SongEditor({ song, onBack }: { song: Song; onBack: () => void }) {
           {song.inspiration.map((note, i) => (
             <View key={i} style={styles.inspirationRow}>
               <Body style={styles.inspirationText}>{note}</Body>
-              <Pressable hitSlop={8} onPress={() => confirmRemoveInspiration(i, note)}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Remove inspiration note" hitSlop={8} onPress={() => confirmRemoveInspiration(i, note)}>
                 <Ionicons name="close" size={16} color={colors.inkSoft} />
               </Pressable>
             </View>
@@ -360,7 +360,7 @@ function NewSongModal({ visible, onClose, onCreate }: { visible: boolean; onClos
     <SheetModal visible={visible} onClose={onClose}>
       <View style={styles.modalHeader}>
         <SectionHeading>New song</SectionHeading>
-        <Pressable hitSlop={8} onPress={onClose}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={onClose}>
           <Ionicons name="close" size={22} color={colors.inkSoft} />
         </Pressable>
       </View>

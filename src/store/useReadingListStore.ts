@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Quote, ReadingListEntry, ReadingSession, ReadingStatus } from '../types/sections';
 import { genId } from '../utils/id';
-import { todayISO } from '../utils/date';
+import { dayOfYear, toISODate, todayISO } from '../utils/date';
 import { pagesBetween, percentFromPages, sanitizePageCount } from '../utils/bookProgress';
 
 export interface QuoteInput {
@@ -215,8 +215,8 @@ export const useReadingListStore = create<ReadingListState>()(
 export function weeklyResurfacedQuote(quotes: Quote[], todayIso: string): Quote | undefined {
   if (quotes.length === 0) return undefined;
   const d = new Date(`${todayIso}T00:00:00`);
-  const start = new Date(d.getFullYear(), 0, 1);
-  const weekNumber = Math.floor((d.getTime() - start.getTime()) / (7 * 86400000));
+  // Calendar weeks since 1 January (DST can't move the change to another day).
+  const weekNumber = Math.floor(dayOfYear(toISODate(d)) / 7);
   const sorted = [...quotes].sort((a, b) => a.id.localeCompare(b.id));
   return sorted[weekNumber % sorted.length];
 }

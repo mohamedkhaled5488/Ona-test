@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { GraduationChoice, Habit, HabitCheckIn, HabitFrequency } from '../types/sections';
 import { genId } from '../utils/id';
-import { todayISO } from '../utils/date';
+import { daysBetweenISODates, todayISO } from '../utils/date';
 import { cancelReminders, scheduleReminder } from '../utils/notifications';
 import { frequencyStreak, shouldResurfaceWhyFor, nextScheduledDates, type FrequencyStreak } from '../utils/habitFrequency';
 
@@ -267,10 +267,9 @@ export function habitStreak(checkIns: HabitCheckIn[], habitId: string, today: st
   return frequencyStreak(checkIns, habitId, frequency, today);
 }
 
+// "Day N": calendar days, so the spring daylight-saving change can't lose one.
 export function daysElapsed(habit: Habit, today: string): number {
-  const start = new Date(`${habit.createdAt}T00:00:00`);
-  const now = new Date(`${today}T00:00:00`);
-  return Math.max(1, Math.floor((now.getTime() - start.getTime()) / 86400000) + 1);
+  return Math.max(1, daysBetweenISODates(habit.createdAt.slice(0, 10), today) + 1);
 }
 
 export function habitMilestoneMessage(elapsed: number, targetDays: number): string | undefined {

@@ -116,14 +116,30 @@ describe('below the minimum, no insight', () => {
 });
 
 describe('counts and maths', () => {
-  test('completion, best weekday and time of day', () => {
+  test('completion, by weekday and by time of day: the numbers, in a fixed order', () => {
     // Mondays all done, other days half.
     const tasks = many(28, '2026-10-01', {}, (i) => addDaysISO('2026-10-01', i) === '2026-10-05' || ['2026-10-12', '2026-10-19', '2026-10-26'].includes(addDaysISO('2026-10-01', i)) || i % 2 === 0);
     const c = completionInsight(occurrences(tasks, R, doneOn, []), buckets(R, 'day', 1));
     expect(c.planned).toBe(28);
-    expect(c.bestWeekday?.name).toBe('Mondays');
-    expect(c.bestTime?.time).toBe('morning');
     expect(c.lines[0]).toBe(`You finished ${c.done} of 28 tasks (${c.rate}%).`);
+    // Every weekday, in week order (the week starts on Monday in these tests).
+    expect(c.byWeekday.map((d) => d.name)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    expect(c.byWeekday[0]).toEqual({ weekday: 1, name: 'Mon', rate: 100, planned: 4 });
+    expect(c.lines[1]).toMatch(/^Done by weekday: Mon 100% of 4 · Tue \d+% of 4 · /);
+  });
+
+  test('never a "best" day or time, even with a big gap or a near-tie', () => {
+    // 41 / 40 / 39 finished across the day (the demo's real spread).
+    const at = (h: number) => (t: DailyTask) => ({ ...t, completedAt: { [t.date]: `${t.date}T${String(h).padStart(2, '0')}:00:00` } });
+    const even = [...many(40, '2026-08-01', { title: 'a' }).map(at(9)), ...many(39, '2026-08-01', { title: 'b' }).map(at(14)), ...many(41, '2026-08-01', { title: 'c' }).map(at(19))];
+    const r2 = { start: '2026-08-01', end: '2026-10-31' };
+    const e = completionInsight(occurrences(even, r2, doneOn, []), buckets(r2, 'week', 1));
+    expect(e.lines).toContain('When the 120 finished tasks with a time were checked off: morning 40 · afternoon 39 · evening 41.');
+    // A big gap is shown the same way: just the numbers.
+    const lopsided = [...many(30, '2026-08-01', { title: 'a' }).map(at(9)), ...many(3, '2026-08-01', { title: 'c' }).map(at(19))];
+    const l = completionInsight(occurrences(lopsided, r2, doneOn, []), buckets(r2, 'week', 1));
+    expect(l.lines).toContain('When the 33 finished tasks with a time were checked off: morning 30 · evening 3.');
+    for (const x of [...e.lines, ...l.lines]) expect(x).not.toMatch(/most|best|usually|tend/i);
   });
 
   test('per tag: planned, done, time timed, moves; quiet tags', () => {
@@ -137,7 +153,7 @@ describe('counts and maths', () => {
     const t = tagInsight(occ, tasks, [study, home]);
     expect(t.tags.map((s) => [s.tag.name, s.planned, s.done, s.minutes, s.moved])).toEqual([['Study', 6, 4, 25, 3]]);
     expect(t.quiet.map((q) => q.name)).toEqual(['Home']); // 3 planned, none done
-    expect(t.lines[0]).toBe('Study: 4 of 6 done (67%), 25 min timed.');
+    expect(t.lines[0]).toBe('Study: 4 of 6 done (67%), 25 min timed, moved 3 times.');
     expect(t.lines.join(' ')).toMatch(/Only if you want them to/);
   });
 
@@ -149,7 +165,7 @@ describe('counts and maths', () => {
 
   test.each([
     [[30, 38, 39, 41, 60], 30, /about 30% longer/], // median 39 of 30
-    [[30, 31, 29, 30, 32], 30, /close to how long/],
+    [[30, 31, 29, 30, 32], 30, /took about as long as estimated, within 10%/],
     [[20, 20, 22, 18, 21], 30, /about 33% less time/],
   ])('estimate accuracy uses the median: took %j for %i-minute estimates', (actuals, est, re) => {
     const tasks = actuals.map((a, i) => T({ id: `e${i}`, date: addDaysISO('2026-10-01', i), done: true, estimateMinutes: est, actualMinutes: { [addDaysISO('2026-10-01', i)]: a } }));
@@ -163,16 +179,11 @@ describe('counts and maths', () => {
     expect(estimateInsight(occurrences(tasks, R, doneOn, [])).n).toBe(1);
   });
 
-  test('energy match: high-energy tasks finished in the best time of day', () => {
-    const morning = many(6, '2026-10-01', { title: 'm' });
+  test('energy match: when high-energy tasks were finished, next to all tasks', () => {
+    const morning = many(9, '2026-10-01', { title: 'm' });
     const highEvening = many(5, '2026-10-10', { title: 'h', energy: 'high' }).map((t) => ({ ...t, completedAt: { [t.date]: `${t.date}T19:00:00` } }));
     const e = energyInsight(occurrences([...morning, ...highEvening], R, doneOn, []));
-    expect(e.bestTime).toBe('morning');
-    expect(e.inBest).toBe(0);
-    expect(e.lines).toEqual([
-      '0 of 5 high-energy tasks were finished in the morning, when you tend to finish the most.',
-      'Planning high-energy tasks for the morning might suit you.',
-    ]);
+    expect(e.lines).toEqual(['High-energy tasks, when they were finished (5): evening 5.', 'All finished tasks with a time (14): morning 9 · evening 5.']);
   });
 
   const withFeelings = (tag: string, zones: FeelingZone[], difficulty?: 'harder') => {
@@ -187,26 +198,24 @@ describe('counts and maths', () => {
     return { tasks, entries };
   };
 
-  test('feelings after tasks, by tag, and "harder than expected"', () => {
+  test('feelings after tasks, by tag, and "harder than expected": counts in the zone order', () => {
     const a = withFeelings('study', ['calm', 'calm', 'calm', 'tense', 'lively', 'calm'], 'harder');
     const occ = occurrences(a.tasks, R, doneOn, a.entries);
     const f = feelingsInsight(occ, [study]);
     expect(f.mix).toEqual({ lively: 1, calm: 4, tense: 1, low: 0, okay: 0 });
     expect(f.lines).toEqual([
-      'After tasks, you most often felt Calm (4 of 6).',
-      'After tasks tagged Study, you most often felt Calm (4 of 6).',
-      'Tasks tagged Study were often harder than expected (6 of 6).',
+      'How you felt after tasks (6 feelings): Lively 1 · Calm 4 · Tense 1.',
+      'After tasks tagged Study (6): Lively 1 · Calm 4 · Tense 1.',
+      'Tasks tagged Study: harder than expected 6 of 6 times rated.',
     ]);
   });
 
-  test('tasks you feel good after, and the other kind framed as information', () => {
+  test('feelings after each tag: every tag, both sides, none picked out', () => {
     const good = withFeelings('study', ['calm', 'lively', 'calm', 'calm', 'okay']);
     const heavy = withFeelings('home', ['tense', 'low', 'tense', 'calm', 'okay']);
     const occ = occurrences([...good.tasks, ...heavy.tasks], R, doneOn, [...good.entries, ...heavy.entries]);
     const g = feelGoodInsight(occ, [study, home]);
-    expect(g.good).toEqual([{ tag: study, n: 5, count: 4 }]);
-    expect(g.heavy).toEqual([{ tag: home, n: 5, count: 3 }]);
-    expect(g.lines[1]).toMatch(/Worth knowing, not something to fix\.$/);
+    expect(g.lines).toEqual(['Study (5): Lively or Calm 4 · Tense or Low 0.', 'Home (5): Lively or Calm 1 · Tense or Low 3.']);
   });
 
   test('busy days: planned well over the usual time, and how those days went', () => {
@@ -256,7 +265,7 @@ describe('weekly review', () => {
     const r = weeklyReview(tasks, [study], '2026-10-12', 1, doneOn, [], 480, (t) => t.title)!;
     expect(r.weekStart).toBe('2026-10-05');
     expect(r.wins[0]).toBe('You finished 4 tasks.');
-    expect(r.wins).toContain('Most done: Study (4).');
+    expect(r.wins).toContain('Done by tag: Study 4.');
     expect(r.slipped[0]).toBe("2 tasks stayed open. That's okay; they can wait or go.");
     expect(r.slipped[1]).toBe('Kept moving: Clean the attic.');
     expect(r.suggestion.length).toBeGreaterThan(0);
@@ -309,6 +318,6 @@ describe('correlational, never causal, never guilt', () => {
   test('every insight says how many points it is based on', () => {
     const src = fs.readFileSync(path.join(process.cwd(), 'src/screens/PlanningInsightsScreen.tsx'), 'utf8');
     expect(src).toMatch(/Based on \{gate\.n\} \{gate\.unit\}/);
-    expect(src).toMatch(/These are patterns, not causes\./);
+    expect(src).toMatch(/not a ranking, and not causes\./);
   });
 });

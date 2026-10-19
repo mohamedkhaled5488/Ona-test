@@ -1,0 +1,5 @@
+# Maestro workspace: the five core journeys (docs/test-cases/e2e.md).
+# Flows tagged `needs-backend` sign in, so they need a build pointed at a
+# LOCAL Supabase stack (see docs/test-cases/e2e.md). Never a hosted project.
+flows:
+  - "*.yaml"

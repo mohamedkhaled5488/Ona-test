@@ -43,3 +43,6 @@ yarn-error.*
 
 # Claude Code runtime files
 .claude/scheduled_tasks.lock
+
+# Test coverage reports
+coverage/

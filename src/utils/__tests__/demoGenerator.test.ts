@@ -1,6 +1,10 @@
 // Demo mode, stage 2: the sample data generator. Same seed, same story;
 // dates relative to today with nothing in the future except plans; enough
 // data for every chart and Insight; month graphs covering their whole month.
+// These build the full 8-week sample set; give them room on a slow, busy
+// machine (a coverage run) instead of the default 5 seconds.
+jest.setTimeout(20_000);
+
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []) }));
 
 import { DEMO_DAYS, generateDemoData, localeCurrency, type DemoSections } from '../../demo/generate';

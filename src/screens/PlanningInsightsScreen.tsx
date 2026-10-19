@@ -112,7 +112,7 @@ function InsightCard({
           ))}
           {extra}
           <Caption style={styles.muted}>
-            Based on {gate.n} {gate.unit}. These are patterns, not causes.
+            Based on {gate.n} {gate.unit}. These are counts from your own logs, in a fixed order: not a ranking, and not causes.
           </Caption>
           {data && data.length > 0 && (
             <>
@@ -338,7 +338,7 @@ export function PlanningInsightsScreen({ navigation }: Props) {
                 value={x.n}
                 max={Math.max(...timeCounts.map((y) => y.n), 1)}
                 text={`${x.n}`}
-                color={x.t === all.energy.bestTime ? colors.teal : withAlpha(colors.teal, 0.45)}
+                color={colors.teal}
               />
             ))}
           </View>
@@ -361,17 +361,16 @@ export function PlanningInsightsScreen({ navigation }: Props) {
         }
         data={[
           ...feelingZones.map((z) => ({ label: z.label, value: String(all.feelings.mix[z.id]) })),
-          ...all.feelings.byTag.map((t) => ({ label: `Tagged ${t.tag.name}`, value: `mostly ${t.top} (${t.topCount} of ${t.n})` })),
+          ...all.feelings.byTag.map((t) => ({ label: `Tagged ${t.tag.name}`, value: feelingZones.filter((z) => t.mix[z.id] > 0).map((z) => `${z.label} ${t.mix[z.id]}`).join(', ') })),
         ]}
       />
 
       <InsightCard
-        title="Tasks you feel good after"
+        title="Feelings after each tag"
         gate={all.feelGood}
         lines={all.feelGood.lines}
         data={[
-          ...all.feelGood.good.map((t) => ({ label: `${t.tag.name}: Lively or Calm`, value: `${t.count} of ${t.n}` })),
-          ...all.feelGood.heavy.map((t) => ({ label: `${t.tag.name}: Tense or Low`, value: `${t.count} of ${t.n}` })),
+          ...all.feelGood.perTag.map((t) => ({ label: t.tag.name, value: `Lively or Calm ${t.pleasant} · Tense or Low ${t.unpleasant} (of ${t.n})` })),
         ]}
       />
 

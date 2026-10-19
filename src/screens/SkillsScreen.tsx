@@ -52,6 +52,7 @@ import { shouldAskItemFeeling } from '../utils/itemFeelings';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
+import { parseNumberInput, parseWholeNumberInput } from '../utils/numberInput';
 
 const accent = sectionAccents.skills;
 
@@ -125,7 +126,7 @@ function AddSkillSheet({ visible, onClose, onCreated }: { visible: boolean; onCl
       <Eyebrow style={styles.fieldLabel}>Icon</Eyebrow>
       <View style={styles.swatchRow}>
         {skillIconOptions.map((i) => (
-          <Pressable key={i} onPress={() => setIcon(i)} style={[styles.iconSwatch, icon === i && { backgroundColor: withAlpha(color, 0.25), borderColor: color }]}>
+          <Pressable accessibilityRole="radio" accessibilityState={{ selected: icon === i }} accessibilityLabel={`Icon: ${String(i).replace(/-outline$/, '').replace(/-/g, ' ')}`} key={i} onPress={() => setIcon(i)} style={[styles.iconSwatch, icon === i && { backgroundColor: withAlpha(color, 0.25), borderColor: color }]}>
             <Ionicons name={i} size={18} color={icon === i ? color : colors.inkSoft} />
           </Pressable>
         ))}
@@ -327,8 +328,8 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
   const prompt = skill.type ? skillTypeMeta[skill.type].prompt : skillTypeMeta.other.prompt;
   const metricValues = Object.fromEntries(
     Object.entries(metricText)
-      .filter(([, v]) => v.trim() !== '' && Number.isFinite(Number(v)))
-      .map(([k, v]) => [k, Number(v)])
+      .filter(([, v]) => v.trim() !== '' && Number.isFinite(parseNumberInput(v)))
+      .map(([k, v]) => [k, parseNumberInput(v)])
   );
   const hasDetails = focus.length || difficulty || Object.keys(metricValues).length || struggled.length || struggledText.trim() || breakthrough || feedbackText.trim();
 
@@ -486,7 +487,7 @@ function LogSessionSheet({ skill, visible, onClose, onSave }: { skill: Skill; vi
         disabled={!minutesText.trim() && !notes.trim() && !photoUri && !hasDetails}
         onPress={() => {
           onSave({
-            minutes: Number(minutesText) || 0,
+            minutes: parseWholeNumberInput(minutesText) || 0,
             notes,
             photoUri,
             // No voice recording yet, so nothing claims one is attached.
@@ -790,7 +791,7 @@ function FolderStage({
                 ) : null}
               </View>
             </Pressable>
-            <Pressable onPress={() => requestDelete({ message: `Remove milestone "${m.text}"?`, perform: () => deleteMilestone(skillId, m.id) })} hitSlop={8}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Remove milestone ${m.text}`} onPress={() => requestDelete({ message: `Remove milestone "${m.text}"?`, perform: () => deleteMilestone(skillId, m.id) })} hitSlop={8}>
               <Ionicons name="close" size={16} color={colors.inkSoft} />
             </Pressable>
           </View>

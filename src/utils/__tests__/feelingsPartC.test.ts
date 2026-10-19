@@ -17,6 +17,13 @@ import { DEFAULT_SETTINGS, migrateSettings, useSettingsStore } from '../../store
 import { setAnalyticsTransport, track } from '../analytics';
 import { todayISO, addDaysISO } from '../date';
 import { tagImpactRanking } from '../feelingsStats';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 let n = 0;
 const e = (date: string, zone: FeelingZone, tags: string[] = [], extra: Partial<FeelingCheckIn> = {}): FeelingCheckIn => ({
@@ -29,13 +36,14 @@ const e = (date: string, zone: FeelingZone, tags: string[] = [], extra: Partial<
   ...extra,
 });
 const nameOf = (id: string) => ({ content: 'Content', relieved: 'Relieved' } as Record<string, string>)[id];
-const BANNED = /\bcaus(e|es|ed|ing)\b|\bbecause\b|\bmakes? you\b|\bleads? to\b|\bdue to\b|\bresults? in\b|\bstrongest\b|\bimpact\b/i;
+const BANNED = /\bcaus(e|es|ed|ing)\b|\bbecause\b|\bmakes? you\b|\bleads? to\b|\bdue to\b|\bresults? in\b|\bstrongest\b|\bimpact\b|\bmost\b|\btends? to\b|\busually\b|\bbest\b/i;
 
 describe('C1. Confidence thresholds (one config)', () => {
-  test('1–2 facts, 3–6 "so far", 7+ "tends to"', () => {
+  test('1–2 the entries themselves, 3–6 counts marked "so far", 7+ counts', () => {
     expect([1, 2, 3, 6, 7, 30].map(confidenceFor)).toEqual(['facts', 'facts', 'soFar', 'soFar', 'tends', 'tends']);
     expect(FEELINGS_CONFIDENCE).toEqual({ factsMax: 2, soFarMax: 6 });
-    expect(CONFIDENCE_NOTE).toMatch(/3 entries.*"so far".*7.*"tends to"/);
+    expect(CONFIDENCE_NOTE).toMatch(/not a ranking/);
+    expect(CONFIDENCE_NOTE).toMatch(/"so far"/);
   });
 });
 
@@ -57,27 +65,31 @@ describe('C1. Analysis from the first entry', () => {
     expect(i.headline).not.toMatch(/most|tend|so far/i);
   });
 
-  test('3 entries across a month end: "so far", with N of M', () => {
+  test('3 entries across a month end: the counts, marked "so far"', () => {
     const i = overviewInsight([e('2026-09-30', 'calm'), e('2026-10-01', 'calm'), e('2026-10-02', 'low')], nameOf)!;
-    expect(i).toMatchObject({ level: 'soFar', headline: 'So far, Calm comes up most: 2 of 3 entries.', detail: 'Calm 2 · Low 1' });
+    expect(i).toMatchObject({ level: 'soFar', headline: 'So far, across 3 entries: Calm 2 · Low 1.' });
     expect(basedOn(i.n)).toBe('Based on 3 entries');
   });
 
-  test('7 entries: "tends to"', () => {
-    const list = [...Array(5)].map((_, k) => e(`2026-10-0${k + 1}`, 'calm')).concat([e('2026-10-06', 'tense'), e('2026-10-07', 'okay')]);
-    expect(overviewInsight(list, nameOf)!.headline).toBe('You tend to feel Calm most often: 5 of 7 entries.');
+  test('7 entries: the counts, in the zone order (not sorted by count), never "tends to" or "most"', () => {
+    const list = [e('2026-10-06', 'tense'), e('2026-10-07', 'okay')].concat([...Array(5)].map((_, k) => e(`2026-10-0${k + 1}`, 'calm')));
+    const h = overviewInsight(list, nameOf)!.headline;
+    expect(h).toBe('Across 7 entries: Calm 5 · Tense 1 · Okay 1.');
+    expect(h).not.toMatch(/most|tend|usually|best/i);
   });
 
-  test('a tie never names a winner', () => {
-    expect(overviewInsight([e('2026-10-01', 'calm'), e('2026-10-02', 'tense'), e('2026-10-03', 'calm'), e('2026-10-04', 'tense')], nameOf)!.headline).toMatch(/mix/);
+  test('a lopsided or an even spread is shown the same way: just the counts', () => {
+    expect(overviewInsight([e('2026-10-01', 'calm'), e('2026-10-02', 'tense'), e('2026-10-03', 'calm'), e('2026-10-04', 'tense')], nameOf)!.headline).toBe(
+      'So far, across 4 entries: Calm 2 · Tense 2.'
+    );
   });
 
   test('tags: facts at first use, a pattern only with repeats', () => {
     expect(tagInsight([e('2026-10-01', 'tense', ['Work'])], 'Work')!.headline).toBe('Work: tagged once, with Tense.');
     const four = [e('2026-10-01', 'tense', ['Work']), e('2026-10-02', 'tense', ['Work']), e('2026-10-03', 'tense', ['Work']), e('2026-10-04', 'calm', ['Work'])];
-    expect(tagInsight(four, 'Work')!.headline).toBe('So far, Work has mostly come with feeling Tense: 3 of 4.');
+    expect(tagInsight(four, 'Work')!.headline).toBe('Work (4 entries so far): Calm 1 · Tense 3.');
     const eight = [...four, ...four.map((x) => ({ ...x, id: x.id + 'b' }))];
-    expect(tagInsight(eight, 'Work')!.headline).toBe('Work tends to go with feeling Tense: 6 of 8.');
+    expect(tagInsight(eight, 'Work')!.headline).toBe('Work (8 entries): Calm 2 · Tense 6.');
   });
 
   test('"Furthest from your usual" never ranks a tag that matches your usual', () => {
@@ -127,7 +139,7 @@ describe('C2. Where a feeling came from', () => {
   test('"Feelings after" uses the same thresholds', () => {
     expect(itemFeelingInsight([e('2026-10-01', 'calm')], 'after this habit')!.headline).toBe('After this habit, you logged Calm once.');
     expect(itemFeelingInsight([e('2026-10-01', 'calm'), e('2026-10-02', 'calm'), e('2026-10-03', 'okay')], 'after practicing')!.headline).toBe(
-      "So far, you've mostly felt Calm after practicing: 2 of 3."
+      'After practicing (3 entries so far): Calm 2 · Okay 1.'
     );
   });
 });

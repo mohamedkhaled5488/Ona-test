@@ -1,0 +1,38 @@
+# E2E-001 First run: welcome, start without an account, the welcome screen
+# never comes back, and the sign-up form won't submit until it's valid.
+appId: app.ona
+tags:
+  - core
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "A calm place to plan, reflect and grow."
+    timeout: 30000
+- assertVisible: "No account needed."
+- assertVisible: "Explore with sample data"
+- tapOn: "Start using Ona"
+- assertVisible: "Home"
+- assertVisible: "Plan"
+- assertVisible: "Reflect"
+- assertVisible: "Grow"
+- assertVisible: "Learn"
+# Relaunch: straight into the app.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 30000
+- assertNotVisible: "Start using Ona"
+# The sign-up form, reached from Settings.
+- tapOn:
+    id: "home-settings"
+- tapOn: "Account & Subscription"
+- tapOn: "Create account to sync"
+- assertVisible: "Create account"
+- tapOn: "you@example.com"
+- inputText: "not-an-email"
+- hideKeyboard
+- assertVisible:
+    text: "Create account"
+    enabled: false

@@ -140,7 +140,7 @@ export function PlanListScreen({ navigation }: Props) {
       <SheetModal visible={sheetVisible} onClose={() => setSheetVisible(false)}>
         <View style={styles.modalHeader}>
           <SectionHeading>{step === 'start' ? 'Start a new plan' : 'Set up your plan'}</SectionHeading>
-          <Pressable hitSlop={8} onPress={() => setSheetVisible(false)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={() => setSheetVisible(false)}>
             <Ionicons name="close" size={22} color={colors.inkSoft} />
           </Pressable>
         </View>

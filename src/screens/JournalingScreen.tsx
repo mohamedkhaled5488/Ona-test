@@ -52,10 +52,10 @@ export function JournalingScreen({ navigation }: Props) {
       <View style={styles.headerRow}>
         <ScreenTitle>Journaling</ScreenTitle>
         <View style={styles.headerActions}>
-          <Pressable onPress={() => navigation.navigate('catchAThought')} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Catch a thought" onPress={() => navigation.navigate('catchAThought')} hitSlop={8}>
             <Ionicons name="sparkles-outline" size={20} color={colors.inkSoft} />
           </Pressable>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel="Share journal"
             onPress={() =>
               Share.share({
                 message: entries
@@ -75,12 +75,12 @@ export function JournalingScreen({ navigation }: Props) {
 
       <View style={styles.statsRow}>
         <Card style={styles.statCard} flat>
-          <Eyebrow>Streak</Eyebrow>
-          <SectionHeading>{streak} {streak === 1 ? 'day' : 'days'}</SectionHeading>
+          <Eyebrow style={styles.statText}>Streak</Eyebrow>
+          <SectionHeading style={styles.statText}>{streak} {streak === 1 ? 'day' : 'days'}</SectionHeading>
         </Card>
         <Card style={styles.statCard} flat>
-          <Eyebrow>Words written</Eyebrow>
-          <SectionHeading>{totalWordCount(entries)}</SectionHeading>
+          <Eyebrow style={styles.statText}>Words written</Eyebrow>
+          <SectionHeading style={styles.statText}>{totalWordCount(entries)}</SectionHeading>
         </Card>
       </View>
 
@@ -116,11 +116,11 @@ export function JournalingScreen({ navigation }: Props) {
       {!searchResults && (
         <Card style={styles.calendarCard}>
           <View style={styles.calendarHeader}>
-            <Pressable hitSlop={8} onPress={() => setCalendarMonth((m) => addMonthsISO(m, -1))}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={8} onPress={() => setCalendarMonth((m) => addMonthsISO(m, -1))}>
               <Ionicons name="chevron-back" size={18} color={colors.ink} />
             </Pressable>
             <SectionHeading>{formatMonthLabel(calendarMonth)}</SectionHeading>
-            <Pressable hitSlop={8} onPress={() => setCalendarMonth((m) => addMonthsISO(m, 1))}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Next month" hitSlop={8} onPress={() => setCalendarMonth((m) => addMonthsISO(m, 1))}>
               <Ionicons name="chevron-forward" size={18} color={colors.ink} />
             </Pressable>
           </View>
@@ -245,7 +245,10 @@ const styles = themedStyles(() => ({
     flex: 1,
     gap: 2,
     backgroundColor: withAlpha(colors.teal, 0.1),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  statText: { textAlign: 'center' },
   lockRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

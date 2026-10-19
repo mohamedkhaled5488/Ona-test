@@ -21,6 +21,8 @@ import { planToText } from '../utils/planExport';
 import type { PlanStep } from '../types/sections';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
+import { parseWholeNumberInput } from '../utils/numberInput';
+import { deletePlanKeepingTasks } from '../utils/planLinks';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'planDetail'>;
 
@@ -58,7 +60,7 @@ function StepRow({
               <Caption style={styles.stepIndexText}>{index + 1}</Caption>
             </View>
           ) : (
-            <Pressable hitSlop={8} onPress={() => onToggleDone(path)}>
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!(step.done) }} accessibilityLabel="Done" hitSlop={8} onPress={() => onToggleDone(path)}>
               <Ionicons
                 name={step.done ? 'checkmark-circle' : 'ellipse-outline'}
                 size={20}
@@ -94,7 +96,7 @@ function StepRow({
             )}
           </View>
           {depth === 0 && (
-            <Pressable hitSlop={8} onPress={() => onToggleDone(path)}>
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!(step.done) }} accessibilityLabel="Done" hitSlop={8} onPress={() => onToggleDone(path)}>
               <Ionicons
                 name={step.done ? 'checkmark-circle' : 'ellipse-outline'}
                 size={22}
@@ -112,10 +114,10 @@ function StepRow({
           <Caption style={styles.stepActionText}> Move to Daily Planning</Caption>
         </Pressable>
         <View style={styles.reorderCol}>
-          <Pressable hitSlop={4} disabled={isFirst} onPress={() => onMove(path, -1)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Move up" hitSlop={4} disabled={isFirst} onPress={() => onMove(path, -1)}>
             <Ionicons name="chevron-up" size={16} color={isFirst ? colors.line : colors.inkSoft} />
           </Pressable>
-          <Pressable hitSlop={4} disabled={isLast} onPress={() => onMove(path, 1)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Move down" hitSlop={4} disabled={isLast} onPress={() => onMove(path, 1)}>
             <Ionicons name="chevron-down" size={16} color={isLast ? colors.line : colors.inkSoft} />
           </Pressable>
         </View>
@@ -156,7 +158,6 @@ export function PlanDetailScreen({ route, navigation }: Props) {
   const archivePlan = usePlanStore((s) => s.archivePlan);
   const reopenPlan = usePlanStore((s) => s.reopenPlan);
   const saveAsTemplate = usePlanStore((s) => s.saveAsTemplate);
-  const deletePlan = usePlanStore((s) => s.deletePlan);
   const addLinkedTask = useDailyPlanningStore((s) => s.addLinkedTask);
   const setScheduledTime = useDailyPlanningStore((s) => s.setScheduledTime);
   const { requestDelete, showToast } = useUi();
@@ -215,15 +216,16 @@ export function PlanDetailScreen({ route, navigation }: Props) {
   }
 
   const confirmDeletePlan = () => {
-    const previous = usePlanStore.getState().plans;
+    // Tasks already moved into your days stay there, as normal tasks.
+    let undo: (() => void) | undefined;
     requestDelete({
-      message: `"${plan.title}" and all of its steps will be removed.`,
+      message: `"${plan.title}" and all of its steps will be removed. Steps already moved into your days stay there as normal tasks.`,
       toastMessage: 'Plan deleted',
       perform: () => {
-        deletePlan(planId);
+        undo = deletePlanKeepingTasks(planId);
         navigation.goBack();
       },
-      restore: () => usePlanStore.setState({ plans: previous }),
+      restore: () => undo?.(),
     });
   };
 
@@ -247,29 +249,29 @@ export function PlanDetailScreen({ route, navigation }: Props) {
           ))}
         </View>
         <View style={styles.actionIcons}>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel="Save as template"
             hitSlop={8}
             onPress={() => setTemplateModalVisible(true)}
             style={styles.actionIcon}
           >
             <Ionicons name="bookmark-outline" size={20} color={colors.inkSoft} />
           </Pressable>
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel="Share plan"
             hitSlop={8}
             onPress={() => Share.share({ message: planToText(plan) })}
             style={styles.actionIcon}
           >
             <Ionicons name="share-outline" size={20} color={colors.inkSoft} />
           </Pressable>
-          <Pressable hitSlop={8} onPress={confirmDeletePlan} style={styles.actionIcon}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Delete plan" hitSlop={8} onPress={confirmDeletePlan} style={styles.actionIcon}>
             <Ionicons name="trash-outline" size={20} color="#B3413A" />
           </Pressable>
           {plan.status === 'active' ? (
-            <Pressable hitSlop={8} onPress={() => setArchiveModalVisible(true)} style={styles.actionIcon}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Archive plan" hitSlop={8} onPress={() => setArchiveModalVisible(true)} style={styles.actionIcon}>
               <Ionicons name="archive-outline" size={20} color={colors.inkSoft} />
             </Pressable>
           ) : (
-            <Pressable hitSlop={8} onPress={() => reopenPlan(plan.id)} style={styles.actionIcon}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Reopen plan" hitSlop={8} onPress={() => reopenPlan(plan.id)} style={styles.actionIcon}>
               <Ionicons name="refresh-outline" size={20} color={colors.inkSoft} />
             </Pressable>
           )}
@@ -349,7 +351,7 @@ export function PlanDetailScreen({ route, navigation }: Props) {
               value={reviewDays}
               onChangeText={(v) => {
                 setReviewDays(v);
-                setReviewInterval(planId, Number(v) || 14);
+                setReviewInterval(planId, parseWholeNumberInput(v) || 14);
               }}
               keyboardType="number-pad"
               style={styles.reviewDaysInput}

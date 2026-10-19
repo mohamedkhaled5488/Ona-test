@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { FeelingZone, QuitFeelingEntry, QuitHabit, QuitTrack } from '../types/sections';
 import { genId } from '../utils/id';
-import { todayISO } from '../utils/date';
+import { daysBetweenISODates, todayISO } from '../utils/date';
 
 interface QuitHabitsState {
   habits: QuitHabit[];
@@ -141,10 +141,9 @@ export function feelingEntriesForTrack(entries: QuitFeelingEntry[], trackId: str
   return entries.filter((e) => e.trackId === trackId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+// Calendar days, so the spring daylight-saving change can't lose one.
 export function daysSinceTrackStart(track: QuitTrack, today: string): number {
-  const start = new Date(`${track.startDate}T00:00:00`);
-  const end = new Date(`${track.endDate ?? today}T00:00:00`);
-  return Math.max(1, Math.floor((end.getTime() - start.getTime()) / 86400000) + 1);
+  return Math.max(1, daysBetweenISODates(track.startDate, track.endDate ?? today) + 1);
 }
 
 // Milestones are purely additive acknowledgments — no target, no comparison.

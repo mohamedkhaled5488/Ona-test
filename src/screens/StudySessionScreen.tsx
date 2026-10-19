@@ -20,6 +20,7 @@ import { BackgroundAudioToggle } from '../components/BackgroundAudioToggle';
 import { StudySessionDetail } from './StudySessionDetail';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { parseWholeNumberInput } from '../utils/numberInput';
 
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -43,8 +44,8 @@ function SetupView({ onShowHistory }: { onShowHistory: () => void }) {
 
   const isCustom = presetId === 'custom';
   const preset = studyPresets.find((p) => p.id === presetId);
-  const focusMinutes = isCustom ? Number(customFocus) || 25 : preset?.focusMinutes ?? 25;
-  const breakMinutes = isCustom ? Number(customBreak) || 5 : preset?.breakMinutes ?? 5;
+  const focusMinutes = isCustom ? parseWholeNumberInput(customFocus) || 25 : preset?.focusMinutes ?? 25;
+  const breakMinutes = isCustom ? parseWholeNumberInput(customBreak) || 5 : preset?.breakMinutes ?? 5;
 
   return (
     <>
@@ -188,12 +189,12 @@ function ActiveView() {
   useEffect(() => {
     if (!shouldPlay) return;
     let cancelled = false;
-    void playLayer(sound, 0.6).then((result) => {
+    void playLayer(sound, 0.6, 'study').then((result) => {
       if (!cancelled) setSoundError(result.ok ? null : result.error);
     });
     return () => {
       cancelled = true;
-      stopLayer(sound);
+      stopLayer(sound, 'study');
     };
   }, [shouldPlay, sound]);
 
@@ -302,16 +303,16 @@ function HistoryView({ onBack, onOpenSession }: { onBack: () => void; onOpenSess
 
       <View style={styles.statsRow}>
         <Card style={styles.statCard} flat>
-          <Eyebrow>Today</Eyebrow>
-          <SectionHeading>{minutesOnDate(sessions, today)} min</SectionHeading>
+          <Eyebrow style={styles.statText}>Today</Eyebrow>
+          <SectionHeading style={styles.statText}>{minutesOnDate(sessions, today)} min</SectionHeading>
         </Card>
         <Card style={styles.statCard} flat>
-          <Eyebrow>This week</Eyebrow>
-          <SectionHeading>{minutesInLastDays(sessions, today, 7)} min</SectionHeading>
+          <Eyebrow style={styles.statText}>This week</Eyebrow>
+          <SectionHeading style={styles.statText}>{minutesInLastDays(sessions, today, 7)} min</SectionHeading>
         </Card>
         <Card style={styles.statCard} flat>
-          <Eyebrow>Streak</Eyebrow>
-          <SectionHeading>{computeStudyStreak(sessions, today)}d</SectionHeading>
+          <Eyebrow style={styles.statText}>Streak</Eyebrow>
+          <SectionHeading style={styles.statText}>{computeStudyStreak(sessions, today)}d</SectionHeading>
         </Card>
       </View>
 
@@ -610,7 +611,9 @@ const styles = themedStyles(() => ({
     gap: 2,
     backgroundColor: withAlpha(colors.teal, 0.1),
     alignItems: 'center',
+    justifyContent: 'center',
   },
+  statText: { textAlign: 'center' },
   chartCard: {
     marginBottom: spacing.md,
     gap: spacing.sm,

@@ -1,0 +1,33 @@
+# Ona end-to-end tests on an Android emulator, on EAS (docs/test-cases/e2e.md).
+# The build points at http://127.0.0.1:9 (nothing there), so it never talks to a hosted project; the
+# flows that need a server (tag needs-backend) run locally instead.
+# Run by hand: npx eas-cli workflow:run .eas/workflows/e2e-test-android.yml
+name: e2e-test-android
+
+on:
+  push:
+    branches: ['main']
+  schedule:
+    - cron: '0 3 * * *' # nightly
+
+jobs:
+  build_android_for_e2e:
+    type: build
+    # Same as the e2e-test profile; a job's env wins over everything, so the
+    # real project's URL and key stored on EAS can never reach this build.
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: http://127.0.0.1:9
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: e2e-no-server
+    params:
+      platform: android
+      profile: e2e-test
+
+  maestro_test:
+    needs: [build_android_for_e2e]
+    type: maestro
+    params:
+      build_id: ${{ needs.build_android_for_e2e.outputs.build_id }}
+      flow_path: ['.maestro']
+      exclude_tags: ['needs-backend']
+      retries: 1
+      record_screen: true

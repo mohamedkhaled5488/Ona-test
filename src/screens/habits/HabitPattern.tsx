@@ -82,13 +82,16 @@ export function DayStrip<S extends string>({
             {Array.from({ length: 7 }, (_, i) => {
               const cell = row[i];
               const look = cell ? colorFor(cell.status) : null;
+              // Same border width on every cell (only colours change), and a
+              // fresh cell when its status changes, so Android never restyles
+              // one in place into the wrong size.
               return (
                 <View
-                  key={i}
+                  key={`${i}-${cell?.date ?? 'blank'}-${cell?.status ?? ''}`}
                   style={[
                     styles.cell,
-                    look && !look.outline && { backgroundColor: look.fill },
-                    look?.outline && { borderWidth: 1.5, borderColor: look.fill },
+                    look && !look.outline && { backgroundColor: look.fill, borderColor: look.fill },
+                    look?.outline && { borderColor: look.fill },
                   ]}
                 />
               );
@@ -195,7 +198,7 @@ const styles = themedStyles(() => ({
   chipTextActive: { color: colors.white },
   grid: { gap: 3 },
   row: { flexDirection: 'row', gap: 3 },
-  cell: { width: CELL, height: CELL, borderRadius: 3 },
+  cell: { width: CELL, height: CELL, borderRadius: 3, borderWidth: 1.5, borderColor: 'transparent' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendSwatch: { width: 10, height: 10, borderRadius: 2 },

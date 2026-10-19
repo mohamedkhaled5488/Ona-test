@@ -1,0 +1,63 @@
+# Ona CI. On every push and pull request: type-check and the whole Jest suite
+# (unit, component, integration; no network, no Docker). On the default
+# branch, nightly and on demand: the backend tests against a LOCAL Supabase
+# stack started inside the runner (never a hosted project).
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 2 * * *' # nightly
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Type-check and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx jest --ci
+
+  backend:
+    name: Backend (local Supabase)
+    if: github.event_name != 'push' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # Builds the database from supabase/migrations.
+      - run: supabase start -x studio,imgproxy,vector,logflare,supavisor
+      - name: Serve the RevenueCat webhook
+        run: |
+          supabase functions serve revenuecat-webhook --no-verify-jwt --env-file supabase/tests/webhook.env > functions.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:54321/functions/v1/revenuecat-webhook || true)
+            if [ "$code" = "405" ]; then echo "webhook up"; exit 0; fi
+            sleep 2
+          done
+          cat functions.log; exit 1
+      - run: npx jest -c jest.backend.config.js --ci
+      - if: failure()
+        run: cat functions.log || true
+      - if: always()
+        run: supabase stop --no-backup

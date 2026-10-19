@@ -2,6 +2,7 @@
 // into the sections, and decides when to sync (start-up, coming back to Ona,
 // a little after a change, every few minutes while open, and "Sync now").
 import { AppState } from 'react-native';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAccountStore } from '../store/useAccountStore';
@@ -31,11 +32,12 @@ export const localData: LocalData = {
   },
 };
 
-export function supabaseSyncServer(userId: string): SyncServer {
+// `client` is the app's own client; the backend tests pass one for the local stack.
+export function supabaseSyncServer(userId: string, client: SupabaseClient = supabase as unknown as SupabaseClient): SyncServer {
   return {
     pull: async (since, limit) => {
       if (isDemo()) throw new DemoModeError('Sync');
-      let q = supabase
+      let q = client
         .from('sync_records' as never)
         .select('collection, record_id, data, deleted, client_updated_at, server_updated_at')
         .order('server_updated_at', { ascending: true })
@@ -47,7 +49,7 @@ export function supabaseSyncServer(userId: string): SyncServer {
     },
     push: async (rows: OutgoingRow[]) => {
       if (isDemo()) throw new DemoModeError('Sync');
-      const { error } = await supabase
+      const { error } = await client
         .from('sync_records' as never)
         .upsert(rows.map((r) => ({ ...r, user_id: userId })) as never, { onConflict: 'user_id,collection,record_id' });
       if (error) {

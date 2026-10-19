@@ -26,7 +26,7 @@ const EVIDENCE: Record<string, [string, RegExp][]> = {
   planningInsights: [['src/screens/PlanningInsightsScreen.tsx', /feel/i], ['src/utils/planningInsights.ts', /MIN_POINTS/]],
   mealPlan: [['src/screens/DietPlanningScreen.tsx', /'week' \| 'grocery' \| 'summary'/]],
   mealCost: [['src/screens/DietPlanningScreen.tsx', /currency/i], ['src/utils/dietStats.ts', /costBySource/]],
-  mealSummary: [['src/screens/DietPlanningScreen.tsx', /'day' \| 'week' \| 'month'/], ['src/screens/DietPlanningScreen.tsx', /mostRepeatedMeals/]],
+  mealSummary: [['src/screens/DietPlanningScreen.tsx', /'day' \| 'week' \| 'month'/], ['src/screens/DietPlanningScreen.tsx', /repeatedMeals/]],
   budgetModes: [['src/types/sections.ts', /mode: BudgetMode/], ['src/types/sections.ts', /deadline\?: string/]],
   budgetEntries: [['src/types/sections.ts', /categoryId\?: string;\n  note\?: string;\n  photoUri\?: string/]],
   budgetWarn: [['src/store/useSettingsStore.ts', /budgetWarnAt/]],
@@ -35,13 +35,13 @@ const EVIDENCE: Record<string, [string, RegExp][]> = {
   journalOnThisDay: [['src/screens/JournalingScreen.tsx', /on this day/i]],
   feelingWheel: [['src/data/feelingsWheel.ts', /description/], ['src/types/sections.ts', /intensities\?:/]],
   feelingGuidance: [['src/screens/MoodCheckScreen.tsx', /guidance/i]],
-  feelingAnalysis: [['src/screens/MoodCheckScreen.tsx', /overviewInsight/], ['src/components/FeelingsGraph.tsx', /pinch/], ['src/screens/MoodCheckScreen.tsx', /compareZonePeriods/], ['src/screens/settings/HelpAboutPages.tsx', /Safety and support resources/]],
+  feelingAnalysis: [['src/screens/MoodCheckScreen.tsx', /overviewInsight/], ['src/components/FeelingsGraph.tsx', /pinch/], ['src/screens/MoodCheckScreen.tsx', /compareMode/], ['src/screens/settings/HelpAboutPages.tsx', /Safety and support resources/]],
   sleepWindDown: [['src/screens/SleepScreen.tsx', /Wind-down checklist/], ['src/utils/reminders.ts', /bedtime/i]],
   sleepSounds: [['src/screens/SleepScreen.tsx', /Your mix/], ['src/screens/SleepScreen.tsx', /Sleep timer/], ['src/types/sections.ts', /'brown-noise'/], ['src/store/useSettingsStore.ts', /defaultFadeOutMinutes/]],
   sleepLog: [['src/screens/SleepScreen.tsx', /How did you sleep/], ['src/screens/SleepScreen.tsx', /Gentle wake alarm/]],
   habitMinimum: [['src/types/sections.ts', /minimumVersion\?: string/], ['src/screens/HabitBuilderScreen.tsx', /Did the minimum version/]],
   habitMilestones: [['src/utils/habitPattern.ts', /export function milestoneBar/], ['src/utils/habitFrequency.ts', /paused/]],
-  habitPattern: [['src/screens/BuildHabitAnalysis.tsx', /DayStrip/], ['src/utils/habitTimeOfDay.ts', /MIN_GAP/], ['src/screens/habits/HabitLogDetail.tsx', /Comment/], ['src/utils/itemFeelings.ts', /logItemFeeling/]],
+  habitPattern: [['src/screens/BuildHabitAnalysis.tsx', /DayStrip/], ['src/utils/habitTimeOfDay.ts', /Done when planned for each time/], ['src/screens/habits/HabitLogDetail.tsx', /Comment/], ['src/utils/itemFeelings.ts', /logItemFeeling/]],
   quitUrge: [['src/screens/QuitHabitScreen.tsx', /UrgeTimer/], ['src/screens/QuitHabitScreen.tsx', /Do something instead/], ['src/screens/QuitHabitScreen.tsx', /Reach out/]],
   quitResisted: [['src/screens/QuitHabitScreen.tsx', /You've resisted/]],
   quitJourney: [['src/screens/QuitHabitAnalysis.tsx', /part of the story, not a reset/]],
@@ -63,13 +63,15 @@ const EVIDENCE: Record<string, [string, RegExp][]> = {
 
 describe('D4. Every slide describes something that exists', () => {
   test('each slide maps to a feature, and the app has it', () => {
+    const problems: string[] = [];
     for (const s of ALL_SLIDES) {
       const proofs = EVIDENCE[s.feature];
-      if (!proofs) throw new Error(`Slide "${s.key}" describes "${s.feature}", which has no evidence listed`);
-      for (const [file, re] of proofs) {
-        if (!re.test(read(file))) throw new Error(`Slide "${s.key}" (${s.feature}): ${file} doesn't match ${re}`);
+      if (!proofs) problems.push(`Slide "${s.key}" describes "${s.feature}", which has no evidence listed`);
+      for (const [file, re] of proofs ?? []) {
+        if (!re.test(read(file))) problems.push(`Slide "${s.key}" (${s.feature}): ${file} doesn't match ${re}`);
       }
     }
+    expect(problems).toEqual([]);
   });
 
   test('no evidence entry is left without a slide', () => {

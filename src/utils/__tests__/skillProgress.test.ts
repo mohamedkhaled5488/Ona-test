@@ -12,7 +12,7 @@ import {
   subSkillName,
   neglectedSubSkills,
   suggestedFocus,
-  mostFrequentStruggle,
+  struggleCounts,
   sweetSpot,
   effortAndProgress,
   weeklyDifficulty,
@@ -199,11 +199,13 @@ describe('sub-skills', () => {
     expect(suggestedFocus(s, [session('2026-09-01', { focusSubSkillIds: ['a'] })])).toMatchObject({ reason: 'leastRecent', subSkill: { name: 'Barre chords' } });
   });
 
-  it('most frequent struggle: simple counts from the chips, gated by a minimum', () => {
-    const s = skill({ subSkills: [{ id: 'b', name: 'Barre chords', level: 1, createdAt: '' }] });
-    const sessions = ['09-01', '09-03', '09-05', '09-07', '09-09'].map((d, i) => session(`2026-${d}`, { struggledSubSkillIds: i < 4 ? ['b'] : [] }));
-    expect(mostFrequentStruggle(s, sessions)).toMatchObject({ count: 4, of: 4 });
-    expect(mostFrequentStruggle(s, sessions.slice(0, 2))).toBeUndefined();
+  it('struggled with: every sub-skill marked, with its count, in sub-skill order, gated by a minimum', () => {
+    const s = skill({ subSkills: [{ id: 'a', name: 'Chords', level: 2, createdAt: '' }, { id: 'b', name: 'Barre chords', level: 1, createdAt: '' }] });
+    const sessions = ['09-01', '09-03', '09-05', '09-07', '09-09'].map((d, i) => session(`2026-${d}`, { struggledSubSkillIds: i < 4 ? ['b'] : ['a'] }));
+    const r = struggleCounts(s, sessions)!;
+    expect(r.of).toBe(5);
+    expect(r.counts.map((c) => [c.subSkill.name, c.count])).toEqual([['Chords', 1], ['Barre chords', 4]]);
+    expect(struggleCounts(s, sessions.slice(0, 2))).toBeUndefined();
   });
 });
 
@@ -325,7 +327,7 @@ describe('insights stay quiet until the data supports them', () => {
     expect(skillSummary(s, [], '2026-10-01')).toBeUndefined();
     expect(suggestedFocus(s, [])).toMatchObject({ reason: 'leastRecent' });
     expect(neglectedSubSkills(s, [], '2026-10-01')).toEqual([]);
-    expect(mostFrequentStruggle(s, [])).toBeUndefined();
+    expect(struggleCounts(s, [])).toBeUndefined();
     expect(sweetSpot([], SKILL, [], 'higher')).toBeUndefined();
     expect(effortAndProgress([], SKILL, [], 'higher')).toBeUndefined();
     expect(detectPlateau([], 'higher', '2026-10-01')).toBeUndefined();
@@ -336,7 +338,7 @@ describe('insights stay quiet until the data supports them', () => {
 });
 
 describe('summary, recap and journey', () => {
-  it('summary names the metric change and the most / least practiced sub-skills', () => {
+  it('summary names the metric change and the time per sub-skill, in sub-skill order', () => {
     const s = skill({
       startDate: '2026-06-01',
       metrics: [{ ...WPM, name: 'songs played cleanly', unit: '' }],
@@ -347,7 +349,7 @@ describe('summary, recap and journey', () => {
       session('2026-09-30', { minutes: 60, focusSubSkillIds: ['fp'], metricValues: { wpm: 3 } }),
     ];
     expect(skillSummary(s, sessions, '2026-10-01')).toBe(
-      'You\'ve practiced Guitar for 3 h over 4 months. Your "songs played cleanly" went from 0 to 3. Strumming has had the most attention; fingerpicking the least.'
+      'You\'ve practiced Guitar for 3 h over 4 months. Your "songs played cleanly" went from 0 to 3. Time per sub-skill: Strumming 2 h · Fingerpicking 1 h.'
     );
   });
 

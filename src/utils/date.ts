@@ -1,3 +1,5 @@
+import { nowDate } from './clock';
+
 export function toISODate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -5,8 +7,9 @@ export function toISODate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+// "Today" on this phone, from the app's one clock (utils/clock.ts).
 export function todayISO(): string {
-  return toISODate(new Date());
+  return toISODate(nowDate());
 }
 
 // Calendar arithmetic on ISO dates is done in UTC, where every day is 24
@@ -47,10 +50,10 @@ export function formatDisplayDate(iso: string): string {
   return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+// 0 for 1 January. Counted on the calendar (UTC), so a daylight-saving change
+// can't make two dates share a number.
 export function dayOfYear(iso: string): number {
-  const d = new Date(`${iso}T00:00:00`);
-  const start = new Date(d.getFullYear(), 0, 1);
-  return Math.floor((d.getTime() - start.getTime()) / 86400000);
+  return daysBetweenISODates(`${iso.slice(0, 4)}-01-01`, iso);
 }
 
 // When a reminder `minutesBefore` a local start time fires, in real elapsed

@@ -45,7 +45,8 @@ const task = (id: string) => store().tasks.find((t) => t.id === id)!;
 const zoneDir = path.join(os.tmpdir(), `ona-tz-${process.pid}`);
 function compileForZones() {
   fs.mkdirSync(zoneDir, { recursive: true });
-  for (const name of ['date', 'taskRepeat']) {
+  // date.ts reads the app's clock, so the clock goes too.
+  for (const name of ['clock', 'date', 'taskRepeat']) {
     const src = fs.readFileSync(path.join(process.cwd(), 'src/utils', `${name}.ts`), 'utf8');
     const out = babel.transformSync(src, {
       filename: `${name}.ts`,

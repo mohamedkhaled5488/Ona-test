@@ -20,6 +20,13 @@ import { useReadingListStore } from '../../store/useReadingListStore';
 import { useHabitsStore } from '../../store/useHabitsStore';
 import { cancelReminders } from '../notifications';
 import type { Habit, Plan, QuitTrack, Skill } from '../../types/sections';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 function deps(overrides: Partial<DeleteAccountDeps> = {}) {
   const calls: string[] = [];

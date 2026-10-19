@@ -13,7 +13,7 @@ import type {
   SubSkill,
 } from '../types/sections';
 import { genId } from '../utils/id';
-import { todayISO, addDaysISO, toISODate } from '../utils/date';
+import { todayISO, addDaysISO, dayOfYear, toISODate } from '../utils/date';
 import { cancelReminders, scheduleReminder } from '../utils/notifications';
 
 export interface PracticeSessionInput {
@@ -373,8 +373,8 @@ export function resurfaceOldSession(sessions: PracticeSession[], skillId: string
   const eligible = sessions.filter((s) => s.skillId === skillId && s.date <= cutoff);
   if (eligible.length === 0) return undefined;
   const d = new Date(`${today}T00:00:00`);
-  const start = new Date(d.getFullYear(), 0, 1);
-  const weekNumber = Math.floor((d.getTime() - start.getTime()) / (7 * 86400000));
+  // Calendar weeks since 1 January (DST can't move the change to another day).
+  const weekNumber = Math.floor(dayOfYear(toISODate(d)) / 7);
   const sorted = [...eligible].sort((a, b) => a.id.localeCompare(b.id));
   return sorted[weekNumber % sorted.length];
 }

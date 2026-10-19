@@ -25,7 +25,7 @@ export function SheetModal({ visible, onClose, children }: SheetModalProps) {
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView behavior="padding" style={styles.root}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
         <Card style={styles.sheet}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
             {children}

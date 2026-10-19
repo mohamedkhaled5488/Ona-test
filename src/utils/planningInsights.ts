@@ -8,8 +8,12 @@ import { occursOn } from './taskRepeat';
 import { addDaysISO, addMonthsISO, daysBetweenISODates, daysInMonthISO, weekdayOfISO } from './date';
 import { datesInRange, weekStartFor } from './feelingsStats';
 import { linkedEntry } from './taskFeelings';
+import { getCalendarWeekStart } from './date';
 
 export const MIN_POINTS = 5;
+// Insights never rank (no "best day", no "most often"): they show the counts
+// behind a pattern in a fixed order (week order, morning to night, the zone
+// order, your own tag order) and let you read them yourself.
 
 export interface Range {
   start: string;
@@ -123,6 +127,19 @@ export function timeOfDay(isoDateTime: string): TimeOfDay {
   return 'night';
 }
 
+// Finished tasks by part of the day, morning to night (only parts that have any).
+export function finishTimes(occ: Occurrence[]): { counts: [TimeOfDay, number][]; of: number } {
+  const timed = occ.filter((o) => o.completedAt);
+  const m = new Map<TimeOfDay, number>();
+  for (const o of timed) m.set(timeOfDay(o.completedAt!), (m.get(timeOfDay(o.completedAt!)) ?? 0) + 1);
+  const order: TimeOfDay[] = ['morning', 'afternoon', 'evening', 'night'];
+  return { counts: order.filter((t) => m.has(t)).map((t) => [t, m.get(t)!] as [TimeOfDay, number]), of: timed.length };
+}
+
+const TIME_SHORT: Record<TimeOfDay, string> = { morning: 'morning', afternoon: 'afternoon', evening: 'evening', night: 'night' };
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const timesText = (counts: [TimeOfDay, number][]) => counts.map(([t, n]) => `${TIME_SHORT[t]} ${n}`).join(' · ');
+
 // An insight that isn't ready yet still says how far along it is.
 export interface Gate {
   enough: boolean;
@@ -138,8 +155,8 @@ export interface CompletionInsight extends Gate {
   planned: number;
   done: number;
   rate: number;
-  bestWeekday?: { name: string; rate: number; planned: number };
-  bestTime?: { time: TimeOfDay; count: number; of: number };
+  byWeekday: { weekday: number; name: string; rate: number; planned: number }[]; // in week order
+  times: [TimeOfDay, number][]; // finished tasks, morning to night
   lines: string[];
 }
 
@@ -157,26 +174,22 @@ export function completionInsight(occ: Occurrence[], bs: Bucket[]): CompletionIn
     if (o.done) d.done += 1;
     byDay.set(weekdayOfISO(o.date), d);
   }
-  let bestWeekday: CompletionInsight['bestWeekday'];
-  for (const [wd, d] of byDay) {
-    if (d.planned < 3) continue; // a day needs a few tasks before it can be "best"
-    const rate = pct(d.done, d.planned);
-    if (!bestWeekday || rate > bestWeekday.rate) bestWeekday = { name: WEEKDAY_NAMES[wd], rate, planned: d.planned };
-  }
-  const timed = occ.filter((o) => o.completedAt);
-  const times = new Map<TimeOfDay, number>();
-  for (const o of timed) times.set(timeOfDay(o.completedAt!), (times.get(timeOfDay(o.completedAt!)) ?? 0) + 1);
-  const top = [...times.entries()].sort((a, b) => b[1] - a[1])[0];
-  const bestTime = top && timed.length >= MIN_POINTS ? { time: top[0], count: top[1], of: timed.length } : undefined;
+  // Every weekday that had tasks, in week order: the numbers, no "best day".
+  const ws = getCalendarWeekStart();
+  const byWeekday = [0, 1, 2, 3, 4, 5, 6]
+    .map((k) => (ws + k) % 7)
+    .filter((wd) => byDay.has(wd))
+    .map((wd) => ({ weekday: wd, name: WEEKDAY_SHORT[wd], rate: pct(byDay.get(wd)!.done, byDay.get(wd)!.planned), planned: byDay.get(wd)!.planned }));
+  const ft = finishTimes(occ);
   const g = gate(planned, 'tasks');
   const lines = g.enough
     ? [
         `You finished ${done} of ${plural(planned, 'task')} (${pct(done, planned)}%).`,
-        ...(bestWeekday ? [`${bestWeekday.name} tend to be your most complete days (${bestWeekday.rate}% of ${plural(bestWeekday.planned, 'task')}).`] : []),
-        ...(bestTime ? [`You most often finish tasks in ${TIME_OF_DAY_LABEL[bestTime.time]} (${bestTime.count} of ${bestTime.of}).`] : []),
+        ...(byWeekday.length > 1 ? [`Done by weekday: ${byWeekday.map((d) => `${d.name} ${d.rate}% of ${d.planned}`).join(' · ')}.`] : []),
+        ...(ft.of >= MIN_POINTS ? [`When the ${plural(ft.of, 'finished task')} with a time were checked off: ${timesText(ft.counts)}.`] : []),
       ]
     : [];
-  return { ...g, series, planned, done, rate: pct(done, planned), bestWeekday, bestTime, lines };
+  return { ...g, series, planned, done, rate: pct(done, planned), byWeekday, times: ft.counts, lines };
 }
 
 // --- 2. By tag --------------------------------------------------------------------
@@ -189,8 +202,7 @@ export interface TagStat {
   moved: number; // times its tasks were moved to another day
 }
 export interface TagInsight extends Gate {
-  tags: TagStat[]; // only tags with enough tasks to say something
-  mostMoved?: TagStat;
+  tags: TagStat[]; // only tags with enough tasks to say something, in your tag order
   quiet: TaskTag[]; // "haven't had much room lately"
   lines: string[];
 }
@@ -202,8 +214,7 @@ export function tagInsight(occ: Occurrence[], tasks: DailyTask[], tags: TaskTag[
     const moved = tasks.filter((t) => t.tagIds.includes(tag.id) && mine.some((o) => o.taskId === t.id)).reduce((s, t) => s + t.moveCount, 0);
     return { tag, planned: mine.length, done, rate: pct(done, mine.length), minutes: mine.reduce((s, o) => s + (o.actual ?? 0), 0), moved };
   });
-  const shown = stats.filter((s) => s.planned >= MIN_POINTS).sort((a, b) => b.planned - a.planned);
-  const mostMoved = [...shown].filter((s) => s.moved >= 2).sort((a, b) => b.moved - a.moved)[0];
+  const shown = stats.filter((s) => s.planned >= MIN_POINTS);
   const quiet = stats
     .filter((s) => (s.planned === 0 && tasks.some((t) => t.tagIds.includes(s.tag.id))) || (s.planned >= 3 && s.done === 0))
     .map((s) => s.tag);
@@ -211,12 +222,11 @@ export function tagInsight(occ: Occurrence[], tasks: DailyTask[], tags: TaskTag[
   const g = gate(tagged, 'tagged tasks');
   const lines = g.enough
     ? [
-        ...shown.slice(0, 3).map((s) => `${s.tag.name}: ${s.done} of ${s.planned} done (${s.rate}%)${s.minutes ? `, ${s.minutes} min timed` : ''}.`),
-        ...(mostMoved ? [`Tasks tagged ${mostMoved.tag.name} were moved to another day most often (${plural(mostMoved.moved, 'time')}).`] : []),
+        ...shown.map((s) => `${s.tag.name}: ${s.done} of ${s.planned} done (${s.rate}%)${s.minutes ? `, ${s.minutes} min timed` : ''}${s.moved ? `, moved ${plural(s.moved, 'time')}` : ''}.`),
         ...(quiet.length ? [`Haven't had much room lately: ${quiet.map((t) => t.name).join(', ')}. Only if you want them to.`] : []),
       ]
     : [];
-  return { ...g, tags: shown, mostMoved, quiet, lines };
+  return { ...g, tags: shown, quiet, lines };
 }
 
 // --- 3. Estimate accuracy ------------------------------------------------------------
@@ -240,46 +250,40 @@ export function estimateInsight(occ: Occurrence[]): EstimateInsight {
   const percent = Math.round((ratio - 1) * 100);
   let lines: string[] = [];
   if (g.enough) {
-    if (Math.abs(percent) <= 10) lines = ['Your estimates tend to be close to how long things take.'];
-    else if (percent > 0) lines = [`You usually take about ${percent}% longer than you estimate.`, `Adding about ${percent}% when you estimate might make days feel less tight.`];
-    else lines = [`Tasks usually take you about ${-percent}% less time than you estimate.`, 'You could plan a little more into a day, if you want to.'];
+    const across = `Across ${plural(pairs.length, 'timed task')} with an estimate (the middle value)`;
+    if (Math.abs(percent) <= 10) lines = [`${across}, tasks took about as long as estimated, within 10%.`];
+    else if (percent > 0) lines = [`${across}, tasks took about ${percent}% longer than estimated.`, `Adding about ${percent}% when you estimate might make days feel less tight.`];
+    else lines = [`${across}, tasks took about ${-percent}% less time than estimated.`, 'You could plan a little more into a day, if you want to.'];
   }
   return { ...g, pairs, ratio, percent, lines };
 }
 
 // --- 4. Energy match ---------------------------------------------------------------
 export interface EnergyInsight extends Gate {
-  bestTime?: TimeOfDay;
-  inBest: number;
+  high: [TimeOfDay, number][]; // high-energy tasks finished, morning to night
+  all: [TimeOfDay, number][]; // every finished task with a time
   highDone: number;
   lines: string[];
 }
 
 export function energyInsight(occ: Occurrence[]): EnergyInsight {
-  const timed = occ.filter((o) => o.completedAt);
-  const counts = new Map<TimeOfDay, number>();
-  for (const o of timed) counts.set(timeOfDay(o.completedAt!), (counts.get(timeOfDay(o.completedAt!)) ?? 0) + 1);
-  const bestTime = timed.length >= MIN_POINTS ? [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] : undefined;
-  const high = timed.filter((o) => o.energy === 'high');
-  const inBest = bestTime ? high.filter((o) => timeOfDay(o.completedAt!) === bestTime).length : 0;
-  const g = gate(high.length, 'high-energy tasks finished');
-  const lines =
-    g.enough && bestTime
-      ? [
-          `${inBest} of ${high.length} high-energy tasks were finished in ${TIME_OF_DAY_LABEL[bestTime]}, when you tend to finish the most.`,
-          ...(inBest / high.length < 0.5 ? [`Planning high-energy tasks for ${TIME_OF_DAY_LABEL[bestTime]} might suit you.`] : []),
-        ]
-      : [];
-  return { ...g, bestTime, inBest, highDone: high.length, lines };
+  const all = finishTimes(occ);
+  const high = finishTimes(occ.filter((o) => o.energy === 'high'));
+  const g = gate(high.of, 'high-energy tasks finished');
+  const lines = g.enough
+    ? [`High-energy tasks, when they were finished (${high.of}): ${timesText(high.counts)}.`, `All finished tasks with a time (${all.of}): ${timesText(all.counts)}.`]
+    : [];
+  return { ...g, high: high.counts, all: all.counts, highDone: high.of, lines };
 }
 
 // --- 5 & 6. Feelings after tasks ------------------------------------------------
 const ZONE_LABEL: Record<FeelingZone, string> = { lively: 'Lively', calm: 'Calm', tense: 'Tense', low: 'Low', okay: 'Okay' };
-const ZONES: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay'];
+const ZONES: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay']; // the app's zone order
+const mixText = (count: (z: FeelingZone) => number) => ZONES.filter((z) => count(z) > 0).map((z) => `${ZONE_LABEL[z]} ${count(z)}`).join(' · ');
 
 export interface FeelingsInsight extends Gate {
   mix: Record<FeelingZone, number>;
-  byTag: { tag: TaskTag; n: number; top: FeelingZone; topCount: number }[];
+  byTag: { tag: TaskTag; n: number; mix: Record<FeelingZone, number> }[]; // your tag order
   harder: { tag: TaskTag; n: number; harder: number }[];
   lines: string[];
 }
@@ -290,8 +294,8 @@ export function feelingsInsight(occ: Occurrence[], tags: TaskTag[]): FeelingsIns
   const byTag = tags
     .map((tag) => {
       const mine = felt.filter((o) => o.tagIds.includes(tag.id));
-      const counts = ZONES.map((z) => [z, mine.filter((o) => o.after === z).length] as const).sort((a, b) => b[1] - a[1]);
-      return { tag, n: mine.length, top: counts[0][0], topCount: counts[0][1] };
+      const tagMix = Object.fromEntries(ZONES.map((z) => [z, mine.filter((o) => o.after === z).length])) as Record<FeelingZone, number>;
+      return { tag, n: mine.length, mix: tagMix };
     })
     .filter((t) => t.n >= MIN_POINTS);
   const harder = tags
@@ -299,28 +303,26 @@ export function feelingsInsight(occ: Occurrence[], tags: TaskTag[]): FeelingsIns
       const rated = occ.filter((o) => o.difficulty && o.tagIds.includes(tag.id));
       return { tag, n: rated.length, harder: rated.filter((o) => o.difficulty === 'harder').length };
     })
-    .filter((t) => t.n >= MIN_POINTS && t.harder / t.n >= 0.5);
+    .filter((t) => t.n >= MIN_POINTS);
   const g = gate(felt.length, 'feelings after tasks');
-  const top = ZONES.map((z) => [z, mix[z]] as const).sort((a, b) => b[1] - a[1])[0];
   const lines = g.enough
     ? [
-        `After tasks, you most often felt ${ZONE_LABEL[top[0]]} (${top[1]} of ${felt.length}).`,
-        ...byTag.slice(0, 3).map((t) => `After tasks tagged ${t.tag.name}, you most often felt ${ZONE_LABEL[t.top]} (${t.topCount} of ${t.n}).`),
-        ...harder.slice(0, 2).map((t) => `Tasks tagged ${t.tag.name} were often harder than expected (${t.harder} of ${t.n}).`),
+        `How you felt after tasks (${plural(felt.length, 'feeling')}): ${mixText((z) => mix[z])}.`,
+        ...byTag.map((t) => `After tasks tagged ${t.tag.name} (${t.n}): ${mixText((z) => t.mix[z])}.`),
+        ...harder.map((t) => `Tasks tagged ${t.tag.name}: harder than expected ${t.harder} of ${plural(t.n, 'time')} rated.`),
       ]
     : [];
   return { ...g, mix, byTag, harder, lines };
 }
 
 export interface FeelGoodInsight extends Gate {
-  good: { tag: TaskTag; n: number; count: number }[]; // tend to be followed by Lively/Calm
-  heavy: { tag: TaskTag; n: number; count: number }[]; // tend to be followed by Tense/Low
+  perTag: { tag: TaskTag; n: number; pleasant: number; unpleasant: number }[]; // your tag order
   lines: string[];
 }
 
 export function feelGoodInsight(occ: Occurrence[], tags: TaskTag[]): FeelGoodInsight {
   const felt = occ.filter((o) => o.after);
-  const per = tags
+  const perTag = tags
     .map((tag) => {
       const mine = felt.filter((o) => o.tagIds.includes(tag.id));
       return {
@@ -331,20 +333,13 @@ export function feelGoodInsight(occ: Occurrence[], tags: TaskTag[]): FeelGoodIns
       };
     })
     .filter((t) => t.n >= MIN_POINTS);
-  const good = per.filter((t) => t.pleasant / t.n >= 0.6).map((t) => ({ tag: t.tag, n: t.n, count: t.pleasant }));
-  const heavy = per.filter((t) => t.unpleasant / t.n >= 0.5).map((t) => ({ tag: t.tag, n: t.n, count: t.unpleasant }));
   const g = gate(felt.length, 'feelings after tasks');
   const lines = !g.enough
     ? []
-    : per.length === 0
-      ? ['No single tag has 5 feelings after it yet, so there is nothing to compare.']
-      : good.length + heavy.length === 0
-        ? ['No tag stands out either way yet.']
-        : [
-            ...good.map((t) => `Tasks tagged ${t.tag.name} tend to be followed by Lively or Calm (${t.count} of ${t.n}).`),
-            ...heavy.map((t) => `Tasks tagged ${t.tag.name} are often followed by Tense or Low (${t.count} of ${t.n}). Worth knowing, not something to fix.`),
-          ];
-  return { ...g, good, heavy, lines };
+    : perTag.length === 0
+      ? ['No single tag has 5 feelings after it yet.']
+      : perTag.map((t) => `${t.tag.name} (${t.n}): Lively or Calm ${t.pleasant} · Tense or Low ${t.unpleasant}.`);
+  return { ...g, perTag, lines };
 }
 
 // --- 7. Overload ---------------------------------------------------------------
@@ -460,9 +455,8 @@ export function weeklyReview(
   const c = completionInsight(occ, buckets(r, 'day', weekStartsOn));
   const t = tagInsight(occ, tasks, tags);
   const wins: string[] = [`You finished ${plural(c.done, 'task')}.`];
-  if (c.bestWeekday) wins.push(`${c.bestWeekday.name.slice(0, -1)} was your most complete day.`);
-  const topTag = [...t.tags].sort((a, b) => b.done - a.done)[0];
-  if (topTag && topTag.done) wins.push(`Most done: ${topTag.tag.name} (${topTag.done}).`);
+  const doneByTag = t.tags.filter((x) => x.done > 0);
+  if (doneByTag.length) wins.push(`Done by tag: ${doneByTag.map((x) => `${x.tag.name} ${x.done}`).join(' · ')}.`);
   const open = occ.filter((o) => !o.done);
   const moved = tasks.filter((x) => x.moveCount >= 2 && occ.some((o) => o.taskId === x.id));
   const slipped: string[] = [];

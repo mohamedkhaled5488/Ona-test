@@ -220,7 +220,7 @@ function WindDownCard() {
     <Card style={[styles.card, { borderLeftColor: ACCENT, borderLeftWidth: 3 }]}>
       <View style={styles.headerRow}>
         <Eyebrow style={{ color: ACCENT }}>Wind-down checklist</Eyebrow>
-        <Pressable onPress={resetWindDownForTonight} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Reset tonight's checklist" onPress={resetWindDownForTonight} hitSlop={8}>
           <Ionicons name="refresh-outline" size={16} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -232,7 +232,7 @@ function WindDownCard() {
               <Ionicons name={item.done ? 'checkbox' : 'square-outline'} size={20} color={item.done ? ACCENT : colors.inkSoft} />
               <Body style={item.done ? styles.checklistDone : undefined}>{item.label}</Body>
             </Pressable>
-            <Pressable onPress={() => remove(item.id, item.label)} hitSlop={8}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${item.label}`} onPress={() => remove(item.id, item.label)} hitSlop={8}>
               <Ionicons name="close" size={16} color={colors.inkSoft} />
             </Pressable>
           </View>
@@ -253,7 +253,7 @@ function WindDownCard() {
             }
           }}
         />
-        <Pressable
+        <Pressable accessibilityRole="button" accessibilityLabel="Add to checklist"
           onPress={() => {
             if (newItem.trim()) {
               addWindDownItem(newItem);

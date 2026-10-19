@@ -41,6 +41,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
+import { onlyDigits } from '../utils/numberInput';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'book'>;
 
@@ -132,7 +133,7 @@ function ManualAddSheet({ visible, onClose, onCreated }: { visible: boolean; onC
       <View style={styles.totalRow}>
         <TextInput
           value={notSure ? '' : totalPages}
-          onChangeText={(t) => setTotalPages(t.replace(/[^0-9]/g, ''))}
+          onChangeText={(t) => setTotalPages(onlyDigits(t))}
           editable={!notSure}
           placeholder="e.g. 320"
           style={[styles.sheetInput, styles.totalInput, notSure && styles.inputDisabled]}
@@ -173,7 +174,7 @@ function PageStepper({ value, onChange, max }: { value: string; onChange: (v: st
       </Pressable>
       <TextInput
         value={value}
-        onChangeText={(t) => onChange(t.replace(/[^0-9]/g, ''))}
+        onChangeText={(t) => onChange(onlyDigits(t))}
         keyboardType="number-pad"
         maxLength={5}
         selectTextOnFocus
@@ -211,7 +212,7 @@ function MyBooksListStage({
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>My Books</ScreenTitle>
-        <Pressable onPress={onOpenQuoteSearch} style={styles.headerLink} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Search quotes" onPress={onOpenQuoteSearch} style={styles.headerLink} hitSlop={8}>
           <Ionicons name="search-outline" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -417,7 +418,7 @@ function QuoteAddSheet({
       />
 
       <Eyebrow style={styles.fieldLabel}>Page (optional)</Eyebrow>
-      <TextInput value={page} onChangeText={setPage} placeholder="e.g. 142" placeholderTextColor={colors.inkSoft} style={styles.sheetInput} keyboardType="number-pad" />
+      <TextInput value={page} onChangeText={(t) => setPage(onlyDigits(t))} placeholder="e.g. 142" placeholderTextColor={colors.inkSoft} style={styles.sheetInput} keyboardType="number-pad" />
 
       <Eyebrow style={styles.fieldLabel}>Why this resonated (optional)</Eyebrow>
       <TextInput value={note} onChangeText={setNote} placeholder="A personal note, separate from the quote" placeholderTextColor={colors.inkSoft} style={styles.sheetInput} multiline />
@@ -463,17 +464,17 @@ function QuoteRow({ quote, entry }: { quote: Quote; entry: ReadingListEntry }) {
       {quote.note && <Caption style={styles.quoteNote}>{quote.note}</Caption>}
 
       <View style={styles.quoteActionsRow}>
-        <Pressable hitSlop={8} onPress={() => toggleQuoteFavorite(quote.id)} style={styles.quoteActionButton}>
+        <Pressable accessibilityRole="button" accessibilityLabel={quote.favorite ? 'Remove from favorites' : 'Add to favorites'} hitSlop={8} onPress={() => toggleQuoteFavorite(quote.id)} style={styles.quoteActionButton}>
           <Ionicons name={quote.favorite ? 'star' : 'star-outline'} size={18} color={colors.amber} />
         </Pressable>
-        <Pressable
+        <Pressable accessibilityRole="button" accessibilityLabel="Share quote"
           hitSlop={8}
           onPress={() => shareQuoteCardImage(cardRef, `"${quote.text}"\n— ${entry.book.title}`)}
           style={styles.quoteActionButton}
         >
           <Ionicons name="share-outline" size={18} color={colors.inkSoft} />
         </Pressable>
-        <Pressable hitSlop={8} onPress={remove} style={styles.quoteActionButton}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Delete quote" hitSlop={8} onPress={remove} style={styles.quoteActionButton}>
           <Ionicons name="trash-outline" size={18} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -795,7 +796,7 @@ function FolderStage({
               <View style={styles.totalRow}>
                 <TextInput
                   value={editingTotal}
-                  onChangeText={(t) => setEditingTotal(t.replace(/[^0-9]/g, ''))}
+                  onChangeText={(t) => setEditingTotal(onlyDigits(t))}
                   placeholder="Total pages"
                   style={[styles.sheetInput, styles.totalInput]}
                   keyboardType="number-pad"
@@ -856,7 +857,7 @@ function FolderStage({
           <Eyebrow>My rating & review</Eyebrow>
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((n) => (
-              <Pressable key={n} hitSlop={4} onPress={() => setRating(entry.id, n)}>
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: (entry.rating ?? 0) === n }} accessibilityLabel={`Rate ${n} out of 5`} key={n} hitSlop={4} onPress={() => setRating(entry.id, n)}>
                 <Ionicons name={(entry.rating ?? 0) >= n ? 'star' : 'star-outline'} size={20} color={colors.amber} />
               </Pressable>
             ))}
@@ -922,7 +923,7 @@ function FolderStage({
           <Caption>A rating and a few words are optional.</Caption>
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((n) => (
-              <Pressable key={n} hitSlop={4} onPress={() => setFlow({ ...flow, rating: flow.rating === n ? 0 : n })}>
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: flow.rating === n }} accessibilityLabel={`Rate ${n} out of 5`} key={n} hitSlop={4} onPress={() => setFlow({ ...flow, rating: flow.rating === n ? 0 : n })}>
                 <Ionicons name={flow.rating >= n ? 'star' : 'star-outline'} size={20} color={colors.amber} />
               </Pressable>
             ))}
@@ -988,7 +989,7 @@ function FolderStage({
                       ? `, ${s.pagesRead} pages`
                       : ''}
                 </Caption>
-                <Pressable hitSlop={8} onPress={() => removeSession(s.id)}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Remove session" hitSlop={8} onPress={() => removeSession(s.id)}>
                   <Ionicons name="close" size={14} color={colors.inkSoft} />
                 </Pressable>
               </View>
@@ -1073,7 +1074,7 @@ function QuoteSearchStage({ onBack, onOpenFolder }: { onBack: () => void; onOpen
     <>
       <View style={styles.headerRow}>
         <ScreenTitle>Search your quotes</ScreenTitle>
-        <Pressable onPress={onBack} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onBack} hitSlop={8}>
           <Ionicons name="close" size={20} color={colors.inkSoft} />
         </Pressable>
       </View>

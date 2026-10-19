@@ -57,6 +57,7 @@ import { colors, fonts, radii, spacing } from '../theme';
 import { themedStyles } from '../theme/runtime';
 import type { RootStackParamList } from '../navigation/types';
 import type { AlarmSoundId, TaskEnergy, TaskPriority, TaskRepeat, TaskTemplate } from '../types/sections';
+import { onlyDigits } from '../utils/numberInput';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'taskEditor'>;
 
@@ -678,7 +679,7 @@ export function TaskEditorScreen({ route, navigation }: Props) {
                 <TextInput
                   value={customEstimate}
                   onChangeText={(v) => {
-                    const digits = v.replace(/[^0-9]/g, '').slice(0, 4);
+                    const digits = onlyDigits(v).slice(0, 4);
                     setCustomEstimate(digits);
                     update({ estimateMinutes: Number(digits) > 0 ? Number(digits) : undefined });
                   }}

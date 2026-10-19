@@ -4,7 +4,7 @@
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []) }));
 
 import type { Habit, HabitCheckIn, QuitFeelingEntry, QuitTrack } from '../../types/sections';
-import { completionTime, habitTimeOfDay, quitTiming, MIN_ATTEMPTS, MIN_GAP } from '../habitTimeOfDay';
+import { completionTime, habitTimeOfDay, quitTiming, MIN_ATTEMPTS } from '../habitTimeOfDay';
 import { buildDayStatuses, milestoneBar, patternRange, quitDayStatuses, weeklyCompletion } from '../habitPattern';
 import { useHabitsStore, habitStreak } from '../../store/useHabitsStore';
 import { completionRate } from '../habitFrequency';
@@ -37,9 +37,9 @@ const days = (count: number, from = '2026-09-01') =>
   }).map((x) => (from === '2026-09-01' ? x : x));
 
 describe('A1. Time of day', () => {
-  const BANNED = /\bbetter than\b|\bworse\b|\bcauses?\b|\bmakes you\b|\bbecause of\b/i;
+  const BANNED = /\bbetter\b|\bworse\b|\bbest\b|\bmost\b|\busually\b|\btend(s)? to\b|\bcauses?\b|\bmakes you\b|\bbecause of\b/i;
 
-  test('equal rates: no winner, said positively', () => {
+  test('equal rates: both shown, morning to night, no verdict', () => {
     const list = [
       ...days(10).map((d, i) => ci(d, i !== 0, { planned: '08:00' })), // 9 of 10 mornings
       ...days(10).map((d, i) => ci(d, i !== 0, { planned: '19:00' })), // 9 of 10 evenings
@@ -47,25 +47,18 @@ describe('A1. Time of day', () => {
     const r = habitTimeOfDay(list, H);
     expect(r.kind).toBe('rates');
     if (r.kind !== 'rates') return;
-    expect(r.clearer).toBe(false);
-    expect(r.lines.join(' ')).toMatch(/You complete this well in the morning \(90%\) and in the evening \(90%\)\. Both times work for you\./);
-    for (const l of r.lines) expect(l).not.toMatch(/seem to work better|BANNED/);
+    expect(r.lines[0]).toBe('Done when planned for each time: morning 90% (9 of 10) · evening 90% (9 of 10).');
+    for (const l of r.lines) expect(l).not.toMatch(BANNED);
   });
 
-  test(`a clear difference (at least ${MIN_GAP} points, ${MIN_ATTEMPTS}+ each): counts shown, wording correlational`, () => {
+  test(`a big difference (${MIN_ATTEMPTS}+ each) is still just the numbers, never "works better"`, () => {
     const morning = Array.from({ length: 20 }, (_, i) => ci(`2026-0${i < 10 ? 7 : 8}-${String((i % 10) + 1).padStart(2, '0')}`, i < 18, { planned: '07:30' }));
     const evening = Array.from({ length: 20 }, (_, i) => ci(`2026-0${i < 10 ? 7 : 8}-${String((i % 10) + 11).padStart(2, '0')}`, i < 11, { planned: '20:00' }));
-    const r = habitTimeOfDay([...morning, ...evening], H);
-    expect(r.kind === 'rates' && r.clearer).toBe(true);
-    expect(r.kind !== 'notEnough' && r.lines).toEqual(['Mornings: 90% done (18 of 20). Evenings: 55% done (11 of 20).', 'Mornings seem to work better for this habit.']);
-  });
-
-  test('a small difference is not ranked', () => {
-    const a = Array.from({ length: 10 }, (_, i) => ci(`2026-07-${String(i + 1).padStart(2, '0')}`, i < 8, { planned: '08:00' })); // 80%
-    const b = Array.from({ length: 10 }, (_, i) => ci(`2026-08-${String(i + 1).padStart(2, '0')}`, i < 7, { planned: '13:00' })); // 70%
-    const r = habitTimeOfDay([...a, ...b], H);
-    expect(r.kind === 'rates' && !r.clearer).toBe(true);
-    expect(r.kind !== 'notEnough' && r.lines.join(' ')).not.toMatch(/better/);
+    const r = habitTimeOfDay([...evening, ...morning], H);
+    expect(r.kind !== 'notEnough' && r.lines).toEqual([
+      'Done when planned for each time: morning 90% (18 of 20) · evening 55% (11 of 20).',
+      'Each number is how often it got done when it was planned for that time of day.',
+    ]);
   });
 
   test('tiny samples: no comparison', () => {
@@ -77,16 +70,16 @@ describe('A1. Time of day', () => {
   test('one empty bucket: only that time, no ranking', () => {
     const list = Array.from({ length: 6 }, (_, i) => ci(`2026-07-${String(i + 1).padStart(2, '0')}`, i < 5, { planned: '08:00' }));
     const r = habitTimeOfDay(list, H);
-    expect(r.kind === 'rates' && r.lines).toEqual(['Planned in the morning, you\'ve done it 5 of 6 times (83%).']);
+    expect(r.kind === 'rates' && r.lines[0]).toBe('Planned in the morning: done 5 of 6 times (83%).');
   });
 
-  test('no planned time: when it\'s usually done, no rates, no "better", and a hint', () => {
+  test('no planned time: when it was completed, as counts, and a hint', () => {
     const list = [...Array.from({ length: 4 }, (_, i) => ci(`2026-07-${String(i + 1).padStart(2, '0')}`, true, { hour: 7 })), ci('2026-07-10', true, { hour: 19 }), ci('2026-07-11', false, { hour: 22 })];
     const r = habitTimeOfDay(list, H);
     expect(r.kind).toBe('whenDone');
     const text = r.kind === 'whenDone' ? r.lines.join(' ') : '';
-    expect(text).toBe('When you complete it: in the morning 4, in the evening 1. Add a planned time (the cue reminder) to see which time works best.');
-    expect(text).not.toMatch(/%|better/);
+    expect(text).toBe('When it was completed (5 times): morning 4 · evening 1. Add a planned time (the cue reminder) to see how often it gets done at each time of day.');
+    expect(text).not.toMatch(BANNED);
   });
 
   test('too few known times: not enough yet', () => {
@@ -106,15 +99,15 @@ describe('A1. Time of day', () => {
     expect(completionTime(c)?.getHours()).toBe(23);
   });
 
-  test('Quit: when urges come, as counts; "tend to" only when one time clearly holds most', () => {
+  test('Quit: when urges came, as counts, even when one time holds most of them', () => {
     const tracks: QuitTrack[] = [{ id: 't', quitHabitId: 'q', startDate: '2026-09-01', createdAt: '', status: 'active' }];
     const urge = (hour: number, i: number): QuitFeelingEntry => ({ id: `u${i}`, trackId: 't', feelingId: 'x', zone: 'tense', isRelapseMoment: false, isResistedUrge: true, createdAt: new Date(2026, 8, 2 + i, hour).toISOString() });
-    expect(quitTiming([20, 8, 13].map(urge), tracks, 'q')!.lines).toEqual(['Urges logged: in the morning 1, in the afternoon 1, in the evening 1.']);
-    expect(quitTiming([18, 19, 20, 18, 19, 8].map(urge), tracks, 'q')!.lines).toEqual(['Urges tend to come in the evening (5 of 6).']);
+    expect(quitTiming([20, 8, 13].map(urge), tracks, 'q')!.lines).toEqual(['When urges and slips were logged (3): morning 1 · afternoon 1 · evening 1.']);
+    expect(quitTiming([18, 19, 20, 18, 19, 8].map(urge), tracks, 'q')!.lines).toEqual(['When urges and slips were logged (6): morning 1 · evening 5.']);
     expect(quitTiming([], tracks, 'q')).toBeUndefined();
   });
 
-  test('no line ever says "better than", "worse" or anything causal', () => {
+  test('no line ever ranks ("better", "most", "usually", "tends to") or says anything causal', () => {
     // The strings people read, not the comments explaining the rule.
     const src = read('src/utils/habitTimeOfDay.ts')
       .split('\n')

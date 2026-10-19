@@ -7,11 +7,18 @@ import type { Habit, HabitCheckIn, PracticeSession, SkillMetric } from '../../ty
 import { buildDayStatuses, weeklyCompletion } from '../habitPattern';
 import { completionRate, longestFrequencyStreak } from '../habitFrequency';
 import { habitTimeOfDay } from '../habitTimeOfDay';
-import { longestHabitStreak, mostSkippedReasonTag, mostSkippedWeekday, sessionLengthLines, sessionMinutesByTimeOfDay } from '../habitStats';
+import { longestHabitStreak, missesByWeekday, sessionLengthLines, sessionMinutesByTimeOfDay, skipReasons } from '../habitStats';
 import { growDetails, periodStats, withoutHidden } from '../recapStats';
 import { detectPlateau, metricSeries, plateauPeriods, describeMetricChange, metricChange } from '../skillProgress';
 import { minutesByTimeOfDay } from '../skillStats';
 import { habitStreak } from '../../store/useHabitsStore';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 const H = 'habit-b';
 let n = 0;
@@ -79,71 +86,60 @@ describe('B1. The same numbers everywhere', () => {
   });
 });
 
-describe('B4. Analysis cards only claim what the data supports', () => {
+describe('B4. Analysis cards show the numbers, never a ranking', () => {
   const daily = (dates: string[], done: (d: string, i: number) => boolean, tags?: (i: number) => string[]) =>
     dates.map((d, i) => ci(d, done(d, i), tags ? { reasonTags: tags(i) } : {}));
 
-  test('a weekday is only named when it clearly stands out', () => {
-    // Mondays missed 3 times, Tuesdays 2: too close to call.
-    const close = [
-      ...['2026-09-07', '2026-09-14', '2026-09-21'].map((d) => ci(d, false)),
-      ...['2026-09-08', '2026-09-15'].map((d) => ci(d, false)),
-      ci('2026-09-09', true),
+  test('missed days by weekday: every weekday logged, in week order, with "missed of logged"', () => {
+    const list = [
+      ...['2026-09-07', '2026-09-14', '2026-09-21'].map((d) => ci(d, false)), // Mondays
+      ...['2026-09-08', '2026-09-15'].map((d) => ci(d, false)), // Tuesdays
+      ci('2026-09-09', true), // a Wednesday, done
     ];
-    expect(mostSkippedWeekday(close, H)).toBeUndefined();
-    const clear = [...close.filter((c) => c.date !== '2026-09-15'), ci('2026-09-28', false)];
-    expect(mostSkippedWeekday(clear, H)).toEqual({ weekday: 'Monday', count: 4, logged: 4 });
+    expect(missesByWeekday(list, H)).toEqual([
+      { weekday: 'Mon', missed: 3, logged: 3 },
+      { weekday: 'Tue', missed: 2, logged: 2 },
+      { weekday: 'Wed', missed: 0, logged: 1 },
+    ]);
+    // Below the minimum number of misses: nothing to show yet.
+    expect(missesByWeekday([ci('2026-09-07', false), ci('2026-09-08', true)], H)).toBeUndefined();
   });
 
-  test('a habit done only on Mondays is never "most often skipped on Mondays"', () => {
-    const mondays = daily(['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28'], () => false);
-    expect(mostSkippedWeekday(mondays, H)).toBeUndefined();
+  test('reasons on missed days: each with its count, in the reason list order (not by count)', () => {
+    const list = daily(range('2026-09-01', 6), () => false, (i) => (i < 4 ? ['Work'] : ['Sleep']));
+    const r = skipReasons(list, H)!;
+    expect(r.missedTotal).toBe(6);
+    const order = (require('../../data/feelingsWheel').reasonTagOptions as string[]).filter((t) => t === 'Work' || t === 'Sleep');
+    expect(r.tags.map((t) => t.tag)).toEqual(order);
+    expect(r.tags.find((t) => t.tag === 'Work')!.count).toBe(4);
   });
 
-  test('a tie between reasons names neither; the winner shows "N of M"', () => {
-    const tie = daily(range('2026-09-01', 6), () => false, (i) => (i < 3 ? ['Tired'] : ['Work']));
-    expect(mostSkippedReasonTag(tie, H)).toBeUndefined();
-    const lead = daily(range('2026-09-01', 6), () => false, (i) => (i < 4 ? ['Tired'] : ['Work']));
-    expect(mostSkippedReasonTag(lead, H)).toEqual({ tag: 'Tired', count: 4, missedTotal: 6 });
-  });
-
-  test('session length: "longest" only with a clear gap; otherwise just the averages', () => {
+  test('session length: the averages, morning to evening, never "longest"', () => {
     const one = sessionLengthLines([{ bucket: 'before 9am', averageMinutes: 20, count: 4 }])!;
-    expect(one.headline).toBe('Your before 9am sessions average 20 min.');
+    expect(one.headline).toBe('Sessions before 9am: 20 min on average (4).');
     expect(one.evidence).toMatch(/Based on 4 timed sessions/);
-    const close = sessionLengthLines([
-      { bucket: 'after 6pm', averageMinutes: 22, count: 4 },
+    const two = sessionLengthLines([
       { bucket: 'before 9am', averageMinutes: 20, count: 5 },
-    ])!;
-    expect(close.headline).not.toMatch(/longest/);
-    const clear = sessionLengthLines([
       { bucket: 'after 6pm', averageMinutes: 30, count: 4 },
-      { bucket: 'before 9am', averageMinutes: 20, count: 5 },
     ])!;
-    expect(clear.headline).toMatch(/after 6pm sessions tend to run longest: 30 min/);
+    expect(two.headline).toBe('Average session length: before 9am 20 min (5) · after 6pm 30 min (4).');
+    expect(two.headline + two.evidence).not.toMatch(/longest|most|best|tend/i);
   });
 
-  test('session length goes by when it was done, not when it was logged', () => {
+  test('session length goes by when it was done, not when it was logged, in the order of the day', () => {
     // Done at 7am, logged that evening.
     const list = range('2026-09-01', 3).map((d) => ({ ...ci(d, true, { durationMinutes: 20 }, 20), completedAt: at(d, 7) }));
     expect(sessionMinutesByTimeOfDay(list, H)).toEqual([{ bucket: 'before 9am', averageMinutes: 20, count: 3 }]);
-  });
-
-  test('time of day and the weekday card never contradict each other or rank tiny gaps', () => {
-    // 10 mornings and 10 evenings, 8 vs 7 done: no winner.
-    const list = [
-      ...range('2026-09-01', 10).map((d, i) => ci(d, i < 8, { plannedTime: '08:00' })),
-      ...range('2026-09-11', 10).map((d, i) => ci(d, i < 7, { plannedTime: '19:00' }, 19)),
-    ];
-    const r = habitTimeOfDay(list, H);
-    expect(r.kind).toBe('rates');
-    if (r.kind === 'rates') expect(r.clearer).toBe(false);
+    const evening = range('2026-09-10', 3).map((d) => ({ ...ci(d, true, { durationMinutes: 40 }, 20), completedAt: at(d, 20) }));
+    expect(sessionMinutesByTimeOfDay([...evening, ...list], H).map((x) => x.bucket)).toEqual(['before 9am', 'after 6pm']);
   });
 
   test('the cards never use ranking or causal words', () => {
     const fs = require('fs') as { readFileSync: (p: string, e: string) => string };
-    const src = fs.readFileSync(require('path').join(process.cwd(), 'src/screens/BuildHabitAnalysis.tsx'), 'utf8');
-    expect(src).not.toMatch(/strongest link|because of|causes|makes you/i);
+    for (const f of ['src/screens/BuildHabitAnalysis.tsx', 'src/screens/QuitHabitAnalysis.tsx', 'src/screens/SkillAnalysis.tsx']) {
+      const strings = (fs.readFileSync(require('path').join(process.cwd(), f), 'utf8').match(/`[^`]*`|"[^"]*"|'[^']*'/g) ?? []).join(' ');
+      expect(strings).not.toMatch(/strongest|most often|most frequent|works? best|has worked for you|tend(s|ed)? to|longest:|because of|causes|makes you/i);
+    }
   });
 });
 
@@ -202,7 +198,7 @@ describe('B9. A year of logs', () => {
       buildDayStatuses(hb, all, days[0], today, today);
       weeklyCompletion(hb, all, days[0], today, today);
       habitTimeOfDay(all, `h${h}`);
-      mostSkippedWeekday(all, `h${h}`);
+      missesByWeekday(all, `h${h}`);
     }
     expect(Date.now() - t0).toBeLessThan(1500);
   });

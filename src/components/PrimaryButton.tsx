@@ -58,6 +58,8 @@ const styles = themedStyles(() => ({
     fontFamily: fonts.bodyMedium,
     fontSize: fontSizes.base,
     color: colors.white,
+    // Centered even when a long label wraps onto two lines.
+    textAlign: 'center',
   },
   outlineLabel: {
     color: colors.teal,

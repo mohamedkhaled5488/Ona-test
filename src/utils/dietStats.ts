@@ -13,12 +13,12 @@ export function costBySource(meals: PlannedMeal[]): Partial<Record<MealSource, n
   return result;
 }
 
-export function mostRepeatedMeals(meals: PlannedMeal[], limit = 5): { name: string; count: number }[] {
+// Meals planned more than once, A to Z with their counts (not a top list).
+export function repeatedMeals(meals: PlannedMeal[]): { name: string; count: number }[] {
   const counts = new Map<string, number>();
   meals.forEach((m) => counts.set(m.name, (counts.get(m.name) ?? 0) + 1));
   return Array.from(counts.entries())
     .map(([name, count]) => ({ name, count }))
     .filter((entry) => entry.count > 1)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit);
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -1,9 +1,10 @@
 import type { FeelingCheckIn, FeelingZone } from '../types/sections';
 import { safeguardFeelingIds, reasonTagOptions, zoneMeta, findFeeling } from '../data/feelingsWheel';
-import { addDaysISO, addMonthsISO, getMonthGrid, weekdayOfISO } from './date';
+import { addDaysISO, addMonthsISO, daysBetweenISODates, getMonthGrid, weekdayOfISO } from './date';
 
+// Calendar days from a to b (the same rule as date.ts).
 export function daysBetweenISO(a: string, b: string): number {
-  return Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / 86400000);
+  return daysBetweenISODates(a, b);
 }
 
 // Consecutive days (ending today or yesterday) with at least one check-in.
@@ -523,7 +524,7 @@ export function tagFeelingBreakdown(entries: FeelingCheckIn[], tag: string): Tag
       percentage: Math.round((count / matches.length) * 100),
       notes: notes.get(feeling) ?? [],
     }))
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => a.feeling.localeCompare(b.feeling)); // A to Z, not ranked
 }
 
 export interface TagPrimaryZone {

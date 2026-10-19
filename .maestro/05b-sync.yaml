@@ -1,0 +1,17 @@
+# E2E-007 Then sync: sign in (LOCAL Supabase stack), sync, and the task
+# written offline reaches the server. Run after 01b-sign-up with the same
+# MAESTRO_E2E_EMAIL; the account's trial gives sync access.
+appId: app.ona
+tags:
+  - needs-backend
+---
+- launchApp
+- tapOn:
+    id: "home-settings"
+- tapOn: "Account & Subscription"
+- tapOn: "Sync now"
+- extendedWaitUntil:
+    notVisible: "Syncing…"
+    timeout: 30000
+- assertNotVisible: "Couldn't sync.*"
+- assertNotVisible: "Not yet"

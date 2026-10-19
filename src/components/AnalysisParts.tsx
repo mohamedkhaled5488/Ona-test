@@ -64,18 +64,23 @@ const styles = themedStyles(() => ({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
+  // The number and its label sit in the middle of the tile.
   statCard: {
     flexBasis: '47%',
     flexGrow: 1,
     gap: 2,
     paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statValue: {
     fontFamily: fonts.headingSemiBold,
     fontSize: 30,
+    textAlign: 'center',
   },
   statLabel: {
     color: colors.inkSoft,
+    textAlign: 'center',
   },
   insightCard: {
     borderLeftWidth: 4,

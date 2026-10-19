@@ -5,6 +5,7 @@ import { computeEntitlement, snapshotFromRaw, type RawEntitlement } from './enti
 import { useEntitlementStore, type EntitlementCacheState } from '../store/useEntitlementStore';
 import { track } from './analytics';
 import { isDemo } from './dataSpace';
+import { now as clockNow } from './clock';
 
 export interface EntitlementServer {
   startTrial: () => Promise<RawEntitlement>; // idempotent on the server
@@ -16,7 +17,7 @@ type Store = { getState: () => EntitlementCacheState };
 const inFlight = new Map<string, Promise<boolean>>();
 
 // Returns true when a fresh answer was saved, false when the cache was kept.
-export function refreshEntitlement(userId: string, server: EntitlementServer, store: Store = useEntitlementStore, now: () => number = Date.now): Promise<boolean> {
+export function refreshEntitlement(userId: string, server: EntitlementServer, store: Store = useEntitlementStore, now: () => number = clockNow): Promise<boolean> {
   if (isDemo()) return Promise.resolve(false); // no account traffic in Demo mode
   const running = inFlight.get(userId);
   if (running) return running;

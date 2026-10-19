@@ -2,6 +2,10 @@
 // no account), where leaving the demo goes, and the account, sign-in and
 // purchase screens in demo. Demo mode ships in release builds; the Developer
 // page stays debug-only.
+// These build the full 8-week sample set; give them room on a slow, busy
+// machine (a coverage run) instead of the default 5 seconds.
+jest.setTimeout(20_000);
+
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []) }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +14,13 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useDailyPlanningStore } from '../../store/useDailyPlanningStore';
 import { DATA_SAFETY } from '../../config/about';
 import { todayISO } from '../date';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 const fs = require('fs') as { readFileSync: (p: string, e: string) => string };
 const path = require('path') as { join: (...p: string[]) => string };

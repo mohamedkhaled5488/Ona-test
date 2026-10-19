@@ -177,16 +177,16 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <View style={styles.flex}>
         <View style={styles.topBar}>
-          <Pressable hitSlop={10} onPress={() => navigation.goBack()}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={24} color={theme.soft} />
           </Pressable>
           <View style={styles.topActions}>
             {mode === 'read' ? (
               <>
-                <Pressable hitSlop={10} onPress={() => setMode('edit')}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Edit entry" hitSlop={10} onPress={() => setMode('edit')}>
                   <Ionicons name="pencil-outline" size={20} color={theme.text} />
                 </Pressable>
-                <Pressable hitSlop={10} onPress={openOverflow}>
+                <Pressable accessibilityRole="button" accessibilityLabel="More options" hitSlop={10} onPress={openOverflow}>
                   <Ionicons name="ellipsis-horizontal" size={22} color={theme.text} />
                 </Pressable>
               </>
@@ -308,7 +308,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
             <View style={styles.bottomBar}>
               <Text style={[styles.wordCount, { color: theme.soft }]}>{countWords(text)} words</Text>
               <View style={styles.bottomActions}>
-                <Pressable hitSlop={10} onPress={() => setShowTags((v) => !v)}>
+                <Pressable accessibilityRole="button" accessibilityState={{ expanded: showTags }} accessibilityLabel="Tags" hitSlop={10} onPress={() => setShowTags((v) => !v)}>
                   <Ionicons name="pricetag-outline" size={20} color={showTags ? theme.text : theme.soft} />
                 </Pressable>
                 {promptsOn && (
@@ -334,7 +334,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       <SheetModal visible={showColorSheet} onClose={() => setShowColorSheet(false)}>
         <View style={styles.sheetHeader}>
           <SectionHeading>Choose a color</SectionHeading>
-          <Pressable hitSlop={8} onPress={() => setShowColorSheet(false)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={() => setShowColorSheet(false)}>
             <Ionicons name="close" size={22} color={colors.inkSoft} />
           </Pressable>
         </View>
@@ -358,7 +358,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       <SheetModal visible={showFeelingPicker} onClose={() => setShowFeelingPicker(false)}>
         <View style={styles.sheetHeader}>
           <SectionHeading>Be more specific</SectionHeading>
-          <Pressable hitSlop={8} onPress={() => setShowFeelingPicker(false)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={() => setShowFeelingPicker(false)}>
             <Ionicons name="close" size={22} color={colors.inkSoft} />
           </Pressable>
         </View>
@@ -375,7 +375,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       <SheetModal visible={showStyle} onClose={() => setShowStyle(false)}>
         <View style={styles.sheetHeader}>
           <SectionHeading>Page appearance</SectionHeading>
-          <Pressable hitSlop={8} onPress={() => setShowStyle(false)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={() => setShowStyle(false)}>
             <Ionicons name="close" size={22} color={colors.inkSoft} />
           </Pressable>
         </View>

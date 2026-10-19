@@ -4,6 +4,10 @@
 // it, dates around midnight and daylight saving, what a bug report says, and
 // a whole session that must not touch the network, the real data, the PINs or
 // the real reminders.
+// These build the full 8-week sample set; give them room on a slow, busy
+// machine (a coverage run) instead of the default 5 seconds.
+jest.setTimeout(20_000);
+
 
 const mockNetwork: string[] = [];
 const mockScheduled: unknown[] = [];
@@ -50,7 +54,7 @@ jest.mock('../network', () => ({ isOnline: async () => mockOnline }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SPACE_KEY, isDemo } from '../dataSpace';
-import { CARRIED_INTO_DEMO, __resetForTests, startAppData, switchDataSpace } from '../dataSpaceController';
+import { CARRIED_INTO_DEMO, __flushForTests, __resetForTests, startAppData, switchDataSpace } from '../dataSpaceController';
 import { LOCAL_DATA, buildExport, wipeLocalData } from '../localData';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useDailyPlanningStore } from '../../store/useDailyPlanningStore';
@@ -64,6 +68,13 @@ import { diagnostics } from '../diagnostics';
 import { todayISO } from '../date';
 import type { FeelingCheckIn, DailyTask } from '../../types/sections';
 import type { EntitlementSnapshot } from '../entitlement';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 const storage = AsyncStorage as unknown as { getItem: (k: string) => Promise<string | null>; setItem: (k: string, v: string) => Promise<void>; getAllKeys: () => Promise<string[]>; clear: () => Promise<void> };
 const fs = require('fs') as { readFileSync: (p: string, e: string) => string };
@@ -72,6 +83,24 @@ const path = require('path') as { join: (...p: string[]) => string };
 async function realDump(): Promise<string> {
   const keys = (await storage.getAllKeys()).filter((k) => !k.startsWith('ona.demo.') && k !== SPACE_KEY).sort();
   return JSON.stringify(await Promise.all(keys.map(async (k) => [k, await storage.getItem(k)])));
+}
+
+
+// Which storage keys changed between two dumps (a readable failure message
+// instead of two giant strings): key, then the first difference.
+function changedKeys(before: string, after: string): string[] {
+  const a = new Map(JSON.parse(before) as [string, string | null][]);
+  const b = new Map(JSON.parse(after) as [string, string | null][]);
+  const keys = [...new Set([...a.keys(), ...b.keys()])].sort();
+  return keys
+    .filter((k) => a.get(k) !== b.get(k))
+    .map((k) => {
+      const x = a.get(k) ?? '(missing)';
+      const y = b.get(k) ?? '(missing)';
+      let i = 0;
+      while (i < x.length && x[i] === y[i]) i++;
+      return `${k}: was …${x.slice(Math.max(0, i - 40), i + 60)}… now …${y.slice(Math.max(0, i - 40), i + 60)}…`;
+    });
 }
 
 const HOUR = 3_600_000;
@@ -90,7 +119,7 @@ async function realUser(opts: { session?: string; trialEndsInMs?: number } = {})
     useAuthStore.setState({ session: { user: { id: opts.session } } as never });
     if (opts.trialEndsInMs !== undefined) useEntitlementStore.getState().saveSnapshot(snapshot(opts.session, opts.trialEndsInMs));
   }
-  await new Promise((r) => setTimeout(r, 500));
+  await __flushForTests();
 }
 
 // Everything a curious person might do in the demo.
@@ -108,7 +137,7 @@ async function aDemoSession() {
   await useAuthStore.getState().signOut();
   await useAuthStore.getState().deleteAccount(false);
   await useDailyPlanningStore.getState().resyncAllReminders();
-  await new Promise((r) => setTimeout(r, 500));
+  await __flushForTests();
 }
 
 let fetchSpy: jest.SpyInstance;
@@ -135,6 +164,7 @@ describe.each([
   ['an account on a trial', { session: 'u-trial', trialEndsInMs: 10 * 24 * HOUR }],
   ['an account whose trial has ended', { session: 'u-expired', trialEndsInMs: -2 * 24 * HOUR }],
 ])('entering with %s', (_label, opts) => {
+  // Builds the full 8-week sample set: allow for a slow, busy machine (coverage runs).
   test('a whole demo session: no network, no reminders, real data and account state untouched', async () => {
     await realUser(opts);
     const scheduledBefore = mockScheduled.length;
@@ -147,7 +177,7 @@ describe.each([
     await aDemoSession();
     await switchDataSpace('real');
 
-    expect(await realDump()).toBe(realBefore);
+    expect(changedKeys(realBefore, await realDump())).toEqual([]);
     expect(mockNetwork).toEqual([]);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(mockScheduled.length).toBe(scheduledBefore);
@@ -223,10 +253,10 @@ describe('the demo\'s own data tools only touch demo data', () => {
     await switchDataSpace('demo');
     const realBefore = await realDump();
     await wipeLocalData();
-    await new Promise((r) => setTimeout(r, 500));
+    await __flushForTests();
     expect(useDailyPlanningStore.getState().tasks).toEqual([]);
     await switchDataSpace('real');
-    expect(await realDump()).toBe(realBefore);
+    expect(changedKeys(realBefore, await realDump())).toEqual([]);
     expect(useDailyPlanningStore.getState().tasks.length).toBeGreaterThan(0);
   });
 

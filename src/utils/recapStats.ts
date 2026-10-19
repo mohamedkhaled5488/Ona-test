@@ -25,6 +25,9 @@ import { bookProgress, describeProgress } from './bookProgress';
 import { computePlanProgress, flattenSteps } from '../store/usePlanStore';
 import { addDaysISO } from './date';
 
+// The app's zone order, used wherever Recap lists feelings (never sorted by count).
+const RECAP_ZONE_ORDER: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay'];
+
 export interface RecapData extends RecapSourceData {
   readingSessions: ReadingSession[];
   quotes: Quote[];
@@ -174,11 +177,11 @@ export function periodStats(data: RecapData, range: DateRange): PeriodStats {
     zoneMix[e.zone] += 1;
     for (const id of e.feelingIds) feelingCounts.set(id, (feelingCounts.get(id) ?? 0) + 1);
   }
+  // Every feeling named in the period, A to Z (not the "top" ones).
   const topFeelings = [...feelingCounts.entries()]
     .map(([id, count]) => ({ id, name: findFeeling(id)?.name ?? '', count }))
     .filter((f) => f.name)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const sleepIn = data.sleepLogs.filter((l) => inRange(l.date, range));
   const readingIn = data.readingSessions.filter((s) => inRange(s.date, range));
@@ -408,17 +411,10 @@ export function buildHighlights(data: RecapData, stats: PeriodStats): Highlight[
   }
 
   if (multiDay) {
-    const fullest = [...stats.dates].sort((a, b) => totalOf(stats, b) - totalOf(stats, a))[0];
-    if (fullest && totalOf(stats, fullest) > 0) {
-      out.push({ id: 'best-day', text: `Your fullest day was ${dayLabel(fullest)}, with ${formatDuration(totalOf(stats, fullest))} of focused time.`, target: { kind: 'day', date: fullest }, sensitive: false });
-    }
+    // No "fullest day" or "biggest reading day": Recap doesn't rank days.
     const run = longestActiveRun(stats.activeDates, range);
     if (run.length >= 3 && run.end) {
       out.push({ id: 'streak', text: `${run.length} days in a row with something logged.`, target: { kind: 'day', date: run.end }, sensitive: false });
-    }
-    const reading = Object.entries(stats.pagesByDay).sort((a, b) => b[1] - a[1])[0];
-    if (reading && reading[1] > 0) {
-      out.push({ id: 'reading-day', text: `Biggest reading day: ${plural(reading[1], 'page', 'pages')} on ${dayLabel(reading[0])}.`, target: { kind: 'section', section: 'book' }, sensitive: false });
     }
   }
 
@@ -652,12 +648,12 @@ export function buildStory(
   cards.push(win ? { id: 'win', title: 'One win', headline: win.text, lines: [], sensitive: win.sensitive } : null);
 
   if (stats.feelingsLogged > 0) {
-    const zones = (Object.entries(stats.zoneMix) as [FeelingZone, number][]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+    const zones = RECAP_ZONE_ORDER.map((z) => [z, stats.zoneMix[z]] as [FeelingZone, number]).filter(([, n]) => n > 0);
     cards.push({
       id: 'feelings',
       title: 'Feelings, in words',
-      headline: `Mostly ${joinList(zones.slice(0, 2).map(([z]) => zoneMeta(z).label.toLowerCase()))}`,
-      lines: stats.topFeelings.map((f) => `${f.name} — ${plural(f.count, 'time', 'times')}`),
+      headline: zones.map(([z, n]) => `${zoneMeta(z).label} ${n}`).join(' · '),
+      lines: stats.topFeelings.slice(0, 6).map((f) => `${f.name} — ${plural(f.count, 'time', 'times')}`),
       sensitive: true,
     });
   }

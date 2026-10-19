@@ -1,0 +1,49 @@
+# E2E-003 Plan → daily task → feeling: a plan's step moved into today,
+# ticked off in Daily Planning, with a feeling logged for it.
+appId: app.ona
+tags:
+  - core
+---
+- runFlow: subflows/fresh-start.yaml
+- tapOn: "Plan"
+- tapOn: "Plan Builder"
+- tapOn: "New Plan"
+- tapOn: "Start from scratch"
+- tapOn: "e.g. Learn guitar, Move to a new city..."
+- inputText: "Run a 10K"
+- tapOn: "Why do you want to do this?"
+- inputText: "Feel strong again"
+- hideKeyboard
+- tapOn: "Create plan"
+# The new plan opens.
+- extendedWaitUntil:
+    visible: "Add a step..."
+    timeout: 10000
+- tapOn: "Add a step..."
+- inputText: "Buy running shoes"
+- hideKeyboard
+- tapOn: "Add"
+- assertVisible: "Buy running shoes"
+- tapOn: ".*Move to Daily Planning"
+- tapOn: "Today"
+- tapOn: "Add to .*"
+- assertVisible: "Added to Daily Planning for .*"
+# Over to Daily Planning.
+- back
+- back
+- tapOn: "Daily Planning"
+- extendedWaitUntil:
+    visible: "Buy running shoes"
+    timeout: 10000
+- tapOn: "Mark \"Buy running shoes\" done"
+- assertVisible: "Mark \"Buy running shoes\" not done"
+- tapOn: "How do you feel\?"
+- tapOn: "Calm: Pleasant, quiet"
+- tapOn: "Save"
+- assertVisible: "Felt calm"
+# Survives a relaunch.
+- stopApp
+- launchApp
+- tapOn: "Plan"
+- tapOn: "Daily Planning"
+- assertVisible: "Mark \"Buy running shoes\" not done"

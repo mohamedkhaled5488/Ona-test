@@ -1,0 +1,6 @@
+# Grow tab → Habits hub.
+appId: app.ona
+---
+- tapOn: "Grow"
+- tapOn: "Habits"
+- assertVisible: "Build a new habit, or work on quitting one."

@@ -32,6 +32,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
+import { parseNumberInput } from '../utils/numberInput';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'budget'>;
 
@@ -67,12 +68,13 @@ function AddBudgetSheet({ visible, onClose, onCreated }: { visible: boolean; onC
     setName('');
     setMode('limit');
     setAmount('');
-    setCurrency('USD');
+    // Back to your default currency (Settings), not a hard-coded one.
+    setCurrency(useSettingsStore.getState().budgetCurrency);
     setPickingCurrency(false);
     setRecurrence('none');
   };
 
-  const input: BudgetInput = { name, mode, targetAmount: Number(amount) || 0, currency, recurrence };
+  const input: BudgetInput = { name, mode, targetAmount: parseNumberInput(amount) || 0, currency, recurrence };
 
   return (
     <SheetModal visible={visible} onClose={() => { reset(); onClose(); }}>
@@ -297,9 +299,9 @@ function LogEntrySheet({ budget, visible, onClose, onSave }: { budget: Budget; v
 
       <PrimaryButton
         label="Save"
-        disabled={!(Number(amount) > 0)}
+        disabled={!(parseNumberInput(amount) > 0)}
         onPress={() => {
-          onSave({ amount: Number(amount), categoryId, note, photoUri });
+          onSave({ amount: parseNumberInput(amount), categoryId, note, photoUri });
           reset();
           onClose();
         }}
@@ -368,7 +370,7 @@ function FolderStage({ budgetId, onBack, onOpenEntry }: { budgetId: string; onBa
           <Ionicons name="chevron-back" size={16} color={colors.inkSoft} />
           <Caption> Budgets</Caption>
         </Pressable>
-        <Pressable onPress={removeBudget} hitSlop={8}>
+        <Pressable onPress={removeBudget} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete budget">
           <Ionicons name="trash-outline" size={18} color={colors.inkSoft} />
         </Pressable>
       </View>
@@ -432,7 +434,7 @@ function FolderStage({ budgetId, onBack, onOpenEntry }: { budgetId: string; onBa
           {budget.categories.map((c) => (
             <View key={c.id} style={[styles.chip, styles.categoryChip]}>
               <Body>{c.label}</Body>
-              <Pressable onPress={() => removeCategory(c.id, c.label)} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Remove category ${c.label}`} onPress={() => removeCategory(c.id, c.label)} hitSlop={8}>
                 <Ionicons name="close" size={14} color={colors.inkSoft} />
               </Pressable>
             </View>
@@ -451,7 +453,7 @@ function FolderStage({ budgetId, onBack, onOpenEntry }: { budgetId: string; onBa
               }
             }}
           />
-          <Pressable
+          <Pressable accessibilityRole="button" accessibilityLabel="Add category"
             onPress={() => {
               if (categoryDraft.trim()) {
                 addCategory(budgetId, categoryDraft);

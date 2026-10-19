@@ -1,0 +1,12 @@
+# A fresh install with no account: past the welcome screen into Home.
+appId: app.ona
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible: "Start using Ona"
+    timeout: 30000
+- tapOn: "Start using Ona"
+- assertVisible: "Home"

@@ -49,11 +49,11 @@ export function MonthCalendar({
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Pressable hitSlop={8} onPress={() => onMonthChange(addMonthsISO(month, -1))}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={8} onPress={() => onMonthChange(addMonthsISO(month, -1))}>
           <Ionicons name="chevron-back" size={20} color={colors.ink} />
         </Pressable>
         <SectionHeading>{formatMonthLabel(month)}</SectionHeading>
-        <Pressable hitSlop={8} onPress={() => onMonthChange(addMonthsISO(month, 1))}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Next month" hitSlop={8} onPress={() => onMonthChange(addMonthsISO(month, 1))}>
           <Ionicons name="chevron-forward" size={20} color={colors.ink} />
         </Pressable>
       </View>
@@ -76,9 +76,13 @@ export function MonthCalendar({
           const isFuture = date > today;
           const dayNumber = Number(date.slice(-2));
           const disabled = (disableFuture && isFuture) || (disablePast && date < today);
+          // Keyed by its fill too: when data arrives after the first draw (e.g.
+          // entering the demo), the day is recreated rather than restyled. On
+          // Android, restyling an outlined day into a filled one could leave it
+          // stretched with its number clipped until the month was changed.
           return (
             <Pressable
-              key={date}
+              key={`${date}-${isSplit ? colors2!.join('|') : color ?? 'none'}`}
               disabled={disabled || !onDayPress}
               onPress={() => onDayPress?.(date)}
               style={styles.dayCell}
@@ -86,8 +90,8 @@ export function MonthCalendar({
               <View
                 style={[
                   styles.dayBlock,
-                  !isSplit && (color ? { backgroundColor: color } : styles.dayBlockEmpty),
-                  isToday && { borderWidth: 2, borderColor: accent },
+                  // The border width never changes; only its colour does.
+                  isSplit ? styles.dayBlockSplit : color ? { backgroundColor: color, borderColor: color } : styles.dayBlockEmpty,
                   disabled && styles.dayBlockDisabled,
                 ]}
               >
@@ -98,6 +102,8 @@ export function MonthCalendar({
                   </View>
                 )}
                 <Caption style={[styles.dayNumber, !!color && styles.dayNumberOnColor]}>{dayNumber}</Caption>
+                {/* Today's ring sits on top, so it never changes the day's own border. */}
+                {isToday && <View style={[styles.todayRing, { borderColor: accent }]} pointerEvents="none" />}
               </View>
             </Pressable>
           );
@@ -138,9 +144,18 @@ const styles = themedStyles(() => ({
     width: CELL_SIZE,
     height: CELL_SIZE,
     borderRadius: radii.md,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  dayBlockSplit: {
+    borderColor: 'transparent',
+  },
+  todayRing: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: radii.md,
+    borderWidth: 2,
   },
   splitFill: {
     ...StyleSheet.absoluteFill,
@@ -151,7 +166,6 @@ const styles = themedStyles(() => ({
   },
   dayBlockEmpty: {
     backgroundColor: colors.stone,
-    borderWidth: 1,
     borderColor: colors.line,
   },
   dayBlockDisabled: {

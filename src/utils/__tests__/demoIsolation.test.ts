@@ -4,6 +4,10 @@
 // real storage is byte-for-byte what it was. They also check that nothing
 // leaves the phone while in demo: no sync, account calls, purchases,
 // analytics or notifications.
+// These build the full 8-week sample set; give them room on a slow, busy
+// machine (a coverage run) instead of the default 5 seconds.
+jest.setTimeout(20_000);
+
 
 // --- outside world, recorded --------------------------------------------------
 const mockNetwork: string[] = [];
@@ -71,6 +75,13 @@ import { refreshEntitlement } from '../entitlementSync';
 import { runPurchase, runRestore, DEMO_PURCHASE_MESSAGE } from '../../billing/purchaseFlow';
 import { demoSeed } from '../../demo/demoData';
 import { todayISO } from '../date';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 const storage = AsyncStorage as unknown as { getItem: (k: string) => Promise<string | null>; setItem: (k: string, v: string) => Promise<void>; removeItem: (k: string) => Promise<void>; getAllKeys: () => Promise<string[]>; clear: () => Promise<void> };
 
@@ -82,6 +93,23 @@ async function dump(filter: (k: string) => boolean = () => true): Promise<string
   return JSON.stringify(pairs);
 }
 const realKeys = (k: string) => !k.startsWith('ona.demo.') && k !== SPACE_KEY;
+
+// Which storage keys changed between two dumps (a readable failure message
+// instead of two giant strings): key, then the first difference.
+function changedKeys(before: string, after: string): string[] {
+  const a = new Map(JSON.parse(before) as [string, string | null][]);
+  const b = new Map(JSON.parse(after) as [string, string | null][]);
+  const keys = [...new Set([...a.keys(), ...b.keys()])].sort();
+  return keys
+    .filter((k) => a.get(k) !== b.get(k))
+    .map((k) => {
+      const x = a.get(k) ?? '(missing)';
+      const y = b.get(k) ?? '(missing)';
+      let i = 0;
+      while (i < x.length && x[i] === y[i]) i++;
+      return `${k}: was …${x.slice(Math.max(0, i - 40), i + 60)}… now …${y.slice(Math.max(0, i - 40), i + 60)}…`;
+    });
+}
 
 const sectionState = () =>
   JSON.stringify(Object.fromEntries(Object.entries(LOCAL_DATA).map(([s, { store, keys }]) => [s, Object.fromEntries(keys.map((k) => [k, (store.getState() as Record<string, unknown>)[k]]))])));
@@ -141,7 +169,7 @@ describe('isolation of the data', () => {
     await __flushForTests(); // demo saves happen
     await switchDataSpace('real');
 
-    expect(await dump(realKeys)).toBe(before);
+    expect(changedKeys(before, await dump(realKeys))).toEqual([]);
     expect(sectionState()).toBe(realInMemory);
     expect(JSON.stringify(useSettingsStore.getState())).toBe(realSettings);
     expect(await dump()).toContain('Demo-only task'); // ...kept in the demo's own keys
@@ -262,7 +290,7 @@ describe('demo data', () => {
     changeEverything();
     await resetDemoData(storage);
     expect(sectionState()).toBe(seeded);
-    expect(await dump(realKeys)).toBe(before);
+    expect(changedKeys(before, await dump(realKeys))).toEqual([]);
     expect(isDemo()).toBe(true);
     jest.restoreAllMocks();
   });
@@ -361,7 +389,7 @@ describe('the code paths themselves', () => {
   const fs = require('fs') as { readFileSync: (p: string, e: string) => string; readdirSync: (p: string, o: { withFileTypes: true }) => { name: string; isDirectory: () => boolean }[] };
   const path = require('path') as { join: (...p: string[]) => string; relative: (a: string, b: string) => string };
   const files = (dir: string): string[] =>
-    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (e.name === '__tests__' ? [] : files(path.join(dir, e.name))) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []));
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (e.name === '__tests__' || e.name === 'test-utils' ? [] : files(path.join(dir, e.name))) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []));
 
   test('only the data layer reads or writes storage directly, and always through a space-aware key', () => {
     const allowed = ['lib/supabase.ts', 'utils/localPersistence.ts', 'utils/dataSpaceController.ts', 'store/useSettingsStore.ts', 'store/useAccountStore.ts', 'store/useEntitlementStore.ts', 'store/useSyncStore.ts', 'screens/MoodCheckScreen.tsx'];

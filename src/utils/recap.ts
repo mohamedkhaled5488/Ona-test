@@ -303,7 +303,7 @@ export function buildPatternObservations(events: RecapEvent[], windowStart: stri
   if (journalDates.size >= 3 && studyDates.size >= 3) {
     const overlap = [...journalDates].filter((d) => studyDates.has(d)).length;
     if (overlap / journalDates.size >= 0.6) {
-      observations.push({ id: 'journal-study', text: 'You tend to journal on the same days you study — those two seem to go together for you.' });
+      observations.push({ id: 'journal-study', text: `On ${overlap} of the ${journalDates.size} days you journaled, you also studied.` });
     }
   }
 
@@ -448,20 +448,23 @@ export function buildSkillHabitPatternObservation(
   const inWindowCheckIns = checkIns.filter((c) => c.done && c.date >= windowStart && c.date <= windowEnd);
   if (skills.length === 0 || habits.length === 0) return undefined;
 
-  const topSkill = skills
+  // The first pair A to Z that went together on most practice days (no
+  // picking the "top" skill or habit), said as a plain count.
+  const skillDays = [...skills]
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((skill) => ({ skill, dates: new Set(inWindowSessions.filter((s) => s.skillId === skill.id).map((s) => s.date)) }))
-    .sort((a, b) => b.dates.size - a.dates.size)[0];
-  const topHabit = habits
+    .filter((x) => x.dates.size >= 3);
+  const habitDays = [...habits]
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((habit) => ({ habit, dates: new Set(inWindowCheckIns.filter((c) => c.habitId === habit.id).map((c) => c.date)) }))
-    .sort((a, b) => b.dates.size - a.dates.size)[0];
-
-  if (!topSkill || !topHabit || topSkill.dates.size < 3 || topHabit.dates.size < 3) return undefined;
-
-  const overlap = [...topSkill.dates].filter((d) => topHabit.dates.has(d)).length;
-  if (overlap / topSkill.dates.size < 0.6) return undefined;
-
-  return {
-    id: `skill-habit-${topSkill.skill.id}-${topHabit.habit.id}`,
-    text: `You tend to practice ${topSkill.skill.name} more often on days you've already completed ${topHabit.habit.name}.`,
-  };
+    .filter((x) => x.dates.size >= 3);
+  for (const s of skillDays) {
+    for (const h of habitDays) {
+      const overlap = [...s.dates].filter((d) => h.dates.has(d)).length;
+      if (overlap / s.dates.size >= 0.6) {
+        return { id: `skill-habit-${s.skill.id}-${h.habit.id}`, text: `On ${overlap} of the ${s.dates.size} days you practiced ${s.skill.name}, you had also done ${h.habit.name}.` };
+      }
+    }
+  }
+  return undefined;
 }

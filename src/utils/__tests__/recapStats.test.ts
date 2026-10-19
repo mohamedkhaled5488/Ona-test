@@ -212,7 +212,8 @@ describe('hidden sections and the story', () => {
     const s = periodStats(data, week);
     const summary = effortSummary(s, undefined, 'week', true);
     const ids = buildStory(data, s, buildHighlights(data, s), 'week', true, '2026-10-07').map((c) => c.id);
-    expect(ids).toEqual(['effort', 'time', 'win']);
+    // No "fullest day": Recap doesn't rank days, so with only this there's no win card.
+    expect(ids).toEqual(['effort', 'time']);
   });
 
   it('leaves Feelings and Quit out of shared cards unless the user opts in', () => {

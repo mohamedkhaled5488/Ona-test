@@ -26,9 +26,14 @@ async function loadRow(userId: string): Promise<SubscriptionRow | null> {
   return (data as SubscriptionRow | null) ?? null;
 }
 
-async function saveRow(row: SubscriptionRow): Promise<void> {
+// False when the account no longer exists (deleted in the app while the
+// store subscription lives on): there's nothing to update, and an error
+// would make RevenueCat retry the event forever.
+async function saveRow(row: SubscriptionRow): Promise<boolean> {
   const { error } = await admin.from('subscriptions').upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  if (error?.code === '23503') return false; // no such user
   if (error) throw error;
+  return true;
 }
 
 async function alreadyProcessed(eventId: string): Promise<boolean> {
@@ -77,11 +82,14 @@ Deno.serve(async (req) => {
     const result = applyEvent(current, event);
 
     if (result.action === 'upsert') {
-      await saveRow(result.row);
+      if (!(await saveRow(result.row))) {
+        await markProcessed(event, 'skip:unknownUser');
+        return json(200, { ok: true, result: 'skip' });
+      }
     } else if (result.action === 'refetch') {
       for (const id of result.userIds) {
         const subscriber = await fetchSubscriber(id);
-        await saveRow(rowFromSubscriber(id, subscriber, Date.now(), event.id, event.event_timestamp_ms));
+        await saveRow(rowFromSubscriber(id, subscriber, Date.now(), event.id, event.event_timestamp_ms)); // a deleted account is just skipped
       }
     }
     await markProcessed(event, result.action === 'skip' ? `skip:${result.reason}` : result.action);

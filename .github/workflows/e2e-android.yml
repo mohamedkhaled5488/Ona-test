@@ -1,0 +1,75 @@
+# Ona end-to-end: builds a release APK and runs the Maestro flows in
+# .maestro/ on an Android emulator. The build points at http://127.0.0.1:9
+# (nothing listens there), so it can never reach a hosted Supabase project;
+# the flows tagged needs-backend are skipped here (docs/test-cases/e2e.md).
+# Runs on the default branch, nightly and on demand (Actions → Run workflow).
+name: E2E (Android)
+
+on:
+  push:
+  schedule:
+    - cron: '0 3 * * *' # nightly
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maestro:
+    if: github.event_name != 'push' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CI: 1
+      EXPO_PUBLIC_SUPABASE_URL: http://127.0.0.1:9
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: e2e-no-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+
+      - name: Build the release APK (emulator architecture)
+        run: |
+          npx expo prebuild --platform android --no-install
+          cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Enable KVM (fast emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the flows on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
+            maestro test --exclude-tags needs-backend --format junit --output maestro-report.xml --debug-output maestro-debug .maestro
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-results
+          path: |
+            maestro-report.xml
+            maestro-debug
+          if-no-files-found: ignore

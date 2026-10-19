@@ -28,6 +28,13 @@ import { useSleepStore } from '../../store/useSleepStore';
 import { getNotificationPermission, scheduleReminder } from '../notifications';
 import { resyncFeature, syncWeeklyStoryReminder } from '../reminders';
 import { addDaysISO, todayISO } from '../date';
+import { useClock, restoreClock } from '../../test-utils';
+
+// A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
+beforeEach(() => {
+  useClock('2026-10-18T12:00');
+});
+afterEach(() => restoreClock());
 
 const tomorrow = addDaysISO(todayISO(), 1);
 

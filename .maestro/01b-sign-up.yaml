@@ -1,0 +1,27 @@
+# E2E-002 Sign up from the welcome screen, against a LOCAL Supabase stack.
+# Run with: maestro test -e MAESTRO_E2E_EMAIL=e2e-<random>@ona.test .maestro/01b-sign-up.yaml
+appId: app.ona
+tags:
+  - needs-backend
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Sign in or create an account"
+    timeout: 30000
+- tapOn: "Sign in or create an account"
+- tapOn: "you@example.com"
+- inputText: ${MAESTRO_E2E_EMAIL}
+- tapOn: "At least 6 characters"
+- inputText: "e2e-password-1"
+- hideKeyboard
+- tapOn: "Store my feelings and habit data in my Ona account"
+- tapOn:
+    text: "Create account"
+    enabled: true
+    index: 1
+# With email confirmation off (the local stack's default) you land in the
+# app; with it on, Ona asks you to confirm your email.
+- extendedWaitUntil:
+    visible: "(Home|Check .* for a confirmation link, then come back and sign in\.)"
+    timeout: 20000

@@ -496,7 +496,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
           {observations.map((o) => (
             <Body key={o.id}>{o.text}</Body>
           ))}
-          <Caption style={styles.muted}>Just things that tend to go together in your own data — never a diagnosis.</Caption>
+          <Caption style={styles.muted}>Things that showed up together in your own data, with the counts. Never a diagnosis.</Caption>
         </Card>
       )}
 
@@ -555,7 +555,8 @@ function AreaPage({
   const grow = useMemo(() => growDetails(data, stats, today), [data, stats, today]);
   const learn = useMemo(() => learnDetails(data, stats), [data, stats]);
   const skillTime = useMemo(() => buildSkillsTimeBreakdown(data.skills, data.skillSessions, stats.range.start, stats.range.end), [data, stats.range]);
-  const zones = (Object.entries(stats.zoneMix) as [keyof PeriodStats['zoneMix'], number][]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  // In the zone order, not sorted by count.
+  const zones = (['lively', 'calm', 'tense', 'low', 'okay'] as (keyof PeriodStats['zoneMix'])[]).map((z) => [z, stats.zoneMix[z]] as [keyof PeriodStats['zoneMix'], number]).filter(([, n]) => n > 0);
 
   return (
     <>
@@ -625,10 +626,10 @@ function AreaPage({
               {zones.length > 0 && (
                 <>
                   <ZoneMixBar mix={stats.zoneMix} />
-                  <Caption>Mostly {zones.slice(0, 2).map(([z]) => zoneMeta(z).label.toLowerCase()).join(' and ')}.</Caption>
+                  <Caption>{zones.map(([z, n]) => `${zoneMeta(z).label} ${n}`).join(' · ')}</Caption>
                 </>
               )}
-              {stats.topFeelings.length > 0 && <Caption>Named most: {stats.topFeelings.map((f) => f.name.toLowerCase()).join(', ')}.</Caption>}
+              {stats.topFeelings.length > 0 && <Caption>Feelings you named: {stats.topFeelings.map((f) => `${f.name.toLowerCase()} ${f.count}`).join(', ')}.</Caption>}
             </Card>
           )}
           {show('sleep') && stats.sleepLogs > 0 && (

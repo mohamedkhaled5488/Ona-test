@@ -46,6 +46,7 @@ import { shouldAskItemFeeling } from '../utils/itemFeelings';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
+import { parseWholeNumberInput } from '../utils/numberInput';
 
 const accent = sectionAccents.habitBuilder;
 
@@ -164,7 +165,7 @@ function AddHabitSheet({ visible, onClose, onCreated }: { visible: boolean; onCl
     setFrequency({ kind: 'daily' });
   };
 
-  const effectiveDays = useCustom ? Math.max(1, Number(customDays) || 0) : targetDays;
+  const effectiveDays = useCustom ? Math.max(1, parseWholeNumberInput(customDays) || 0) : targetDays;
 
   const input: HabitInput = {
     name,
@@ -655,7 +656,7 @@ function EditHabitSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const target = Number(targetText);
+  const target = parseWholeNumberInput(targetText);
 
   return (
     <SheetModal visible={visible} onClose={onClose}>

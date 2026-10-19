@@ -1,10 +1,9 @@
-// How confident Feelings wording is allowed to sound, by how many entries
-// back it up. One place for every threshold, so Analysis, the habit and skill
-// "Feelings after" cards and the info note all agree.
+// How Feelings wording grows with the data. It never ranks or says "tends
+// to": it shows what was logged, as counts, and says how many entries that is.
 //
-//   1–2 entries  -> facts only ("You logged Calm once, tagged Work")
-//   3–6 entries  -> "so far"   ("So far, Calm comes up most: 3 of 5")
-//   7+ entries   -> "tends to" ("You tend to feel Calm most often: 12 of 20")
+//   1–2 entries  -> the entries themselves ("You logged Calm once, tagged Work")
+//   3–6 entries  -> counts, marked "so far" ("So far, across 5 entries: Calm 3 · Low 2")
+//   7+ entries   -> counts                  ("Across 20 entries: Calm 12 · Tense 5 · Okay 3")
 //
 // Never causal wording, at any size.
 
@@ -23,5 +22,5 @@ export function confidenceFor(n: number): FeelingsConfidence {
 
 // Shown once, in a small info note on Analysis.
 export const CONFIDENCE_NOTE =
-  `Early on, this page sticks to facts. From ${FEELINGS_CONFIDENCE.factsMax + 1} entries it says "so far", ` +
-  `and from ${FEELINGS_CONFIDENCE.soFarMax + 1} it says "tends to". It shows what came up together, never what caused what.`;
+  `These are counts of what you logged, listed in the same order each time, not a ranking. With 1 or 2 entries the page lists them; ` +
+  `up to ${FEELINGS_CONFIDENCE.soFarMax} it says "so far". It shows what came up together, never what caused what.`;

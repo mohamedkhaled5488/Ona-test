@@ -22,13 +22,13 @@ import { withAlpha } from '../utils/color';
 import {
   buildHabitAnalysisSummary,
   longestHabitStreak,
-  mostSkippedReasonTag,
-  mostSkippedWeekday,
+  missesByWeekday,
+  skipReasons,
   sessionMinutesByTimeOfDay,
   sessionLengthLines,
 } from '../utils/habitStats';
 import { themedStyles } from '../theme/runtime';
-import { basedOn, itemFeelingInsight, zoneTally } from '../utils/feelingsInsights';
+import { basedOn, itemFeelingInsight } from '../utils/feelingsInsights';
 
 // Lazy for the same reason as in MoodCheckScreen: Skia's web backend must not
 // evaluate before App.tsx has loaded CanvasKit.
@@ -90,14 +90,13 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
   const unitWord = (n: number) => (unit === 'week' ? (n === 1 ? 'week' : 'weeks') : n === 1 ? 'day' : 'days');
 
   // --- 4. Insights ---
-  const skipWeekday = mostSkippedWeekday(checkIns, habitId);
-  const skipReason = mostSkippedReasonTag(checkIns, habitId);
-  // From the first feeling: facts, then "so far", then "tends to".
+  const misses = missesByWeekday(checkIns, habitId);
+  const reasons = skipReasons(checkIns, habitId);
+  // From the first feeling: the counts, marked "so far" while there are few.
   const feelingAfter = itemFeelingInsight(habitFeelings, 'after this habit');
-  const feelingTop = zoneTally(habitFeelings)[0];
   const timeOfDay = habitTimeOfDay(checkIns, habitId);
   const sessionLines = sessionLengthLines(sessionMinutesByTimeOfDay(checkIns, habitId));
-  const hasInsights = skipWeekday || skipReason || feelingAfter || timeOfDay.kind !== 'notEnough' || !!sessionLines;
+  const hasInsights = misses || reasons || feelingAfter || timeOfDay.kind !== 'notEnough' || !!sessionLines;
 
   // --- 5. Full log ---
   const feelingByDate = new Map(habitFeelings.map((e) => [e.date, e]));
@@ -168,25 +167,25 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
       {feelingAfter && (
         <InsightCard
           kind="Feelings after"
-          accent={feelingTop ? zoneMeta(feelingTop.zone).accent : accent}
+          accent={accent}
           headline={feelingAfter.headline}
-          evidence={[feelingAfter.detail, `${basedOn(feelingAfter.n)} logged after completing it.`].filter(Boolean).join(' ')}
+          evidence={`${basedOn(feelingAfter.n)} logged after completing it.`}
         />
       )}
-      {skipWeekday && (
+      {misses && (
         <InsightCard
-          kind="Skip pattern"
+          kind="Missed days by weekday"
           accent={SOFT_MISSED}
-          headline={`${skipWeekday.weekday}s are when this most often gets skipped.`}
-          evidence={`Missed on ${skipWeekday.count} of ${skipWeekday.logged} ${skipWeekday.weekday}s logged`}
+          headline={misses.map((d) => `${d.weekday} ${d.missed} of ${d.logged}`).join(' · ')}
+          evidence="Missed check-ins out of all check-ins logged on each weekday. These are counts; they don't say why."
         />
       )}
-      {skipReason && (
+      {reasons && (
         <InsightCard
-          kind="Skip pattern"
+          kind="Reasons on missed days"
           accent={SOFT_MISSED}
-          headline={`"${skipReason.tag}" comes up most on the days this was missed.`}
-          evidence={`Tagged on ${skipReason.count} of ${skipReason.missedTotal} missed days`}
+          headline={reasons.tags.map((t) => `${t.tag} ${t.count}`).join(' · ')}
+          evidence={`How many of the ${reasons.missedTotal} missed days had each reason tagged. A day can have more than one.`}
         />
       )}
       {timeOfDay.kind !== 'notEnough' && (

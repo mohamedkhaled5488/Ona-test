@@ -78,7 +78,7 @@ function AddQuitHabitSheet({ visible, onClose, onCreated }: { visible: boolean; 
       <TextInput value={why} onChangeText={setWhy} placeholder="Your own reason for wanting this..." style={styles.notesInput} multiline />
 
       <Eyebrow style={styles.fieldLabel}>Want to pair this with something to do instead? (optional)</Eyebrow>
-      <Caption style={styles.insteadHint}>Filling a gap tends to work better than leaving one — this adds a small habit to Build, cued by the urge itself.</Caption>
+      <Caption style={styles.insteadHint}>Having something to do instead can help when an urge comes. This adds a small habit to Build, cued by the urge itself.</Caption>
       <TextInput value={instead} onChangeText={setInstead} placeholder="e.g. chew gum, take a short walk" style={styles.sheetInput} />
 
       <PrimaryButton

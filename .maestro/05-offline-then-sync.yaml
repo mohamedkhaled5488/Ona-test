@@ -1,0 +1,23 @@
+# E2E-006 Offline use: with no network at all, everything works and is
+# still there after the app is closed and opened again.
+appId: app.ona
+tags:
+  - core
+---
+- runFlow: subflows/fresh-start.yaml
+- setAirplaneMode: enabled
+- tapOn: "Plan"
+- tapOn: "Daily Planning"
+- extendedWaitUntil:
+    visible: "Add a task..."
+    timeout: 10000
+- tapOn: "Add a task..."
+- inputText: "Written offline"
+- pressKey: Enter
+- assertVisible: "Written offline"
+- stopApp
+- launchApp
+- tapOn: "Plan"
+- tapOn: "Daily Planning"
+- assertVisible: "Written offline"
+- setAirplaneMode: disabled
