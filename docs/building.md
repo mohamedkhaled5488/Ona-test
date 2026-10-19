@@ -41,7 +41,6 @@ Copy `.env.example` to `.env` and fill in:
 
 - `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`: Google sign-in (the **Web** client ID)
-- `GOOGLE_IOS_URL_SCHEME`: only for iOS builds (see the Apple note in google-signin-setup.md)
 
 `.env` is ignored by git. Never commit it.
 

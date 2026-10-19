@@ -96,9 +96,12 @@ The app's automatic tests use a model of Supabase's linking rules. Check the rea
 | Expo Go / web preview | "Google sign-in works in the installed Ona app, not in this preview…" |
 | Web client ID not set | "Google sign-in isn't set up in this version yet…" |
 
-## Apple sign-in: required before an iOS release
+## iPhone: Google is Android-only for now
 
-Not added now. App Store rules (Guideline 4.8) require **Sign in with Apple** in any iOS app that offers Google (or another third-party) sign-in. Before an iOS release:
+On iPhone, Ona offers email and **Sign in with Apple** (decided 2026-10-20); Google sign-in stays on Android. The Google config plugin is therefore not applied (it only adds an iOS URL scheme), and the Google button is hidden on iOS.
 
-- add Sign in with Apple (`expo-apple-authentication` + `supabase.auth.signInWithIdToken({ provider: 'apple' })`);
-- create an **iOS** OAuth client in Google Cloud and set `GOOGLE_IOS_URL_SCHEME` (the reversed iOS client ID, `com.googleusercontent.apps.…`) for the build. `app.config.js` uses a placeholder until then, which only affects iOS.
+To offer Google on iPhone later:
+
+- create an **iOS** OAuth client in Google Cloud;
+- add `['@react-native-google-signin/google-signin', { iosUrlScheme }]` back to `app.config.js` with its reversed client ID (`com.googleusercontent.apps.…`);
+- check App Review Guideline 4.8 (login services) again at that time.
