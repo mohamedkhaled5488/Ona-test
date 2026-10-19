@@ -45,7 +45,8 @@ tags:
 - tapOn: 'How do you feel\?'
 - tapOn: "Calm: Pleasant, quiet"
 - tapOn: "Save"
-- assertVisible: "Felt calm"
+# The task card keeps the feeling: "Felt: calm".
+- assertVisible: "Felt: calm"
 # Survives a relaunch.
 - stopApp
 - launchApp

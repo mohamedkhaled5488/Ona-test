@@ -28,7 +28,7 @@ const read = (f: string) => fs.readFileSync(path.join(FLOWS, f), 'utf8');
 // Text that is built at run time (from what the flow typed, or a template),
 // with the piece of source that produces it.
 const DYNAMIC: Record<string, string> = {
-  'Felt calm': 'Felt {feeling.label.toLowerCase()}',
+  'Felt: calm': "{before ? 'After' : 'Felt'}: {feeling.label.toLowerCase()}",
   'Calm: Pleasant, quiet': "label: 'Calm', description: 'Pleasant, quiet'",
   'Mark "Buy running shoes" done': 'Mark "${resolved.title}" done',
   'Mark "Buy running shoes" not done': 'Mark "${resolved.title}" not done',
