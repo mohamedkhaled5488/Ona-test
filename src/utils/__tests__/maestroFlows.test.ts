@@ -33,9 +33,10 @@ const DYNAMIC: Record<string, string> = {
   'Mark "Buy running shoes" done': 'Mark "${resolved.title}" done',
   'Mark "Buy running shoes" not done': 'Mark "${resolved.title}" not done',
   'Add to .*': 'label={`Add to ${formatDisplayDate(date)}',
-  'Added to Daily Planning for .*': 'Added to Daily Planning for ${date}',
+  'Track 1': '<Body>Track {number}</Body>',
+  'Track 2': '<Body>Track {number}</Body>',
+  'Ongoing — Day 0': 'Ongoing — Day {daysSinceTrackStart(track, today)}',
   'Marked done today.*': "Marked {todayEntry.done ? 'done' : 'missed'}",
-  '.*2 chapters so far.*': 'chapters so far',
   '(Home|Check .* for a confirmation link, then come back and sign in.)':'for a confirmation link, then come back and sign in.',
 };
 
@@ -146,7 +147,7 @@ describe('E2E-GUARD: the Maestro flows match the app', () => {
     expect(gh).toMatch(/EXPO_PUBLIC_SUPABASE_URL: http:\/\/127\.0\.0\.1:9\n/);
     expect(gh).toMatch(/EXPO_PUBLIC_SUPABASE_ANON_KEY: e2e-no-server\n/);
     expect(gh).toMatch(/script: bash scripts\/e2e-run\.sh/);
-    expect(fs.readFileSync(path.join(ROOT, 'scripts/e2e-run.sh'), 'utf8')).toMatch(/--exclude-tags needs-backend/);
+    expect(fs.readFileSync(path.join(ROOT, 'scripts/e2e-run.sh'), 'utf8')).toMatch(/needs-backend' "\$flow" && continue/);
     expect(gh).not.toMatch(/secrets\./);
   });
 });

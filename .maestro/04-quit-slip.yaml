@@ -28,6 +28,9 @@ tags:
     commands:
       - tapOn: "Skip"
 - tapOn: "Start a new track now"
+# The journey keeps both chapters: the one that ended, and the new one.
+- scrollUntilVisible:
+    element: "Track 2"
 - assertVisible: "Your journey"
-- back
-- assertVisible: ".*2 chapters so far.*"
+- assertVisible: "Track 1"
+- assertVisible: "Ongoing — Day 0"

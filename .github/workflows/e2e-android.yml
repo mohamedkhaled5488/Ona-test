@@ -68,7 +68,7 @@ jobs:
         with:
           name: maestro-results
           path: |
-            maestro-report.xml
-            maestro.log
+            maestro-reports
+            maestro-screens
             maestro-debug
           if-no-files-found: ignore

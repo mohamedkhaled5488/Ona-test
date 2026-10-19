@@ -20,6 +20,12 @@ tags:
     text: "Done"
     index: 0
 - tapOn: "Save"
+# Ona then offers an optional "How do you feel?" sheet; skipping is fine.
+- runFlow:
+    when:
+      visible: "How do you feel?"
+    commands:
+      - tapOn: "Skip"
 - assertVisible: "Marked done today.*"
 - scrollUntilVisible:
     element: "Analysis"

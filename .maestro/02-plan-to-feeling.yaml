@@ -27,7 +27,7 @@ tags:
 - tapOn: ".*Move to Daily Planning"
 - tapOn: "Today"
 - tapOn: "Add to .*"
-- assertVisible: "Added to Daily Planning for .*"
+# (A short toast confirms it; the next steps check the task really is there.)
 # Over to Daily Planning.
 - back
 - back
