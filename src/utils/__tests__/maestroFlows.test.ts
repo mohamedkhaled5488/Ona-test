@@ -114,7 +114,8 @@ describe('E2E-GUARD: the Maestro flows match the app', () => {
     const gh = fs.readFileSync(path.join(ROOT, '.github/workflows/e2e-android.yml'), 'utf8');
     expect(gh).toMatch(/EXPO_PUBLIC_SUPABASE_URL: http:\/\/127\.0\.0\.1:9\n/);
     expect(gh).toMatch(/EXPO_PUBLIC_SUPABASE_ANON_KEY: e2e-no-server\n/);
-    expect(gh).toMatch(/--exclude-tags needs-backend/);
+    expect(gh).toMatch(/script: bash scripts\/e2e-run\.sh/);
+    expect(fs.readFileSync(path.join(ROOT, 'scripts/e2e-run.sh'), 'utf8')).toMatch(/--exclude-tags needs-backend/);
     expect(gh).not.toMatch(/secrets\./);
   });
 });

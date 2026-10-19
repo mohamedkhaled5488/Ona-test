@@ -25,12 +25,12 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: http://127.0.0.1:9
       EXPO_PUBLIC_SUPABASE_ANON_KEY: e2e-no-server
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -61,9 +61,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: |
-            adb install -r android/app/build/outputs/apk/release/app-release.apk
-            maestro test --exclude-tags needs-backend --format junit --output maestro-report.xml --debug-output maestro-debug .maestro
+          script: bash scripts/e2e-run.sh
 
       - if: always()
         uses: actions/upload-artifact@v4
@@ -71,5 +69,6 @@ jobs:
           name: maestro-results
           path: |
             maestro-report.xml
+            maestro.log
             maestro-debug
           if-no-files-found: ignore
