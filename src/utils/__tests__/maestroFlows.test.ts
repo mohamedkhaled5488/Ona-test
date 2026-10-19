@@ -35,7 +35,7 @@ const DYNAMIC: Record<string, string> = {
   'Add to .*': 'label={`Add to ${formatDisplayDate(date)}',
   'Track 1': '<Body>Track {number}</Body>',
   'Track 2': '<Body>Track {number}</Body>',
-  'Ongoing — Day 0': 'Ongoing — Day {daysSinceTrackStart(track, today)}',
+  'Ongoing — Day 1': 'Ongoing — Day {daysSinceTrackStart(track, today)}',
   'Marked done today.*': "Marked {todayEntry.done ? 'done' : 'missed'}",
   '(Home|Check .* for a confirmation link, then come back and sign in.)':'for a confirmation link, then come back and sign in.',
 };
@@ -70,6 +70,7 @@ function selectors(f: string): { text: string[]; ids: string[]; typed: string[] 
         else if (name === 'inputText' && typeof arg === 'string') typed.push(arg);
         else if (name === 'extendedWaitUntil' && a?.visible) selector(a.visible);
         else if (name === 'scrollUntilVisible') selector(a?.element);
+        else if (name === 'repeat' && Array.isArray(a?.commands)) walk(a.commands as unknown[]);
         else if (name === 'runFlow' && typeof arg === 'object') {
           const flow = arg as { when?: { visible?: unknown }; commands?: unknown[] };
           if (flow.when?.visible) selector(flow.when.visible);

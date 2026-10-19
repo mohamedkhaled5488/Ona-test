@@ -28,9 +28,14 @@ tags:
 - tapOn: "Today"
 - tapOn: "Add to .*"
 # (A short toast confirms it; the next steps check the task really is there.)
-# Over to Daily Planning.
-- back
-- back
+# Over to Daily Planning: back out of the plan (the keyboard or a sheet
+# may take a press of its own) until the Plan folder shows again.
+- repeat:
+    times: 4
+    while:
+      notVisible: "Daily Planning"
+    commands:
+      - back
 - tapOn: "Daily Planning"
 - extendedWaitUntil:
     visible: "Buy running shoes"

@@ -32,6 +32,7 @@ Also worth doing soon: run the end-to-end flows, and add a linter (AUD-14). The 
 | FIX-09 | Medium | Sleep ↔ Study | Both sections share one sound engine keyed only by sound name: ending a study session with "rain" stopped Sleep's rain (Sleep still showed it playing), and Sleep's timer fade-out silenced a study session | `audioEngine` | Each section owns its own players | int.audioOwners.test.ts |
 | FIX-10 | Low | Server (privacy) | Any signed-in user could ask the server whether another account has sync access (`has_sync_access(other id)` answered `true` for a paying account) | BE-RLS-009 failed on the local stack | Answers only about the caller (migration 0006); the sync rules behave as before | rls.test.ts BE-RLS-009 |
 | FIX-11 | Medium | Server (billing) | A RevenueCat event for an account deleted in the app (its store subscription still renewing) failed with a 500, so RevenueCat would retry it indefinitely | BE-WH-009 failed: foreign-key error 23503 | The webhook acknowledges it and records it as "unknown user" | webhook.test.ts BE-WH-009 |
+| FIX-12 | Low | Quit a Habit | A chapter that started and ended the same day read "1 days" in the journey | Found by the first emulator run (E2E-005) | "1 day" / "N days" | quitJourneyCopy.test.tsx |
 
 ## Regression and safety checks added in Stage 8
 

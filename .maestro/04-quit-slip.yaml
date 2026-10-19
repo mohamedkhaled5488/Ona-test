@@ -33,4 +33,5 @@ tags:
     element: "Track 2"
 - assertVisible: "Your journey"
 - assertVisible: "Track 1"
-- assertVisible: "Ongoing — Day 0"
+# Ona counts the day a track starts as Day 1.
+- assertVisible: "Ongoing — Day 1"

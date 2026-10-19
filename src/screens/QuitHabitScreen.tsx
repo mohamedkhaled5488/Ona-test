@@ -39,6 +39,9 @@ import { ItemFeelingPrompt } from '../components/ItemFeelingSheet';
 import { logItemFeeling, shouldAskItemFeeling } from '../utils/itemFeelings';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
+// "1 day", "5 days".
+const dayCount = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+
 type Props = NativeStackScreenProps<RootStackParamList, 'quitHabit'>;
 
 const accent = sectionAccents.quitHabit;
@@ -776,7 +779,7 @@ function JourneyStage({
                 {track.status === 'active' ? (
                   <Caption style={{ color: accent }}>Ongoing — Day {daysSinceTrackStart(track, today)}</Caption>
                 ) : (
-                  <Caption>{daysSinceTrackStart(track, track.endDate!)} days</Caption>
+                  <Caption>{dayCount(daysSinceTrackStart(track, track.endDate!))}</Caption>
                 )}
               </View>
               <Caption>
@@ -837,7 +840,7 @@ function TrackDetailStage({ habitId, trackId, onBack }: { habitId: string; track
       <Caption style={styles.subtitle}>
         {formatDisplayDate(track.startDate)}
         {track.endDate ? ` – ${formatDisplayDate(track.endDate)}` : ' – present'}
-        {track.status === 'active' ? ` · Day ${daysSinceTrackStart(track, today)}` : ` · ${daysSinceTrackStart(track, track.endDate!)} days`}
+        {track.status === 'active' ? ` · Day ${daysSinceTrackStart(track, today)}` : ` · ${dayCount(daysSinceTrackStart(track, track.endDate!))}`}
       </Caption>
 
       <View style={styles.list}>
