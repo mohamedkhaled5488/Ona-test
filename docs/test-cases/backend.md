@@ -61,3 +61,6 @@ Every test creates its own new accounts, so no test depends on another one.
 | BE-WH-007 | Webhook | Lifetime | – | Lifetime purchase; EXPIRATION; support refund | Survives expiry; refund ends it | backend | P1 | webhook.test.ts |
 | BE-WH-008 | Webhook | Not ours | – | Other entitlement; anonymous buyer; TEST | Skipped; nothing stored | backend | P2 | webhook.test.ts |
 | BE-WH-009 | Webhook | Renewal for a deleted account | Purchased, account deleted | RENEWAL | Acknowledged (200) and recorded, so RevenueCat stops retrying. **Bug, fixed:** it failed with a 500 and would be retried forever | backend | P1 | webhook.test.ts |
+| BE-CON-001 | Sync consent | Answer kept with the account | New account | Read; set yes; read | Starts unanswered (null); yes is saved and read back | backend | P0 | consent.test.ts |
+| BE-CON-002 | Privacy | Nobody else's answer | A said yes | B reads and changes A's answer (client and raw REST) | B sees nothing and changes nothing | backend | P0 | consent.test.ts |
+| BE-CON-003 | Privacy | Not signed in | A said yes | Anon reads and changes | Nothing read or changed | backend | P1 | consent.test.ts |

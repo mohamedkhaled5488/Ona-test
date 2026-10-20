@@ -20,6 +20,7 @@ import { AppLockOverlay } from './src/components/LockScreen';
 import { PaywallSheet } from './src/components/PaywallSheet';
 import { useRelockOnBackground } from './src/hooks/useScreenPrivacy';
 import { UiProvider } from './src/components/UiProvider';
+import { SyncConsentPrompt } from './src/components/SyncConsentPrompt';
 import { initNotifications, installExpoGoPushCrashGuard } from './src/utils/notifications';
 import { useAuthStore } from './src/store/useAuthStore';
 import { loadSkiaWebIfNeeded } from './src/utils/loadSkiaWeb';
@@ -33,6 +34,7 @@ import { useDataSpace } from './src/hooks/useDataSpace';
 import { DemoFrame } from './src/demo/DemoBanner';
 import { useDailyPlanningStore } from './src/store/useDailyPlanningStore';
 import { startSync } from './src/sync/syncController';
+import { startAccountConsent } from './src/sync/accountConsent';
 import { installDevLog } from './src/utils/devLog';
 import { colors } from './src/theme';
 import { applyTheme, themeVersion } from './src/theme/runtime';
@@ -99,10 +101,16 @@ export default function App() {
       .then(async () => {
         setStartScreen(await decideStartScreen(!!useAuthStore.getState().session));
         if (!alive) return;
+        // The account's answer to "store my data in my account" comes first,
+        // so a new phone or a reinstall syncs your data back by itself.
+        const stopConsent = startAccountConsent();
         const stopSync = startSync();
         // Monthly tasks and series with an end get their next reminders scheduled.
         void useDailyPlanningStore.getState().refreshRollingReminders();
-        stop = () => stopSync();
+        stop = () => {
+          stopConsent();
+          stopSync();
+        };
         setDataReady(true);
       });
     return () => {
@@ -174,6 +182,7 @@ export default function App() {
               <RootNavigator />
             </DemoFrame>
             <PaywallSheet />
+            <SyncConsentPrompt />
             <AppLockOverlay />
           </View>
         </UiProvider>

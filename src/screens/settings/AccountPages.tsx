@@ -97,21 +97,21 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
   const syncing = useSyncStore((s) => s.status === 'syncing');
   const syncError = useSyncStore((s) => s.lastError);
   const syncNowPressed = () => {
-    // Sync is the paid part: without access, this is when the plans appear
-    // (unless they were closed in the last week).
-    if (!gate.allowed && gate.reason === 'noEntitlement') {
-      if (!openPaywall('paidAction')) showToast({ message: `${gate.message} See Plan & usage to turn it back on.` });
-      return;
-    }
     if (!gate.allowed) {
       showToast({ message: gate.message });
       return;
     }
-    void syncNow().then((r) =>
-      showToast({
-        message: !r.ok ? r.message : r.pulled + r.pushed === 0 ? 'Everything is up to date.' : `Synced. ${r.pushed} sent, ${r.pulled} received.`,
-      })
-    );
+    void syncNow().then((r) => {
+      if (!r.ok) return showToast({ message: r.message });
+      // Without sync access your data still comes down; sending is the paid
+      // part, so this is when the plans appear (unless closed in the last week).
+      if (r.downloadOnly) {
+        showToast({ message: r.pulled ? `${r.pulled} received from your account.` : 'This phone has everything from your account.' });
+        openPaywall('paidAction');
+        return;
+      }
+      showToast({ message: r.pulled + r.pushed === 0 ? 'Everything is up to date.' : `Synced. ${r.pushed} sent, ${r.pulled} received.` });
+    });
   };
 
   if (!session) {
@@ -166,7 +166,7 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
         />
       </Group>
 
-      <Group title="Sync" footer={gate.allowed ? undefined : gate.message}>
+      <Group title="Sync" footer={gate.message}>
         <InfoRow label="Last synced" value={formatSyncedAt(lastSyncedAt)} />
         <NavRow icon="sync-outline" label={syncing ? 'Syncing…' : 'Sync now'} explain={syncError ?? undefined} onPress={syncNowPressed} />
         <ToggleRow label="Pause sync" explain="Keep using Ona normally. Nothing leaves this device while paused." value={syncPaused} onChange={setSyncPaused} />

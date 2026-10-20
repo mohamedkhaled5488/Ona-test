@@ -11,7 +11,7 @@ import { useEntitlementStore } from '../store/useEntitlementStore';
 import { useSyncStore } from '../store/useSyncStore';
 import { LOCAL_DATA, normalizeField } from '../utils/localData';
 import { computeEntitlement } from '../utils/entitlement';
-import { syncGate, type SyncGate } from '../utils/sync';
+import { canUpload, syncGate, type SyncGate } from '../utils/sync';
 import { resyncFeature } from '../utils/reminders';
 import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type RemoteRow, type SyncServer } from './engine';
 import { DemoModeError, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
@@ -86,7 +86,7 @@ export function currentSyncGate(): SyncGate {
 
 let running: Promise<SyncOutcome> | null = null;
 
-export type SyncOutcome = { ok: true; pulled: number; pushed: number } | { ok: false; message: string };
+export type SyncOutcome = { ok: true; pulled: number; pushed: number; downloadOnly?: boolean } | { ok: false; message: string };
 
 // A sync that's still running (the data-space switch waits for it).
 export function syncInFlight(): Promise<unknown> {
@@ -103,14 +103,14 @@ export function syncNow(): Promise<SyncOutcome> {
     store.setStatus('syncing');
     try {
       const { owner, cursor, fingerprints } = useSyncStore.getState();
-      const result = await syncOnce(userId, supabaseSyncServer(userId), { owner, cursor, fingerprints }, localData);
+      const result = await syncOnce(userId, supabaseSyncServer(userId), { owner, cursor, fingerprints }, localData, Date.now, { upload: canUpload(gate) });
       useSyncStore.getState().setSyncState(result.state);
       useSyncStore.getState().setStatus('idle');
       useAccountStore.getState().markSynced(new Date().toISOString());
       // Items from another phone: schedule their reminders on this one.
       if (result.changedCollections.includes('dailyPlanning.tasks')) await resyncFeature('tasks');
       if (result.changedCollections.some((c) => c === 'habits.habits' || c === 'skills.skills')) await resyncFeature('habits');
-      return { ok: true, pulled: result.pulled, pushed: result.pushed };
+      return { ok: true, pulled: result.pulled, pushed: result.pushed, ...(canUpload(gate) ? {} : { downloadOnly: true }) };
     } catch (e) {
       const message = e instanceof OtherAccountError ? e.message : `Couldn't sync: ${e instanceof Error ? e.message : String(e)}`;
       useSyncStore.getState().setStatus('error', message);

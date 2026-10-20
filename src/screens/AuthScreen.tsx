@@ -12,11 +12,11 @@ import { withAlpha } from '../utils/color';
 import { useAuthStore } from '../store/useAuthStore';
 import { CheckRow } from '../components/CheckRow';
 import { GoogleButton } from '../components/GoogleButton';
-import { useSettingsStore } from '../store/useSettingsStore';
 import { TRIAL_DAYS } from '../config/plans';
 import { themedStyles } from '../theme/runtime';
 import { useDataSpace } from '../hooks/useDataSpace';
 import { DemoNotice } from '../demo/DemoNotice';
+import { consentGivenAtSignIn } from '../sync/accountConsent';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -39,8 +39,6 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
   const [consentStore, setConsentStore] = useState(false);
   const [consentAnalytics, setConsentAnalytics] = useState(false);
   const [consentTips, setConsentTips] = useState(false);
-  const alreadyConsented = useSettingsStore((s) => s.consent.storeData);
-  const setConsent = useSettingsStore((s) => s.setConsent);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -63,19 +61,17 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
         : await signUp(email.trim(), password, { storeData: consentStore, analytics: consentAnalytics, tips: consentTips });
     setSubmitting(false);
     if (ok && mode === 'signUp') setCheckEmail(true);
-    if (ok && mode === 'signIn') {
-      // Consent is asked on each phone: a new phone shouldn't start sending
-      // data just because another one was allowed to.
-      if (consentStore) setConsent({ storeData: true });
-      navigation?.goBack();
-    }
+    // Signing in: the account's own answer applies (asked once per account,
+    // see src/sync/accountConsent.ts), so this phone syncs by itself.
+    if (ok && mode === 'signIn') navigation?.goBack();
   };
 
   const [googleBusy, setGoogleBusy] = useState(false);
   const continueWithGoogle = async () => {
     clearError();
     setGoogleBusy(true);
-    const consent = mode === 'signUp' ? { storeData: consentStore, analytics: consentAnalytics, tips: consentTips } : { storeData: consentStore };
+    const consent = mode === 'signUp' ? { storeData: consentStore, analytics: consentAnalytics, tips: consentTips } : {};
+    if (mode === 'signUp' && consentStore) consentGivenAtSignIn();
     const result = await signInWithGoogle(consent);
     setGoogleBusy(false);
     if (result.ok) navigation?.goBack();
@@ -143,17 +139,6 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
             secureTextEntry
             textContentType={mode === 'signUp' ? 'newPassword' : 'password'}
           />
-
-          {mode === 'signIn' && !alreadyConsented && (
-            <View style={styles.consents}>
-              <CheckRow
-                label="Store my feelings and habit data in my Ona account"
-                detail="Needed to sync this phone. You can change this any time in Settings."
-                checked={consentStore}
-                onChange={setConsentStore}
-              />
-            </View>
-          )}
 
           {mode === 'signUp' && (
             <View style={styles.consents}>

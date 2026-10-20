@@ -43,3 +43,5 @@ Integration tests run the real stores together on in-memory storage with a set c
 | 12 | INT-PLAN-006..009 | Plan / step | (above) | integration | P0 | int.planDaily.test.ts |
 | 13 Export | INT-EXP-001 | Counts match | Every array in every section matches | integration | P0 | int.flows.test.ts |
 | 14 Demo isolation | (existing) | Real data byte-for-byte unchanged; zero network | demoIsolation, demoEdgeCases | integration | P0 | existing files |
+| 10 Account ↔ data | SYNC-ACC-001..009 | "Store my data in my account" answered once per account | Reinstall or new phone with a yes: syncs at once, no question; an older per-phone yes becomes the account's; never answered: asked after sign-in (Yes / Not now remembered); off on one phone is off everywhere; demo and data-space switches never change it; the Create-account box always counts; offline changes nothing | integration | P0 | accountConsent.test.ts |
+| 10 | SYNC-ACC-010/011 | Restoring never needs a subscription | Without access sync still downloads (only sending is off); a reinstall gets its data back, and its own new entries are sent once access returns | integration | P0 | accountConsent.test.ts |

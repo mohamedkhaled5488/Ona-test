@@ -62,7 +62,10 @@ export interface SyncResult {
 const PAGE = 500;
 const PUSH_BATCH = 200;
 
-export async function syncOnce(userId: string, server: SyncServer, start: SyncState, local: LocalData, now: () => number = Date.now): Promise<SyncResult> {
+// `upload: false` (no trial or subscription): only pull. The state then
+// remembers only what the server has, so this phone's own changes are still
+// sent once sync access is back.
+export async function syncOnce(userId: string, server: SyncServer, start: SyncState, local: LocalData, now: () => number = Date.now, opts: { upload?: boolean } = {}): Promise<SyncResult> {
   if (start.owner && start.owner !== userId) throw new OtherAccountError();
   const known: SyncState['fingerprints'] = Object.fromEntries(Object.entries(start.fingerprints).map(([c, m]) => [c, { ...m }]));
   const collections = syncedCollections().map((c) => c.key);
@@ -112,6 +115,7 @@ export async function syncOnce(userId: string, server: SyncServer, start: SyncSt
     if (rows.length < PAGE) break;
   }
   for (const c of touched) local.write(c, fromRecords(c, local.read(c), localRecords.get(c)!));
+  if (opts.upload === false) return { state: { owner: userId, cursor, fingerprints: known }, pulled, pushed: 0, changedCollections: [...touched] };
 
   // --- 2. Push ---
   const at = new Date(now()).toISOString();

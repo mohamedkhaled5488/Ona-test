@@ -5,7 +5,7 @@ jest.mock('../notifications', () => ({
 }));
 
 import { deleteAccount, withdrawStoreDataConsent, OFFLINE_MESSAGE, type DeleteAccountDeps } from '../accountActions';
-import { syncGate, type SyncGateInput } from '../sync';
+import { canUpload, syncGate, type SyncGateInput } from '../sync';
 import { capUsage, computeEntitlement } from '../entitlement';
 import { forcedSnapshot } from '../../hooks/useEntitlement';
 import { useEntitlementStore } from '../../store/useEntitlementStore';
@@ -130,11 +130,14 @@ describe('consent and sync', () => {
 
 describe('trial and plan', () => {
   const now = Date.parse('2026-10-06T12:00:00Z');
-  test('when a trial ends nothing is deleted and sync pauses', () => {
+  // Changed 2026-10-20 at the owner's request: your data must come back to
+  // any phone you sign in on, so downloading continues; only sending pauses.
+  test('when a trial ends nothing is deleted, sending pauses, and your data still comes down', () => {
     const ended = computeEntitlement(forcedSnapshot('trialEnded', now), now);
     expect(ended.state).toBe('trialEnded');
     const gate = syncGate(gateInput({ syncAccess: ended.syncAccess }));
-    expect(gate).toMatchObject({ allowed: false, reason: 'noEntitlement', message: 'Nothing was deleted. Sync is paused.' });
+    expect(gate).toMatchObject({ allowed: true, uploads: false });
+    expect(canUpload(gate)).toBe(false);
     // The entitlement is a pure read — no data changes when a trial ends.
     expect(usePlanStore.getState().plans.length).toBeGreaterThan(0);
   });
