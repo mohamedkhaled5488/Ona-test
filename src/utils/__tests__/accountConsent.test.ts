@@ -1,123 +1,166 @@
-// "Store my data in my account" is kept with the account, answered once:
-// every phone you sign in on (a new phone, a reinstall) syncs and brings
-// your data back by itself, and restoring works even without a trial or
-// subscription. Reported: after reinstalling and signing in, the app was
-// empty, because the per-phone box hadn't been ticked again.
+// Signing in keeps your data in your account, with the sentence shown next to
+// every sign-in button. The answer lives with the account: "off" stays off
+// everywhere (also after a reinstall); "on" by default only when the account
+// has no answer; an unreadable answer changes nothing (and a server missing
+// the columns says so); every answer is recorded with its date, wording
+// version and screen; accounts from before the sentence see it once.
+// Restoring never needs a subscription.
 // IDs: docs/test-cases/integration.md (SYNC-ACC-*)
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 
-import { reconcileConsent, startAccountConsent, answerConsentPrompt, consentGivenAtSignIn, useConsentPromptStore, type AccountConsent, type ConsentServer } from '../../sync/accountConsent';
+import { AppState } from 'react-native';
+import { reconcileConsent, startAccountConsent, noteConsentSource, acknowledgeConsentNotice, useConsentStatusStore, ServerNeedsUpdateError, SERVER_NEEDS_UPDATE, type ConsentServer } from '../../sync/accountConsent';
+import { CONSENT_WORDING_VERSION, type ConsentSource } from '../../config/consentWording';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useSettingsStore, DEFAULT_SETTINGS } from '../../store/useSettingsStore';
 import { setDataSpace, setSwitchingDataSpace } from '../dataSpace';
 import { syncGate, canUpload, DOWNLOAD_ONLY_MESSAGE } from '../sync';
 import { EMPTY_SYNC_STATE, syncOnce, type LocalData, type OutgoingRow, type RemoteRow, type SyncServer } from '../../sync/engine';
 
-function consentServer(initial: Record<string, AccountConsent> = {}) {
-  const answers = new Map(Object.entries(initial));
-  const saved: [string, boolean][] = [];
-  const server: ConsentServer & { answers: typeof answers; saved: typeof saved } = {
+type Rec = { on: boolean | null; version: string | null; source: string | null };
+function consentServer(initial: Record<string, Partial<Rec>> = {}, fail?: Error) {
+  const answers = new Map<string, Rec>(Object.entries(initial).map(([k, v]) => [k, { on: null, version: null, source: null, ...v }]));
+  const saved: [string, boolean, string][] = [];
+  const server: ConsentServer & { answers: typeof answers; saved: typeof saved; fail?: Error } = {
     answers,
     saved,
-    load: async (id) => answers.get(id) ?? null,
-    save: async (id, on) => {
-      saved.push([id, on]);
-      answers.set(id, on);
+    fail,
+    load: async (id) => {
+      if (server.fail) throw server.fail;
+      return answers.get(id) ?? { on: null, version: null, source: null };
+    },
+    save: async (id, on, source) => {
+      saved.push([id, on, source]);
+      answers.set(id, { on, version: CONSENT_WORDING_VERSION, source });
     },
   };
   return server;
 }
 const tick = async () => {
-  for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+  for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0));
 };
-const signIn = (id: string) => useAuthStore.setState({ session: { user: { id } } as never });
+// As the sign-in screen does: note the screen, then the session appears.
+const signInFrom = (id: string, source: ConsentSource) => {
+  noteConsentSource(source);
+  useAuthStore.setState({ session: { user: { id } } as never, initializing: false });
+};
 const localConsent = () => useSettingsStore.getState().consent.storeData;
 
 let stop: (() => void) | null = null;
 beforeEach(() => {
   setDataSpace('real');
   setSwitchingDataSpace(false);
-  useAuthStore.setState({ session: null });
+  useAuthStore.setState({ session: null, initializing: false });
   useSettingsStore.setState({ ...DEFAULT_SETTINGS, consent: { ...DEFAULT_SETTINGS.consent } });
-  useConsentPromptStore.getState().dismiss();
+  useConsentStatusStore.setState({ problem: null, notice: null });
 });
 afterEach(() => {
   stop?.();
   stop = null;
 });
 
-describe('SYNC-ACC: the answer lives with the account', () => {
-  test('SYNC-ACC-001 what a phone does when you sign in, for every combination', () => {
-    expect(reconcileConsent(true, false)).toEqual({ local: true, saveToAccount: false, ask: false }); // new phone / reinstall
-    expect(reconcileConsent(false, true)).toEqual({ local: false, saveToAccount: false, ask: false }); // turned off on another phone
-    expect(reconcileConsent(null, true)).toEqual({ local: true, saveToAccount: true, ask: false }); // a yes from before this change
-    expect(reconcileConsent(null, false)).toEqual({ local: false, saveToAccount: false, ask: true }); // never answered: ask
+describe('SYNC-ACC: signing in keeps your data in your account', () => {
+  const none = { on: null, version: null, source: null };
+
+  test('SYNC-ACC-001 the rule, for every case', () => {
+    expect(reconcileConsent(none, 'sign-in')).toEqual({ kind: 'on', record: 'sign-in' }); // no answer yet: on, recorded
+    expect(reconcileConsent({ on: true, version: CONSENT_WORDING_VERSION, source: 'sign-up' }, 'sign-in')).toEqual({ kind: 'on' });
+    expect(reconcileConsent({ on: true, version: null, source: null }, 'google-sign-in')).toEqual({ kind: 'on', record: 'google-sign-in' }); // on before the wording existed
+    expect(reconcileConsent({ on: false, version: 'x', source: 'settings' }, 'sign-in')).toEqual({ kind: 'off' }); // off stays off
+    expect(reconcileConsent(none, null)).toEqual({ kind: 'notice' }); // already signed in, never saw it
+    expect(reconcileConsent({ on: true, version: null, source: null }, null)).toEqual({ kind: 'notice' });
+    expect(reconcileConsent({ on: true, version: CONSENT_WORDING_VERSION, source: 'sign-in' }, null)).toEqual({ kind: 'on' });
   });
 
-  test('SYNC-ACC-002 reinstalling and signing in: the account already said yes, so this phone syncs at once, no question', async () => {
-    const server = consentServer({ u1: true });
+  test('SYNC-ACC-002 (point 3) signing in records the answer with the date, wording version and screen', async () => {
+    const server = consentServer();
     stop = startAccountConsent(server);
-    signIn('u1');
+    signInFrom('u1', 'google-sign-up');
     await tick();
     expect(localConsent()).toBe(true);
-    expect(useConsentPromptStore.getState().askFor).toBeNull();
+    expect(server.saved).toEqual([['u1', true, 'google-sign-up']]);
+    expect(server.answers.get('u1')).toEqual({ on: true, version: CONSENT_WORDING_VERSION, source: 'google-sign-up' });
+  });
+
+  test('SYNC-ACC-003 (point 2) an account that said "off" stays off after a reinstall; nothing is recorded over it', async () => {
+    const server = consentServer({ u1: { on: false, version: CONSENT_WORDING_VERSION, source: 'settings' } });
+    stop = startAccountConsent(server);
+    signInFrom('u1', 'sign-in');
+    await tick();
+    expect(localConsent()).toBe(false);
     expect(server.saved).toEqual([]);
   });
 
-  test('SYNC-ACC-003 a yes given on this phone before (an older version) becomes the account\'s answer', async () => {
-    useSettingsStore.getState().setConsent({ storeData: true });
-    const server = consentServer();
+  test('SYNC-ACC-004 (point 2) the server missing the 0007/0008 columns: nothing turns on, and Settings says so plainly', async () => {
+    const server = consentServer({}, new ServerNeedsUpdateError('column profiles.store_data_consent does not exist'));
     stop = startAccountConsent(server);
-    signIn('u1');
+    signInFrom('u1', 'sign-in');
     await tick();
-    expect(server.answers.get('u1')).toBe(true);
+    expect(localConsent()).toBe(false);
+    expect(useConsentStatusStore.getState().problem).toBe(SERVER_NEEDS_UPDATE);
   });
 
-  test('SYNC-ACC-004 never answered: Ona asks right after sign-in; "Yes" turns sync on and saves it to the account', async () => {
-    const server = consentServer();
+  test('SYNC-ACC-005 (point 2) unreadable because of the network: nothing changes; it is tried again when Ona comes back', async () => {
+    const server = consentServer({}, new Error('Network request failed'));
     stop = startAccountConsent(server);
-    signIn('u1');
+    signInFrom('u1', 'sign-in');
     await tick();
-    expect(useConsentPromptStore.getState().askFor).toBe('u1');
-    await answerConsentPrompt(true);
+    expect(localConsent()).toBe(false);
+    expect(useConsentStatusStore.getState().problem).toBeNull();
+    server.fail = undefined;
+    const listener = (AppState.addEventListener as unknown as jest.Mock).mock.calls.at(-1)?.[1] as (s: string) => void;
+    listener('active');
     await tick();
     expect(localConsent()).toBe(true);
-    expect(server.answers.get('u1')).toBe(true);
-    expect(useConsentPromptStore.getState().askFor).toBeNull();
+    expect(server.saved).toEqual([['u1', true, 'sign-in']]); // recorded with the screen they used
   });
 
-  test('SYNC-ACC-005 "Not now" is remembered for the account, so no phone asks again; Settings can still turn it on', async () => {
+  test('SYNC-ACC-006 (point 3) an account that signed in before the sentence existed sees it once; "OK" records that wording', async () => {
+    useAuthStore.setState({ session: { user: { id: 'u1' } } as never, initializing: false });
+    useSettingsStore.getState().setConsent({ storeData: true }); // syncing under the old per-phone setting
+    const server = consentServer({ u1: { on: true, version: null, source: null } });
+    stop = startAccountConsent(server); // Ona starts, already signed in
+    await tick();
+    expect(useConsentStatusStore.getState().notice).toBe('u1');
+    expect(localConsent()).toBe(true); // keeps syncing while the notice is open
+    await acknowledgeConsentNotice(true);
+    expect(server.answers.get('u1')).toEqual({ on: true, version: CONSENT_WORDING_VERSION, source: 'notice' });
+    stop();
+    stop = startAccountConsent(server); // the next start: not shown again
+    await tick();
+    expect(useConsentStatusStore.getState().notice).toBeNull();
+  });
+
+  test('SYNC-ACC-007 (point 3) "Turn off" on the notice records off, with the notice as the screen', async () => {
+    useAuthStore.setState({ session: { user: { id: 'u1' } } as never, initializing: false });
     const server = consentServer();
     stop = startAccountConsent(server);
-    signIn('u1');
     await tick();
-    await answerConsentPrompt(false);
-    expect(server.answers.get('u1')).toBe(false);
+    expect(useConsentStatusStore.getState().notice).toBe('u1');
+    await acknowledgeConsentNotice(false);
     expect(localConsent()).toBe(false);
-    useAuthStore.setState({ session: null });
-    signIn('u1');
-    await tick();
-    expect(useConsentPromptStore.getState().askFor).toBeNull();
-    useSettingsStore.getState().setConsent({ storeData: true }); // Settings → Privacy
-    await tick();
-    expect(server.answers.get('u1')).toBe(true);
+    expect(server.answers.get('u1')).toMatchObject({ on: false, source: 'notice' });
   });
 
-  test('SYNC-ACC-006 turning it off on one phone turns it off on the others when they next sign in or start', async () => {
-    const server = consentServer({ u1: true });
+  test('SYNC-ACC-008 (point 4) turning it off or on in Settings is saved to the account at once, with Settings as the screen', async () => {
+    const server = consentServer();
     stop = startAccountConsent(server);
-    signIn('u1');
+    signInFrom('u1', 'sign-in');
     await tick();
     useSettingsStore.getState().setConsent({ storeData: false });
     await tick();
-    expect(server.answers.get('u1')).toBe(false);
+    expect(server.answers.get('u1')).toMatchObject({ on: false, source: 'settings' });
+    useSettingsStore.getState().setConsent({ storeData: true });
+    await tick();
+    expect(server.answers.get('u1')).toMatchObject({ on: true, source: 'settings' });
   });
 
-  test('SYNC-ACC-007 the demo, and a switch between your data and the demo, never change the account\'s answer', async () => {
-    const server = consentServer({ u1: true });
+  test("SYNC-ACC-009 the demo, and a switch between your data and the demo, never change the account's answer", async () => {
+    const server = consentServer({ u1: { on: true, version: CONSENT_WORDING_VERSION, source: 'sign-in' } });
     stop = startAccountConsent(server);
-    signIn('u1');
+    signInFrom('u1', 'sign-in');
     await tick();
+    server.saved.length = 0;
     setDataSpace('demo');
     useSettingsStore.getState().setConsent({ storeData: false }); // the demo's own settings
     setDataSpace('real');
@@ -126,25 +169,6 @@ describe('SYNC-ACC: the answer lives with the account', () => {
     setSwitchingDataSpace(false);
     await tick();
     expect(server.saved).toEqual([]);
-  });
-
-  test('SYNC-ACC-008 ticking the box on Create account always counts, even if the account had said no before', async () => {
-    const server = consentServer({ u1: false });
-    stop = startAccountConsent(server);
-    consentGivenAtSignIn();
-    signIn('u1');
-    await tick();
-    expect(localConsent()).toBe(true);
-    expect(server.answers.get('u1')).toBe(true);
-  });
-
-  test('SYNC-ACC-009 offline at sign-in: nothing changes and nothing breaks; it\'s checked again next time', async () => {
-    const server: ConsentServer = { load: async () => Promise.reject(new Error('Network request failed')), save: jest.fn(async () => {}) };
-    stop = startAccountConsent(server);
-    signIn('u1');
-    await tick();
-    expect(localConsent()).toBe(false);
-    expect(useConsentPromptStore.getState().askFor).toBeNull();
   });
 });
 
@@ -183,11 +207,9 @@ describe('SYNC-ACC: restoring never needs a subscription', () => {
     const first = await syncOnce('u1', server, EMPTY_SYNC_STATE, p, Date.now, { upload: false });
     expect(p.data.get('journaling.entries')).toEqual([entry('j1', 'Written on the old phone')]);
     expect(pushes).toEqual([]);
-    // A new entry on this phone, still without access: kept here, not sent.
     p.data.set('journaling.entries', [entry('j1', 'Written on the old phone'), entry('j2', 'Written after reinstalling')]);
     const second = await syncOnce('u1', server, first.state, p, Date.now, { upload: false });
     expect(pushes).toEqual([]);
-    // Access is back: the new entry goes up, the old one isn't re-sent.
     await syncOnce('u1', server, second.state, p, Date.now, { upload: true });
     expect(pushes.flat().map((r) => r.record_id)).toEqual(['j2']);
   });

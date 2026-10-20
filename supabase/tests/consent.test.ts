@@ -3,14 +3,18 @@
 // IDs: docs/test-cases/backend.md (BE-CON-*)
 import { admin, anon, newUser, rest } from './local';
 
-test('BE-CON-001 a new account has not answered yet; it can say yes, and read its answer back', async () => {
+test('BE-CON-001 a new account has not answered yet; the answer is saved with its date, wording version and screen', async () => {
   const u = await newUser('con');
-  const before = await u.db.from('profiles').select('store_data_consent, store_data_consent_at').eq('id', u.id).single();
-  expect(before.data).toEqual({ store_data_consent: null, store_data_consent_at: null });
+  const cols = 'store_data_consent, store_data_consent_at, store_data_consent_version, store_data_consent_source';
+  const before = await u.db.from('profiles').select(cols).eq('id', u.id).single();
+  expect(before.data).toEqual({ store_data_consent: null, store_data_consent_at: null, store_data_consent_version: null, store_data_consent_source: null });
   const at = new Date().toISOString();
-  expect((await u.db.from('profiles').update({ store_data_consent: true, store_data_consent_at: at }).eq('id', u.id)).error).toBeNull();
-  const after = await u.db.from('profiles').select('store_data_consent').eq('id', u.id).single();
-  expect(after.data).toEqual({ store_data_consent: true });
+  // As the app records it: the answer, when, which wording, which screen.
+  const patch = { store_data_consent: true, store_data_consent_at: at, store_data_consent_version: '2026-10-21', store_data_consent_source: 'google-sign-up' };
+  expect((await u.db.from('profiles').update(patch).eq('id', u.id)).error).toBeNull();
+  const after = await u.db.from('profiles').select(cols).eq('id', u.id).single();
+  expect({ ...after.data, store_data_consent_at: patch.store_data_consent_at }).toEqual(patch);
+  expect(Date.parse(after.data!.store_data_consent_at)).toBe(Date.parse(at));
 });
 
 test('BE-CON-002 one account can neither read nor change another account\'s answer', async () => {

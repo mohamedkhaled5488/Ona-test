@@ -34,5 +34,5 @@ tags:
 - inputText: "not-an-email"
 - hideKeyboard
 - assertVisible:
-    text: "Create account"
+    text: "Create account and sync my data"
     enabled: false

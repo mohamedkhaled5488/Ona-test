@@ -15,11 +15,9 @@ tags:
 - tapOn: "At least 6 characters"
 - inputText: "e2e-password-1"
 - hideKeyboard
-- tapOn: "Store my feelings and habit data in my Ona account"
 - tapOn:
-    text: "Create account"
+    text: "Create account and sync my data"
     enabled: true
-    index: 1
 # With email confirmation off (the local stack's default) you land in the
 # app; with it on, Ona asks you to confirm your email.
 - extendedWaitUntil:

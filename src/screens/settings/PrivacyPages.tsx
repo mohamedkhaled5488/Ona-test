@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from '../../lib/supabase';
 import { LEGAL } from '../../config/about';
 import { exportAllData } from '../../utils/exportFile';
 import { useEntitlement } from '../../hooks/useEntitlement';
+import { useTurnOffSync } from '../../hooks/useTurnOffSync';
 import { deleteAccountSubscriptionWarning } from '../../billing/planState';
 import { PLAY_SUBSCRIPTIONS_URL } from '../../config/plans';
 import { wipeLocalData } from '../../utils/localData';
@@ -35,32 +36,12 @@ export function PrivacyPage({
   const { showDialog, showToast } = useUi();
   const [busy, setBusy] = useState(false);
 
+  const turnOffSync = useTurnOffSync();
   const changeStoreData = (on: boolean) => {
-    if (on) {
-      setConsent({ storeData: true });
-      return;
-    }
-    const run = async (deleteServer: boolean) => {
-      const result = await withdraw(deleteServer);
-      showToast({ message: result.ok ? (deleteServer ? 'Sync is off and the copy in your account was deleted.' : 'Sync is off for this data.') : result.message });
-    };
-    showDialog({
-      title: 'Stop storing this data in your account?',
-      message: session
-        ? 'Sync stops right away. You can also delete the copy already in your account. Everything on this device stays.'
-        : 'Nothing is in an account yet. Ona keeps working on this device.',
-      actions: session
-        ? [
-            { label: 'Cancel', style: 'cancel' },
-            { label: 'Keep account copy', style: 'default', onPress: () => void run(false) },
-            { label: 'Delete account copy', style: 'destructive', onPress: () => void run(true) },
-          ]
-        : [
-            { label: 'Cancel', style: 'cancel' },
-            { label: 'Turn off', style: 'default', onPress: () => void run(false) },
-          ],
-    });
+    if (on) setConsent({ storeData: true });
+    else turnOffSync();
   };
+
 
   const exportData = () => {
     const run = async (includePhotos: boolean) => {

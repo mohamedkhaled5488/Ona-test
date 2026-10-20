@@ -16,7 +16,8 @@ import { TRIAL_DAYS } from '../config/plans';
 import { themedStyles } from '../theme/runtime';
 import { useDataSpace } from '../hooks/useDataSpace';
 import { DemoNotice } from '../demo/DemoNotice';
-import { consentGivenAtSignIn } from '../sync/accountConsent';
+import { noteConsentSource } from '../sync/accountConsent';
+import { ACCOUNT_STORAGE_SENTENCE, SIGN_IN_LABEL, SIGN_UP_LABEL } from '../config/consentWording';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -35,8 +36,6 @@ export function AuthScreen(props: { navigation?: { goBack: () => void } }) {
 
 function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } }) {
   const [mode, setMode] = useState<Mode>('signUp');
-  // Never pre-ticked. Storing feelings and habit data needs its own explicit yes.
-  const [consentStore, setConsentStore] = useState(false);
   const [consentAnalytics, setConsentAnalytics] = useState(false);
   const [consentTips, setConsentTips] = useState(false);
   const [email, setEmail] = useState('');
@@ -55,10 +54,11 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
   const submit = async () => {
     clearError();
     setSubmitting(true);
+    noteConsentSource(mode === 'signIn' ? 'sign-in' : 'sign-up');
     const ok =
       mode === 'signIn'
         ? await signIn(email.trim(), password)
-        : await signUp(email.trim(), password, { storeData: consentStore, analytics: consentAnalytics, tips: consentTips });
+        : await signUp(email.trim(), password, { storeData: false, analytics: consentAnalytics, tips: consentTips });
     setSubmitting(false);
     if (ok && mode === 'signUp') setCheckEmail(true);
     // Signing in: the account's own answer applies (asked once per account,
@@ -70,8 +70,9 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
   const continueWithGoogle = async () => {
     clearError();
     setGoogleBusy(true);
-    const consent = mode === 'signUp' ? { storeData: consentStore, analytics: consentAnalytics, tips: consentTips } : {};
-    if (mode === 'signUp' && consentStore) consentGivenAtSignIn();
+    // Sync itself is decided by the account check (src/sync/accountConsent.ts).
+    const consent = mode === 'signUp' ? { analytics: consentAnalytics, tips: consentTips } : {};
+    noteConsentSource(mode === 'signIn' ? 'google-sign-in' : 'google-sign-up');
     const result = await signInWithGoogle(consent);
     setGoogleBusy(false);
     if (result.ok) navigation?.goBack();
@@ -143,12 +144,6 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
           {mode === 'signUp' && (
             <View style={styles.consents}>
               <CheckRow
-                label="Store my feelings and habit data in my Ona account"
-                detail="Needed for sync. This includes your feelings, journal, habits and Quit tracking. You can withdraw this any time in Settings, and delete the copy in your account."
-                checked={consentStore}
-                onChange={setConsentStore}
-              />
-              <CheckRow
                 label="Share anonymous usage data to improve Ona"
                 detail="Only general events like installs and sign-ups. Never your feelings, habits or anything you write."
                 checked={consentAnalytics}
@@ -165,11 +160,12 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
           )}
 
           <PrimaryButton
-            label={submitting ? 'Please wait...' : mode === 'signIn' ? 'Sign in' : 'Create account'}
+            label={submitting ? 'Please wait...' : mode === 'signIn' ? SIGN_IN_LABEL : SIGN_UP_LABEL}
             disabled={!canSubmit}
             style={styles.submitButton}
             onPress={submit}
           />
+          <Caption style={styles.storageNote} testID="consent-sentence-email">{ACCOUNT_STORAGE_SENTENCE}</Caption>
 
           <View style={styles.orRow} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <View style={styles.orLine} />
@@ -178,6 +174,8 @@ function RealAuthScreen({ navigation }: { navigation?: { goBack: () => void } })
           </View>
           {/* Uses the boxes ticked above: nothing is consented to just by choosing Google. */}
           <GoogleButton onPress={() => void continueWithGoogle()} busy={googleBusy} disabled={submitting} />
+          {/* Google's button keeps its required wording; the consent sits right under it. */}
+          <Caption style={styles.storageNote} testID="consent-sentence-google">{ACCOUNT_STORAGE_SENTENCE}</Caption>
         </Card>
       )}
 
@@ -244,6 +242,10 @@ const styles = themedStyles(() => ({
   },
   errorText: {
     color: '#D97A70',
+  },
+  storageNote: {
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   consents: {
     marginTop: spacing.md,

@@ -20,7 +20,7 @@ import { AppLockOverlay } from './src/components/LockScreen';
 import { PaywallSheet } from './src/components/PaywallSheet';
 import { useRelockOnBackground } from './src/hooks/useScreenPrivacy';
 import { UiProvider } from './src/components/UiProvider';
-import { SyncConsentPrompt } from './src/components/SyncConsentPrompt';
+import { ConsentNotice } from './src/components/ConsentNotice';
 import { initNotifications, installExpoGoPushCrashGuard } from './src/utils/notifications';
 import { useAuthStore } from './src/store/useAuthStore';
 import { loadSkiaWebIfNeeded } from './src/utils/loadSkiaWeb';
@@ -182,7 +182,7 @@ export default function App() {
               <RootNavigator />
             </DemoFrame>
             <PaywallSheet />
-            <SyncConsentPrompt />
+            <ConsentNotice />
             <AppLockOverlay />
           </View>
         </UiProvider>

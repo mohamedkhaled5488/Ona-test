@@ -10,6 +10,7 @@ import { useEntitlement, useSyncGate } from '../../hooks/useEntitlement';
 import { getBillingClient } from '../../billing/billingClient';
 import { usePaywallStore } from '../../store/usePaywallStore';
 import { syncNow } from '../../sync/syncController';
+import { useConsentStatusStore } from '../../sync/accountConsent';
 import { useSyncStore } from '../../store/useSyncStore';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -96,6 +97,8 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
   const openPaywall = usePaywallStore((s) => s.open);
   const syncing = useSyncStore((s) => s.status === 'syncing');
   const syncError = useSyncStore((s) => s.lastError);
+  // E.g. the server is missing the consent columns: said plainly, never silent.
+  const consentProblem = useConsentStatusStore((s) => s.problem);
   const syncNowPressed = () => {
     if (!gate.allowed) {
       showToast({ message: gate.message });
@@ -166,7 +169,7 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
         />
       </Group>
 
-      <Group title="Sync" footer={gate.message}>
+      <Group title="Sync" footer={consentProblem ?? gate.message}>
         <InfoRow label="Last synced" value={formatSyncedAt(lastSyncedAt)} />
         <NavRow icon="sync-outline" label={syncing ? 'Syncing…' : 'Sync now'} explain={syncError ?? undefined} onPress={syncNowPressed} />
         <ToggleRow label="Pause sync" explain="Keep using Ona normally. Nothing leaves this device while paused." value={syncPaused} onChange={setSyncPaused} />

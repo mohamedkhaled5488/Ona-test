@@ -18,6 +18,7 @@ import { DemoModeError, isDemo, isSwitchingDataSpace } from '../utils/dataSpace'
 import { withoutDemoItems } from '../utils/demoLeftovers';
 
 const AFTER_CHANGE_MS = 15_000;
+export const UPLOAD_STOPPED = 'Sync was turned off, so nothing more was sent.';
 const EVERY_MS = 5 * 60_000;
 
 export const localData: LocalData = {
@@ -52,6 +53,10 @@ export function supabaseSyncServer(userId: string, client: SupabaseClient = supa
     },
     push: async (rows: OutgoingRow[]) => {
       if (isDemo()) throw new DemoModeError('Sync');
+      // Checked again before every batch: turning sync off (or the trial
+      // ending, a switch to the demo, or a different account signing in)
+      // stops sending at once, even in the middle of a sync.
+      if (!uploadStillAllowed(userId)) throw new Error(UPLOAD_STOPPED);
       const { error } = await client
         .from('sync_records' as never)
         .upsert(rows.map((r) => ({ ...r, user_id: userId })) as never, { onConflict: 'user_id,collection,record_id' });
@@ -62,6 +67,17 @@ export function supabaseSyncServer(userId: string, client: SupabaseClient = supa
       }
     },
   };
+}
+
+// Before each batch: still the same account, sync still on, still allowed to
+// send. (A switch between spaces waits for a running sync, so it isn't a
+// reason to stop one halfway.)
+function uploadStillAllowed(userId: string): boolean {
+  const session = useAuthStore.getState().session;
+  if (session?.user.id !== userId || isDemo()) return false;
+  const settings = useSettingsStore.getState();
+  if (!settings.consent.storeData || useAccountStore.getState().syncPaused) return false;
+  return computeEntitlement(useEntitlementStore.getState().snapshots[userId], Date.now()).syncAccess;
 }
 
 // The same rules as useSyncGate(), readable outside React.

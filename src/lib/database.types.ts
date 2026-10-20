@@ -7,10 +7,10 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        // store_data_consent: see supabase/migrations/0007_store_data_consent.sql.
-        Row: { id: string; email: string | null; created_at: string; store_data_consent: boolean | null; store_data_consent_at: string | null };
+        // store_data_consent*: see supabase/migrations/0007 and 0008.
+        Row: { id: string; email: string | null; created_at: string; store_data_consent: boolean | null; store_data_consent_at: string | null; store_data_consent_version: string | null; store_data_consent_source: string | null };
         Insert: { id: string; email?: string | null };
-        Update: { email?: string | null; store_data_consent?: boolean | null; store_data_consent_at?: string | null };
+        Update: { email?: string | null; store_data_consent?: boolean | null; store_data_consent_at?: string | null; store_data_consent_version?: string | null; store_data_consent_source?: string | null };
       };
       plans: {
         Row: {
