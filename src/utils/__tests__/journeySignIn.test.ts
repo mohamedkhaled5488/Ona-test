@@ -199,3 +199,61 @@ test('JRN-SYNC-006 (point 4) turning sync off in the middle of a big upload stop
   expect(serverIds().length).toBe(200);
   expect(useSyncStore.getState().lastError).toMatch(/turned off/);
 });
+
+// Every AppState listener Ona registered (sync, consent, entitlement): what
+// the phone tells Ona when it is left or opened.
+function phoneSays(state: 'active' | 'background' | 'inactive') {
+  const { AppState } = require('react-native') as { AppState: { addEventListener: jest.Mock } };
+  for (const [event, fn] of AppState.addEventListener.mock.calls) if (event === 'change') (fn as (s: string) => void)(state);
+}
+
+test('JRN-SYNC-007 reported: add something and leave Ona right away (to close or uninstall it): it is in your account', async () => {
+  await freshInstall();
+  signIn('u1');
+  await settle();
+  useJournalStore.setState({ entries: [entry('j1', 'Added just before leaving')] } as never);
+  phoneSays('background'); // Home button / app switcher, no time passes
+  await settle();
+  expect(serverIds()).toEqual(['j1']);
+});
+
+test('JRN-SYNC-008 changes that keep coming never hold your data back: it goes up within 10 seconds', async () => {
+  await freshInstall();
+  signIn('u1');
+  await settle();
+  for (let s = 0; s <= 10; s += 2) {
+    useJournalStore.setState({ entries: [entry('j1', `Version at ${s}s`)] } as never);
+    jest.advanceTimersByTime(2_000);
+    await settle();
+  }
+  expect(serverIds()).toEqual(['j1']);
+});
+
+test('JRN-SYNC-009 a change made while a sync is running is sent right after it', async () => {
+  await freshInstall();
+  signIn('u1');
+  await settle();
+  let once = true;
+  mockServer.onUpsert = () => {
+    if (once) {
+      once = false;
+      useJournalStore.setState({ entries: [...useJournalStore.getState().entries, entry('j2', 'Made during the sync')] } as never);
+    }
+  };
+  useJournalStore.setState({ entries: [entry('j1', 'First')] } as never);
+  phoneSays('background');
+  await settle();
+  phoneSays('background');
+  await settle();
+  expect(serverIds()).toEqual(['j1', 'j2']);
+});
+
+test('JRN-SYNC-010 a single change goes up about 3 seconds later, without leaving Ona', async () => {
+  await freshInstall();
+  signIn('u1');
+  await settle();
+  useJournalStore.setState({ entries: [entry('j1', 'Just one')] } as never);
+  jest.advanceTimersByTime(3_100);
+  await settle();
+  expect(serverIds()).toEqual(['j1']);
+});

@@ -17,7 +17,12 @@ import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type Rem
 import { DemoModeError, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
 import { withoutDemoItems } from '../utils/demoLeftovers';
 
-const AFTER_CHANGE_MS = 15_000;
+// A change is sent about 3 s after it's made (several quick changes go
+// together), and never later than 10 s after the first unsent change, even
+// if changes keep coming. Leaving Ona (Home, another app, locking the phone)
+// sends right away: the moment before an app is closed or uninstalled.
+const AFTER_CHANGE_MS = 3_000;
+const MAX_WAIT_MS = 10_000;
 export const UPLOAD_STOPPED = 'Sync was turned off, so nothing more was sent.';
 const EVERY_MS = 5 * 60_000;
 
@@ -140,13 +145,32 @@ export function syncNow(): Promise<SyncOutcome> {
 
 // Call once at startup, after local data has loaded.
 export function startSync(): () => void {
-  const quietly = () => {
-    if (currentSyncGate().allowed) void syncNow();
-  };
   let changeTimer: ReturnType<typeof setTimeout> | null = null;
+  let firstUnsentAt: number | null = null;
+  let followUp = false; // asked for while a sync was running
+  const quietly = () => {
+    if (changeTimer) clearTimeout(changeTimer);
+    changeTimer = null;
+    firstUnsentAt = null;
+    if (!currentSyncGate().allowed) return;
+    if (running) {
+      // That sync read the data before this request: run once more after it.
+      if (!followUp) {
+        followUp = true;
+        void running.then(() => {
+          followUp = false;
+          quietly();
+        });
+      }
+      return;
+    }
+    void syncNow();
+  };
   const onLocalChange = () => {
     if (changeTimer) clearTimeout(changeTimer);
-    changeTimer = setTimeout(quietly, AFTER_CHANGE_MS);
+    firstUnsentAt ??= Date.now();
+    const wait = Math.max(0, Math.min(AFTER_CHANGE_MS, firstUnsentAt + MAX_WAIT_MS - Date.now()));
+    changeTimer = setTimeout(quietly, wait);
   };
 
   const unsubs = Object.values(LOCAL_DATA).map(({ store }) => (store as unknown as { subscribe: (fn: () => void) => () => void }).subscribe(onLocalChange));
@@ -156,7 +180,10 @@ export function startSync(): () => void {
   unsubs.push(useAccountStore.subscribe((s, p) => s.syncPaused !== p.syncPaused && !s.syncPaused && quietly()));
   unsubs.push(useSettingsStore.subscribe((s, p) => s.consent.storeData !== p.consent.storeData && s.consent.storeData && quietly()));
 
-  const app = AppState.addEventListener('change', (state) => state === 'active' && quietly());
+  // Coming back to Ona, and leaving it: both sync.
+  const app = AppState.addEventListener('change', (state) => {
+    if (state === 'active' || state === 'background' || state === 'inactive') quietly();
+  });
   const interval = setInterval(() => AppState.currentState === 'active' && quietly(), EVERY_MS);
   quietly();
 
