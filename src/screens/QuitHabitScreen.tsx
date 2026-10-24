@@ -36,7 +36,8 @@ import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ItemFeelingPrompt } from '../components/ItemFeelingSheet';
-import { logItemFeeling, shouldAskItemFeeling } from '../utils/itemFeelings';
+import { shouldAskItemFeeling } from '../utils/itemFeelings';
+import { logFeeling } from '../feelings/logFeeling';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 
 // "1 day", "5 days".
@@ -795,7 +796,7 @@ function JourneyStage({
         <FeelingSheet
           visible={feelingSheetOpen}
           onClose={() => setFeelingSheetOpen(false)}
-          onSubmit={(feeling, zone, note) => logItemFeeling({ source: { kind: 'quitHabit', refId: habitId, trackId: active.id }, zone, feelingIds: [feeling.id], note })}
+          onSubmit={(feeling, zone, note) => logFeeling({ source: { kind: 'quitHabit', refId: habitId, trackId: active.id }, zone, feelingIds: [feeling.id], note })}
         />
       )}
     </>

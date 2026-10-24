@@ -1,3 +1,4 @@
+import { logFeeling } from '../feelings/logFeeling';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, PanResponder, Pressable, View } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -74,8 +75,8 @@ import type { RootStackParamList } from '../navigation/types';
 import type { FeelingZone, FeelingCheckIn } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { deleteFeelingEntry, logTaskFeeling } from '../utils/taskFeelings';
-import { logItemFeeling, mirrorFeelingEdit } from '../utils/itemFeelings';
+import { deleteFeelingEntry } from '../utils/taskFeelings';
+import { mirrorFeelingEdit } from '../utils/itemFeelings';
 import { spaceKey } from '../utils/dataSpace';
 import { useDailyPlanningStore } from '../store/useDailyPlanningStore';
 import { basedOn, filterBySource, overviewInsight, sourceBreakdown, tagInsight, SOURCE_GROUP_LABEL, type SourceGroup } from '../utils/feelingsInsights';
@@ -1724,7 +1725,6 @@ export function MoodCheckScreen({ navigation, route }: Props) {
   const [stack, setStack] = useState<ScreenState[]>(() => (startZone ? [{ kind: 'zone' }, { kind: 'word', zone: startZone }] : [{ kind: 'zone' }]));
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
-  const addEntry = useFeelingsStore((s) => s.addEntry);
   const setEntryNote = useFeelingsStore((s) => s.setEntryNote);
 
   // Launched from inside another feature (a habit/skill's "how did that
@@ -1757,15 +1757,17 @@ export function MoodCheckScreen({ navigation, route }: Props) {
     reasonTags?: string[]
   ) => {
     if (leaving) return;
-    // A task's feeling is linked both ways (and carries the task's tags);
-    // a habit's, skill's or Quit moment's carries that item's name as a tag.
-    const id =
-      source?.kind === 'task'
-        ? logTaskFeeling({ taskId: source.refId, date: source.date ?? todayISO(), phase: source.phase ?? 'after', zone, feelingIds, intensities, reasonTags }) ??
-          addEntry(zone, feelingIds, intensities, reasonTags, source)
-        : source && (source.kind === 'habit' || source.kind === 'skill' || source.kind === 'quitHabit')
-          ? logItemFeeling({ source, zone, feelingIds, intensities, reasonTags: [...(route.params?.tags ?? []), ...(reasonTags ?? [])], note: route.params?.note })
-          : addEntry(zone, feelingIds, intensities, reasonTags, source);
+    // One save for every source (src/feelings/logFeeling.ts). Coming from a
+    // habit, practice or Quit moment, the quick sheet's tags and note come along.
+    const fromItem = source && (source.kind === 'habit' || source.kind === 'skill' || source.kind === 'quitHabit');
+    const id = logFeeling({
+      source,
+      zone,
+      feelingIds,
+      intensities,
+      tags: fromItem ? [...(route.params?.tags ?? []), ...(reasonTags ?? [])] : reasonTags,
+      note: fromItem ? route.params?.note : undefined,
+    });
     if (source) {
       setLeaving(true);
       return;

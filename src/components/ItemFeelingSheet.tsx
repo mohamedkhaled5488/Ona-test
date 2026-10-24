@@ -19,7 +19,7 @@ import type { FeelingSource, FeelingZone } from '../types/sections';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
-import { logItemFeeling } from '../utils/itemFeelings';
+import { logFeeling } from '../feelings/logFeeling';
 
 export interface ItemFeelingDraft {
   zone: FeelingZone | undefined;
@@ -196,7 +196,7 @@ export function ItemFeelingPrompt({
       gentle={gentle}
       onSkip={onDone}
       onSave={(d) => {
-        logItemFeeling({ source, zone: d.zone, reasonTags: d.reasonTags, note: d.note });
+        logFeeling({ source, zone: d.zone, tags: d.reasonTags, note: d.note });
         onSaved?.();
         onDone();
       }}

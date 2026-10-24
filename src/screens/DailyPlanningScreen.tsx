@@ -926,7 +926,7 @@ export function DailyPlanningScreen() {
     showToast({ message: minutes ? `Timed ${minutes} min` : 'Stopped' });
   };
 
-  const logTaskFeeling = (task: DailyTask, date = selectedDate, phase: FeelingPhase = 'after', zone?: FeelingZone) => {
+  const openTaskFeelingFlow = (task: DailyTask, date = selectedDate, phase: FeelingPhase = 'after', zone?: FeelingZone) => {
     setJustDone(null);
     setFeelingSheet(null);
     navigation.push('moodCheck', { source: { kind: 'task', refId: task.id, date, phase }, ...(zone ? { startZone: zone } : {}) });
@@ -1108,7 +1108,7 @@ export function DailyPlanningScreen() {
     },
     showDoneStrip: justDone?.taskId === task.id && justDone.date === selectedDate,
     onDismissStrip: () => setJustDone(null),
-    onLogFeeling: logTaskFeeling,
+    onLogFeeling: openTaskFeelingFlow,
     onOpen: openTask,
   });
 
@@ -1379,7 +1379,7 @@ export function DailyPlanningScreen() {
         onClose={() => setFeelingSheet(null)}
         onMoreSpecific={(zone) => {
           const t = feelingSheet && useDailyPlanningStore.getState().tasks.find((x) => x.id === feelingSheet.taskId);
-          if (t && feelingSheet) logTaskFeeling(t, feelingSheet.date, feelingSheet.phase, zone);
+          if (t && feelingSheet) openTaskFeelingFlow(t, feelingSheet.date, feelingSheet.phase, zone);
         }}
       />
 

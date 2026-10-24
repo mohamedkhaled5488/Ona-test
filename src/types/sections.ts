@@ -431,8 +431,12 @@ export interface PersonalFeeling {
 // than from Identify the Feeling directly — lets each feature's own Analysis
 // partition filter the shared feelings log down to just its own entries and
 // reuse all of feelingsStats.ts unchanged, instead of duplicating that logic.
+// Every place outside Identify the Feeling that a feeling can be logged
+// from. One list, so tests can check every source (feelingSourcesContract).
+export const FEELING_SOURCE_KINDS = ['habit', 'quitHabit', 'skill', 'study', 'task', 'book'] as const;
+
 export interface FeelingSource {
-  kind: 'habit' | 'quitHabit' | 'skill' | 'study' | 'task' | 'book';
+  kind: (typeof FEELING_SOURCE_KINDS)[number];
   refId: string; // the habit/skill id this feeling was logged against
   // Tasks: which day of the task, and whether it was felt before starting or after finishing.
   date?: string;

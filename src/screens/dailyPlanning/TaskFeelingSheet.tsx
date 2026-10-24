@@ -12,7 +12,8 @@ import { Caption, Eyebrow, SectionHeading } from '../../components/Typography';
 import { feelingZones, findFeeling, zoneMeta } from '../../data/feelingsWheel';
 import { useDailyPlanningStore, resolveTaskTitle } from '../../store/useDailyPlanningStore';
 import { useFeelingsStore } from '../../store/useFeelingsStore';
-import { clearTaskFeeling, linkedEntry, logTaskFeeling, type FeelingPhase } from '../../utils/taskFeelings';
+import { clearTaskFeeling, linkedEntry, type FeelingPhase } from '../../utils/taskFeelings';
+import { logFeeling } from '../../feelings/logFeeling';
 import { withAlpha } from '../../utils/color';
 import { colors, fonts, radii, spacing } from '../../theme';
 import { themedStyles } from '../../theme/runtime';
@@ -74,10 +75,8 @@ export function TaskFeelingSheet({
 
   const save = () => {
     if (zone) {
-      logTaskFeeling({
-        taskId: task.id,
-        date,
-        phase,
+      logFeeling({
+        source: { kind: 'task', refId: task.id, date, phase },
         zone,
         feelingIds: entry && entry.zone === zone ? entry.feelingIds : [],
         intensities: entry && entry.zone === zone ? entry.intensities : undefined,
