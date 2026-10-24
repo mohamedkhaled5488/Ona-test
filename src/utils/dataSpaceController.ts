@@ -369,8 +369,8 @@ async function clearSteps(storage: Storage): Promise<void> {
 // nothing known about any account), ready for the signed-in account's data.
 export function parkActiveData(meta: { origin: string | null; reason: ParkedReason }, storage: Storage = AsyncStorage): Promise<ParkedCopy> {
   return exclusively(async () => {
-    const { owner, cursor, fingerprints } = useSyncStore.getState();
-    const copy: ParkedCopy = { id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, ...meta, parkedAt: new Date().toISOString(), records: countActiveRecords(), sync: { owner, cursor, fingerprints } };
+    const { owner, cursor, fingerprints, revs } = useSyncStore.getState();
+    const copy: ParkedCopy = { id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, ...meta, parkedAt: new Date().toISOString(), records: countActiveRecords(), sync: { owner, cursor, fingerprints, revs } };
     await storage.setItem(DATA_OP_KEY, JSON.stringify({ op: 'park', copy } satisfies DataOp));
     await parkSteps(copy, storage, 'start');
     // Its reminders stop ringing on this phone (the copy keeps the items;

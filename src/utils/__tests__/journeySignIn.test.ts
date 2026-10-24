@@ -31,15 +31,18 @@ jest.mock('../../lib/supabase', () => {
           return { error: null };
         },
       }),
-      upsert: async (rows: Row[]) => {
-        mockServer.onUpsert?.();
-        for (const r of rows) {
-          const i = mockServer.rows.findIndex((x) => x.collection === r.collection && x.record_id === r.record_id);
-          const row = { ...r, server_updated_at: stamp() };
-          if (i >= 0) mockServer.rows[i] = row;
-          else mockServer.rows.push(row);
-        }
-        return { error: null };
+      upsert: (rows: Row[]) => {
+        const done = (async () => {
+          mockServer.onUpsert?.();
+          for (const r of rows) {
+            const i = mockServer.rows.findIndex((x) => x.collection === r.collection && x.record_id === r.record_id);
+            const row = { ...r, server_updated_at: stamp() };
+            if (i >= 0) mockServer.rows[i] = row;
+            else mockServer.rows.push(row);
+          }
+          return { error: null }; // no revisions here: accepted as sent
+        })();
+        return Object.assign(done, { select: () => done });
       },
       then: (resolve: (v: unknown) => void) => {
         const rows = table === 'sync_records' ? mockServer.rows.filter((r) => !filters.since || r.server_updated_at > filters.since).sort((a, b) => a.server_updated_at.localeCompare(b.server_updated_at)) : [];

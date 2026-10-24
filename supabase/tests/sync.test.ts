@@ -125,3 +125,53 @@ test('BE-SYNC-008 when access ends, the phone gets a clear message, its data sta
   expect((await b.sync()).pulled).toBe(1);
   expect(b.tasks().map((t) => t.id)).toEqual(['t1']);
 });
+
+// Migration 0009: conflicts by server revision, never by a phone's clock.
+test('BE-SYNC-009 a journal entry edited on two phones: the server refuses the stale write, and both versions are kept', async () => {
+  const u = await subscriber();
+  const a = phone(u, { 'journaling.entries': [{ id: 'j1', date: '2026-10-24', zone: 'calm', text: 'Quiet day' }] });
+  await a.sync();
+  const b = phone(u);
+  await b.sync();
+  a.data.set('journaling.entries', [{ id: 'j1', date: '2026-10-24', zone: 'calm', text: 'Quiet day, then a walk' }]);
+  b.data.set('journaling.entries', [{ id: 'j1', date: '2026-10-24', zone: 'calm', text: 'Quiet day, and a call' }]);
+  await a.sync();
+  expect((await b.sync()).conflicts).toBe(1);
+  await a.sync();
+  for (const p of [a, b]) {
+    const texts = ((p.data.get('journaling.entries') ?? []) as { text: string }[]).map((e) => e.text).sort();
+    expect(texts).toEqual(['Quiet day, and a call', 'Quiet day, then a walk']);
+  }
+  const { data } = await admin().from('sync_records').select('record_id, rev').eq('user_id', u.id).order('record_id');
+  expect(data).toEqual([{ record_id: 'j1', rev: 2 }, expect.objectContaining({ rev: 1 })]);
+});
+
+test('BE-SYNC-010 a delete from a phone that never saw the latest edit is refused: the edit comes back', async () => {
+  const u = await subscriber();
+  const a = phone(u, { 'dailyPlanning.tasks': [task('t1', 'Buy bread')] });
+  await a.sync();
+  const b = phone(u);
+  await b.sync();
+  b.data.set('dailyPlanning.tasks', [{ ...b.tasks()[0], title: 'Buy bread and milk' }]);
+  await b.sync();
+  a.data.set('dailyPlanning.tasks', []);
+  await a.sync();
+  expect(a.tasks().map((t) => t.title)).toEqual(['Buy bread and milk']);
+  const { data } = await admin().from('sync_records').select('deleted').eq('user_id', u.id).eq('record_id', 't1').single();
+  expect(data).toEqual({ deleted: false });
+});
+
+test("BE-SYNC-011 a phone's clock doesn't decide: the change that reaches the server last wins, even from a phone a year behind", async () => {
+  const u = await subscriber();
+  const ahead = phone(u, { 'dailyPlanning.tasks': [task('t1', 'Call')] }, 365 * 86_400_000);
+  await ahead.sync();
+  const behind = phone(u, {}, -365 * 86_400_000);
+  await behind.sync();
+  ahead.data.set('dailyPlanning.tasks', [{ ...ahead.tasks()[0], title: 'Call (ahead)' }]);
+  behind.data.set('dailyPlanning.tasks', [{ ...behind.tasks()[0], title: 'Call (behind)' }]);
+  await ahead.sync();
+  await behind.sync(); // later to reach the server
+  await ahead.sync();
+  expect(ahead.tasks().map((t) => t.title)).toEqual(['Call (behind)']);
+  expect(behind.tasks().map((t) => t.title)).toEqual(['Call (behind)']);
+});

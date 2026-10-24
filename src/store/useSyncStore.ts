@@ -23,7 +23,7 @@ export const useSyncStore = create<SyncStoreState>()(
       ...EMPTY_SYNC_STATE,
       status: 'idle',
       lastError: null,
-      setSyncState: (s) => set({ owner: s.owner, cursor: s.cursor, fingerprints: s.fingerprints }),
+      setSyncState: (s) => set({ owner: s.owner, cursor: s.cursor, fingerprints: s.fingerprints, revs: s.revs ?? {} }),
       setStatus: (status, error = null) => set({ status, lastError: error }),
       reset: (keepOwner = false) => set({ ...EMPTY_SYNC_STATE, owner: keepOwner ? get().owner : null }),
     }),
@@ -31,7 +31,7 @@ export const useSyncStore = create<SyncStoreState>()(
       name: 'ona.sync',
       version: 1,
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ owner, cursor, fingerprints }) => ({ owner, cursor, fingerprints }),
+      partialize: ({ owner, cursor, fingerprints, revs }) => ({ owner, cursor, fingerprints, revs }),
     }
   )
 );

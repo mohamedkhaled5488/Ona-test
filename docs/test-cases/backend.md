@@ -48,6 +48,9 @@ Every test creates its own new accounts, so no test depends on another one.
 | BE-SYNC-006 | Privacy | Two accounts | A and B | A syncs a journal entry; B syncs | B receives nothing | backend | P0 | sync.test.ts |
 | BE-SYNC-007 | Sync | Phone of another account | Phone synced with A | Sync as B | Refused before anything is sent | backend | P0 | sync.test.ts |
 | BE-SYNC-008 | Gating | Access ends mid-use | Synced, then trial ended | Add a task; sync; new phone syncs | "Sync access has ended on the server."; the task stays on the phone; a new phone can still pull | backend | P0 | sync.test.ts |
+| BE-SYNC-009 | Conflicts | Journal edited on two phones | Both synced | Edit on A, sync; edit on B, sync | The stale write is refused by the real trigger; both versions kept on both phones; revisions counted | backend | P0 | sync.test.ts |
+| BE-SYNC-010 | Conflicts | Stale delete | B edited after A last synced | A deletes, syncs | Refused; the edit comes back on A; not deleted on the server | backend | P0 | sync.test.ts |
+| BE-SYNC-011 | Conflicts | Wrong clocks (G5) | Phones a year ahead and behind | Both edit; the one behind reaches the server last | Its change wins on both (the old rule kept the one ahead) | backend | P0 | sync.test.ts |
 | BE-ACC-001 | Accounts | Phone data, empty account | New account; 2 entries on the phone | Sign in (real consent, real trial), sync | Asked with the real count (2); nothing sent; Continue sends both | backend | P0 | accounts.test.ts |
 | BE-ACC-002 | Accounts | Merge with real counts | Account has 2 rows; phone 1 | Sign in, sync | Asked with 1 here, 2 in the account; Merge: both have all 3 | backend | P0 | accounts.test.ts |
 | BE-ACC-003 | Accounts | Keep separate | Account 1 row; phone 1 | Choose Keep separate | Account unchanged; the phone's copy kept aside | backend | P0 | accounts.test.ts |

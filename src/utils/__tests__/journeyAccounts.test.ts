@@ -6,7 +6,7 @@
 // IDs: docs/test-cases/integration.md (JRN-ACC-*)
 jest.setTimeout(30_000);
 
-type Row = { user_id: string; collection: string; record_id: string; data: unknown; deleted: boolean; client_updated_at: string; server_updated_at: string };
+type Row = { user_id: string; collection: string; record_id: string; data: unknown; deleted: boolean; client_updated_at: string; server_updated_at: string; rev?: number };
 const mockServer = { rows: [] as Row[], user: null as string | null, tick: 0, onUpsert: null as null | ((n: number) => void), upserts: 0, onPull: null as null | (() => void), trialOver: false };
 
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
@@ -26,16 +26,28 @@ jest.mock('../../lib/supabase', () => {
       // The account's consent: yes for everyone here (sign-in says so).
       maybeSingle: async () => ({ data: { store_data_consent: true, store_data_consent_version: '2026-10-21', store_data_consent_source: 'sign-in' }, error: null }),
       update: () => ({ eq: async () => ({ error: null }) }),
-      upsert: async (rows: Row[]) => {
-        mockServer.upserts++;
-        mockServer.onUpsert?.(mockServer.upserts);
-        for (const r of rows) {
-          const i = mockServer.rows.findIndex((x) => x.user_id === r.user_id && x.collection === r.collection && x.record_id === r.record_id);
-          const row = { ...r, server_updated_at: stamp() };
-          if (i >= 0) mockServer.rows[i] = row;
-          else mockServer.rows.push(row);
-        }
-        return { error: null };
+      // As migration 0009: a write over a revision the phone never saw is
+      // refused and the server's row comes back.
+      upsert: (rows: (Row & { base_rev?: number | null })[]) => {
+        const done = (async () => {
+          mockServer.upserts++;
+          mockServer.onUpsert?.(mockServer.upserts);
+          const back: Row[] = [];
+          for (const { base_rev, ...r } of rows) {
+            const i = mockServer.rows.findIndex((x) => x.user_id === r.user_id && x.collection === r.collection && x.record_id === r.record_id);
+            const old = i >= 0 ? mockServer.rows[i] : null;
+            if (old && base_rev != null && base_rev !== (old.rev ?? 1)) {
+              back.push(old);
+              continue;
+            }
+            const row = { ...r, rev: old ? (old.rev ?? 1) + 1 : 1, server_updated_at: stamp() };
+            if (old) mockServer.rows[i] = row;
+            else mockServer.rows.push(row);
+            back.push(row);
+          }
+          return { data: back, error: null };
+        })();
+        return Object.assign(done, { select: () => done });
       },
       then: (resolve: (v: unknown) => void) => {
         if (table !== 'sync_records') return resolve({ data: [], error: null });

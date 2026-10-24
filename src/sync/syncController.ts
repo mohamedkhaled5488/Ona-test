@@ -14,7 +14,7 @@ import { computeEntitlement } from '../utils/entitlement';
 import { canUpload, syncGate, type SyncGate } from '../utils/sync';
 import { resyncFeature } from '../utils/reminders';
 import { fingerprint, syncedCollections, toRecords } from './records';
-import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type RemoteRow, type SyncServer } from './engine';
+import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type PushedRow, type RemoteRow, type SyncServer } from './engine';
 import { DemoModeError, bumpDataGeneration, dataGeneration, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
 import { CHOICE_NEEDED, prepareAccount, useAccountChoiceStore } from './signInFlow';
 import { withoutDemoItems } from '../utils/demoLeftovers';
@@ -50,6 +50,9 @@ export const localData: LocalData = {
 // `stillAllowed`: this phone's own check before every batch (signed in as
 // `userId`, sync on, access). The server-only tests pass their own, so they
 // test what the server itself enforces.
+// Until a push says otherwise (migration 0009 not run on the server yet).
+let serverHasRevisions = true;
+
 export function supabaseSyncServer(
   userId: string,
   client: SupabaseClient = supabase as unknown as SupabaseClient,
@@ -61,7 +64,8 @@ export function supabaseSyncServer(
       if (isDemo()) throw new DemoModeError('Sync');
       let q = client
         .from('sync_records' as never)
-        .select('collection, record_id, data, deleted, client_updated_at, server_updated_at')
+        // Every column: a server with revisions (0009) also sends `rev`.
+        .select('*')
         .order('server_updated_at', { ascending: true })
         .limit(limit);
       if (since) q = q.gt('server_updated_at', since);
@@ -76,14 +80,23 @@ export function supabaseSyncServer(
       // stops sending at once, even in the middle of a sync.
       if (generation !== undefined && generation !== dataGeneration()) throw new Error(DATA_CHANGED);
       if (!stillAllowed()) throw new Error(UPLOAD_STOPPED);
-      const { error } = await client
-        .from('sync_records' as never)
-        .upsert(rows.map((r) => ({ ...r, user_id: userId })) as never, { onConflict: 'user_id,collection,record_id' });
+      const write = (withRevisions: boolean) =>
+        client
+          .from('sync_records' as never)
+          .upsert(rows.map(({ base_rev, ...r }) => ({ ...r, user_id: userId, ...(withRevisions ? { base_rev } : {}) })) as never, { onConflict: 'user_id,collection,record_id' })
+          .select('*');
+      let { data, error } = await write(serverHasRevisions);
+      // A server without migration 0009 yet: sync as before (no revisions).
+      if (error && serverHasRevisions && /base_rev/.test(error.message ?? '')) {
+        serverHasRevisions = false;
+        ({ data, error } = await write(false));
+      }
       if (error) {
         // Row-level security said no: the server doesn't see sync access.
         if (error.code === '42501') throw new Error('Sync access has ended on the server.');
         throw new Error(error.message);
       }
+      return (data ?? undefined) as PushedRow[] | undefined;
     },
   };
 }
@@ -169,7 +182,7 @@ export function syncNow(): Promise<SyncOutcome> {
     const store = useSyncStore.getState();
     store.setStatus('syncing');
     try {
-      const { owner, cursor, fingerprints } = useSyncStore.getState();
+      const { owner, cursor, fingerprints, revs } = useSyncStore.getState();
       const generation = dataGeneration();
       // Writes stop too if the phone's data changed under this sync.
       const local: LocalData = {
@@ -179,7 +192,7 @@ export function syncNow(): Promise<SyncOutcome> {
           localData.write(c, v);
         },
       };
-      const result = await syncOnce(userId, supabaseSyncServer(userId, undefined, generation), { owner, cursor, fingerprints }, local, Date.now, { upload: canUpload(gate) });
+      const result = await syncOnce(userId, supabaseSyncServer(userId, undefined, generation), { owner, cursor, fingerprints, revs }, local, Date.now, { upload: canUpload(gate) });
       if (generation !== dataGeneration()) throw new Error(DATA_CHANGED);
       useSyncStore.getState().setSyncState(result.state);
       useSyncStore.getState().setStatus('idle');
