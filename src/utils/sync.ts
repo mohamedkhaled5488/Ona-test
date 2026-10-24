@@ -10,10 +10,13 @@ export interface SyncGateInput {
   offline: boolean;
   // This phone's data was last synced with a different account.
   otherAccount?: boolean;
+  // Signed in, and the person hasn't yet chosen what to do with the data
+  // on this phone (sync/signInFlow.ts).
+  choosing?: boolean;
   demo?: boolean; // Demo mode: sample data, never synced
 }
 
-export type SyncBlock = 'demo' | 'notConfigured' | 'signedOut' | 'otherAccount' | 'noConsent' | 'noEntitlement' | 'paused' | 'offline';
+export type SyncBlock = 'demo' | 'notConfigured' | 'signedOut' | 'choosing' | 'otherAccount' | 'noConsent' | 'noEntitlement' | 'paused' | 'offline';
 
 // `uploads: false`: download only. Without a trial or subscription your own
 // data still comes back to every phone you sign in on; only sending this
@@ -27,8 +30,8 @@ const MESSAGES: Record<SyncBlock, string> = {
   demo: 'Demo mode: sample data stays on this phone and is never synced.',
   notConfigured: "Sync isn't set up in this build.",
   signedOut: 'Using Ona on this device only.',
-  otherAccount:
-    "This phone's data belongs to a different Ona account, so it isn't synced here. To use this account, delete the data on this device first (Privacy, Security & Data).",
+  choosing: 'Choose what to do with the data on this phone first.',
+  otherAccount: "This phone's data belongs to a different Ona account, so it isn't synced here.",
   noConsent: "Sync is off because you haven't allowed Ona to store your data in your account.",
   noEntitlement: 'Nothing was deleted. Sync is paused.',
   paused: 'Sync is paused.',
@@ -39,6 +42,7 @@ function firstBlock(input: SyncGateInput): SyncBlock | null {
   if (input.demo) return 'demo';
   if (!input.configured) return 'notConfigured';
   if (!input.signedIn) return 'signedOut';
+  if (input.choosing) return 'choosing';
   if (input.otherAccount) return 'otherAccount';
   if (!input.consentStoreData) return 'noConsent';
   if (input.paused) return 'paused';

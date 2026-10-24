@@ -18,6 +18,7 @@ import { themedStyles } from '../../theme/runtime';
 import { Group, NavRow, ToggleRow } from './SettingsParts';
 import type { SettingsPage, SettingsParams } from './pages';
 import { SecurityGroup } from './SecurityPages';
+import { ParkedCopiesGroup } from './ParkedCopiesGroup';
 import type { LockScope } from '../../utils/pinLock';
 
 export function PrivacyPage({
@@ -146,6 +147,8 @@ export function PrivacyPage({
         />
         <NavRow icon="phone-portrait-outline" label="Delete data on this device" explain="Your account isn't affected" onPress={deleteDeviceData} danger />
       </Group>
+
+      <ParkedCopiesGroup />
 
       <Group title="Account" footer={LEGAL.accountDeletionUrl ? undefined : 'A web page for deletion requests will be linked here before launch.'}>
         {session ? (

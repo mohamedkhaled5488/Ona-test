@@ -13,8 +13,10 @@ import { LOCAL_DATA, normalizeField } from '../utils/localData';
 import { computeEntitlement } from '../utils/entitlement';
 import { canUpload, syncGate, type SyncGate } from '../utils/sync';
 import { resyncFeature } from '../utils/reminders';
+import { fingerprint, syncedCollections, toRecords } from './records';
 import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type RemoteRow, type SyncServer } from './engine';
-import { DemoModeError, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
+import { DemoModeError, dataGeneration, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
+import { CHOICE_NEEDED, prepareAccount, useAccountChoiceStore } from './signInFlow';
 import { withoutDemoItems } from '../utils/demoLeftovers';
 
 // A change is sent about 3 s after it's made (several quick changes go
@@ -24,6 +26,7 @@ import { withoutDemoItems } from '../utils/demoLeftovers';
 const AFTER_CHANGE_MS = 3_000;
 const MAX_WAIT_MS = 10_000;
 export const UPLOAD_STOPPED = 'Sync was turned off, so nothing more was sent.';
+export const DATA_CHANGED = 'The data on this phone changed during sync, so nothing more was sent.';
 const EVERY_MS = 5 * 60_000;
 
 export const localData: LocalData = {
@@ -42,7 +45,9 @@ export const localData: LocalData = {
 };
 
 // `client` is the app's own client; the backend tests pass one for the local stack.
-export function supabaseSyncServer(userId: string, client: SupabaseClient = supabase as unknown as SupabaseClient): SyncServer {
+// `generation`: the data a sync started with (dataGeneration()); if it
+// changes (a switch, a sign-in choice, sign-out), nothing more is sent.
+export function supabaseSyncServer(userId: string, client: SupabaseClient = supabase as unknown as SupabaseClient, generation?: number): SyncServer {
   return {
     pull: async (since, limit) => {
       if (isDemo()) throw new DemoModeError('Sync');
@@ -61,6 +66,7 @@ export function supabaseSyncServer(userId: string, client: SupabaseClient = supa
       // Checked again before every batch: turning sync off (or the trial
       // ending, a switch to the demo, or a different account signing in)
       // stops sending at once, even in the middle of a sync.
+      if (generation !== undefined && generation !== dataGeneration()) throw new Error(DATA_CHANGED);
       if (!uploadStillAllowed(userId)) throw new Error(UPLOAD_STOPPED);
       const { error } = await client
         .from('sync_records' as never)
@@ -97,12 +103,29 @@ export function currentSyncGate(): SyncGate {
     demo: isDemo() || isSwitchingDataSpace(),
     configured: isSupabaseConfigured,
     signedIn: !!session,
-    otherAccount: !!userId && !!owner && owner !== userId,
+    // Before the account check has run, a different owner isn't a block yet:
+    // syncNow() runs the check, which asks the person.
+    otherAccount: !!userId && !!owner && owner !== userId && useAccountChoiceStore.getState().readyFor === userId,
+    choosing: !!userId && useAccountChoiceStore.getState().pending?.userId === userId,
     consentStoreData: settings.consent.storeData,
     syncAccess: !!userId && computeEntitlement(snapshot, Date.now()).syncAccess,
     paused: useAccountStore.getState().syncPaused,
     offline: settings.devSimulateOffline,
   });
+}
+
+// Changes on this phone that the account doesn't have yet (what the last
+// sync left behind, compared item by item). Sign-out mentions them.
+export function unsentChanges(): number {
+  const { fingerprints, owner } = useSyncStore.getState();
+  let n = 0;
+  for (const c of syncedCollections()) {
+    const records = toRecords(c.key, localData.read(c.key));
+    const known = owner ? (fingerprints[c.key] ?? {}) : {};
+    for (const [id, data] of records) if (known[id] !== fingerprint(data)) n++;
+    for (const id of Object.keys(known)) if (!records.has(id)) n++;
+  }
+  return n;
 }
 
 let running: Promise<SyncOutcome> | null = null;
@@ -114,8 +137,23 @@ export function syncInFlight(): Promise<unknown> {
   return running ?? Promise.resolve();
 }
 
+// Before the first sync with an account: what to do with the data on this
+// phone (signInFlow.ts). Runs outside a sync, because bringing data back
+// waits for any running sync.
+let preparing: Promise<SyncOutcome> | null = null;
+
 export function syncNow(): Promise<SyncOutcome> {
   if (running) return running;
+  const userId = useAuthStore.getState().session?.user.id;
+  if (userId && !isDemo() && !isSwitchingDataSpace() && useAccountChoiceStore.getState().readyFor !== userId && isSupabaseConfigured) {
+    preparing ??= prepareAccount(userId)
+      .then((r) => (r === 'ready' ? syncNow() : { ok: false as const, message: CHOICE_NEEDED }))
+      .catch((e): SyncOutcome => ({ ok: false, message: `Couldn't sync: ${e instanceof Error ? e.message : String(e)}` }))
+      .finally(() => {
+        preparing = null;
+      });
+    return preparing;
+  }
   running = (async (): Promise<SyncOutcome> => {
     const gate = currentSyncGate();
     if (!gate.allowed) return { ok: false, message: gate.message };
@@ -124,7 +162,17 @@ export function syncNow(): Promise<SyncOutcome> {
     store.setStatus('syncing');
     try {
       const { owner, cursor, fingerprints } = useSyncStore.getState();
-      const result = await syncOnce(userId, supabaseSyncServer(userId), { owner, cursor, fingerprints }, localData, Date.now, { upload: canUpload(gate) });
+      const generation = dataGeneration();
+      // Writes stop too if the phone's data changed under this sync.
+      const local: LocalData = {
+        read: localData.read,
+        write: (c, v) => {
+          if (generation !== dataGeneration()) throw new Error(DATA_CHANGED);
+          localData.write(c, v);
+        },
+      };
+      const result = await syncOnce(userId, supabaseSyncServer(userId, undefined, generation), { owner, cursor, fingerprints }, local, Date.now, { upload: canUpload(gate) });
+      if (generation !== dataGeneration()) throw new Error(DATA_CHANGED);
       useSyncStore.getState().setSyncState(result.state);
       useSyncStore.getState().setStatus('idle');
       useAccountStore.getState().markSynced(new Date().toISOString());
@@ -175,7 +223,15 @@ export function startSync(): () => void {
 
   const unsubs = Object.values(LOCAL_DATA).map(({ store }) => (store as unknown as { subscribe: (fn: () => void) => () => void }).subscribe(onLocalChange));
   // Signing in, a fresh entitlement answer, or switching sync back on.
-  unsubs.push(useAuthStore.subscribe((s, p) => s.session?.user.id !== p.session?.user.id && quietly()));
+  // A new account (or none) means the account check runs again.
+  useAccountChoiceStore.setState({ pending: null, readyFor: null, busy: false });
+  unsubs.push(
+    useAuthStore.subscribe((s, p) => {
+      if (s.session?.user.id === p.session?.user.id) return;
+      useAccountChoiceStore.setState({ pending: null, readyFor: null });
+      quietly();
+    })
+  );
   unsubs.push(useEntitlementStore.subscribe((s, p) => s.snapshots !== p.snapshots && quietly()));
   unsubs.push(useAccountStore.subscribe((s, p) => s.syncPaused !== p.syncPaused && !s.syncPaused && quietly()));
   unsubs.push(useSettingsStore.subscribe((s, p) => s.consent.storeData !== p.consent.storeData && s.consent.storeData && quietly()));

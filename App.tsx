@@ -21,6 +21,7 @@ import { PaywallSheet } from './src/components/PaywallSheet';
 import { useRelockOnBackground } from './src/hooks/useScreenPrivacy';
 import { UiProvider } from './src/components/UiProvider';
 import { ConsentNotice } from './src/components/ConsentNotice';
+import { AccountChoiceSheet } from './src/components/AccountChoiceSheet';
 import { initNotifications, installExpoGoPushCrashGuard } from './src/utils/notifications';
 import { useAuthStore } from './src/store/useAuthStore';
 import { loadSkiaWebIfNeeded } from './src/utils/loadSkiaWeb';
@@ -186,6 +187,7 @@ export default function App() {
             </DemoFrame>
             <PaywallSheet />
             <ConsentNotice />
+            <AccountChoiceSheet />
             <AppLockOverlay />
           </View>
         </UiProvider>

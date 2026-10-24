@@ -36,7 +36,18 @@ export const isDemoKey = (key: string) => key.startsWith(DEMO_PREFIX) || key ===
 export function setDataSpace(space: DataSpace): void {
   if (space === current) return;
   current = space;
+  generation++;
   listeners.forEach((fn) => fn(space));
+}
+
+// Changes whenever the data in the stores stops being the data a sync
+// started with: a switch to or from the demo, or the phone's own data being
+// put aside, brought back or removed (sign-in choices, sign-out). A sync
+// checks it before every write and every upload batch and stops if it moved.
+let generation = 0;
+export const dataGeneration = (): number => generation;
+export function bumpDataGeneration(): void {
+  generation++;
 }
 
 // True while the data-space controller is loading a space: the stores may

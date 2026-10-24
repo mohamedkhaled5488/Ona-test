@@ -32,6 +32,10 @@ For each row, record Pass / Fail, the device, the build number (Settings → Abo
 | MAN-014 | Same item on both | Turn on airplane mode on both; edit the same task differently; turn it off on both | Both end up the same; nothing duplicated or lost (see AUD-05) | | | |
 | MAN-015 | Sign out | Sign out on B | Data stays on B; sync stops | | | |
 | MAN-016 | Delete account | Settings → Privacy, Security & Data → Delete my account | Asks clearly, deletes; the account can't sign in again | | | |
+| MAN-017 | Merge screen | On B, signed out, add 2 journal entries; sign in to the account from A | Asked with both counts; Merge puts everything on both phones; nothing synced before you answer | | | |
+| MAN-018 | Keep separate | As MAN-017, choose Keep this phone's data separate; later sign out with Remove | B shows the account's data; after sign-out, B's own 2 entries are back; they never reached the account | | | |
+| MAN-019 | Two people, one phone | Sign out of account 1 keeping data; sign in with account 2 | Asked about the other account's data; Keep separate (default) shows only account 2's data; Privacy → Other data on this phone lists account 1's copy | | | |
+| MAN-019b | Sign out with unsent changes | Airplane mode, add an entry, turn airplane mode off and sign out at once | Told 1 change isn't in the account and offered Sync now; Remove is only offered once everything is synced | | | |
 
 ## 3. Notifications and alarms
 

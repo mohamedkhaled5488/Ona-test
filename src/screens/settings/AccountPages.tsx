@@ -9,7 +9,9 @@ import { useAccountStore } from '../../store/useAccountStore';
 import { useEntitlement, useSyncGate } from '../../hooks/useEntitlement';
 import { getBillingClient } from '../../billing/billingClient';
 import { usePaywallStore } from '../../store/usePaywallStore';
-import { syncNow } from '../../sync/syncController';
+import { syncNow, unsentChanges } from '../../sync/syncController';
+import { SIGN_OUT_COPY, signOutAndChoose, signOutCopy, signOutFacts, useAccountChoiceStore } from '../../sync/signInFlow';
+import { canUpload } from '../../utils/sync';
 import { useConsentStatusStore } from '../../sync/accountConsent';
 import { useSyncStore } from '../../store/useSyncStore';
 import { useBackHandler } from '../../hooks/useBackHandler';
@@ -68,23 +70,45 @@ export function AccountPage(props: { go: Go; openSignIn: () => void }) {
 
 function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void }) {
   const session = useAuthStore((s) => s.session);
-  const signOut = useAuthStore((s) => s.signOut);
   const entitlement = useEntitlement();
   const gate = useSyncGate();
   const lastSyncedAt = useAccountStore((s) => s.lastSyncedAt);
   const syncPaused = useAccountStore((s) => s.syncPaused);
   const setSyncPaused = useAccountStore((s) => s.setSyncPaused);
   const { showDialog, showToast } = useUi();
+  const choicePending = useAccountChoiceStore((s) => !!s.pending);
 
-  const confirmSignOut = () =>
-    showDialog({
-      title: 'Sign out?',
-      message: 'Everything stays on this device. Sync stops until you sign in again.',
-      actions: [
-        { label: 'Cancel', style: 'cancel' },
-        { label: 'Sign out', style: 'destructive', onPress: () => void signOut() },
-      ],
-    });
+  // Design 3.4: unsent changes first, then keep or remove this phone's copy.
+  const confirmSignOut = () => {
+    const unsent = unsentChanges();
+    const chooseKeepOrRemove = async () => {
+      const left = unsentChanges();
+      const facts = await signOutFacts(left, gate.allowed && useSyncStore.getState().owner === session?.user.id);
+      const copy = signOutCopy(facts);
+      showDialog({
+        title: copy.title,
+        message: copy.message,
+        actions: [
+          { label: 'Cancel', style: 'cancel' },
+          ...(facts.canRemove ? [{ label: copy.remove, style: 'destructive' as const, onPress: () => void signOutAndChoose(false).then(() => showToast({ message: copy.removedToast })) }] : []),
+          { label: copy.keep, style: 'default', onPress: () => void signOutAndChoose(true) },
+        ],
+      });
+    };
+    if (unsent > 0 && canUpload(gate)) {
+      showDialog({
+        title: SIGN_OUT_COPY.unsentTitle(unsent),
+        message: SIGN_OUT_COPY.unsentMessage,
+        actions: [
+          { label: 'Cancel', style: 'cancel' },
+          { label: SIGN_OUT_COPY.signOutAnyway, style: 'default', onPress: () => void chooseKeepOrRemove() },
+          { label: SIGN_OUT_COPY.syncFirst, style: 'default', onPress: () => void syncNow().then((r) => (r.ok ? chooseKeepOrRemove() : showToast({ message: r.message }))) },
+        ],
+      });
+      return;
+    }
+    void chooseKeepOrRemove();
+  };
 
   // There is no sync engine in this build yet, so "Sync now" says so plainly
   // instead of pretending.
@@ -143,7 +167,7 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
         <InfoRow label="Email" value={session.user.email ?? ''} />
         <NavRow icon="mail-outline" label="Change email" onPress={() => go('changeEmail')} />
         <NavRow icon="key-outline" label="Change password" onPress={() => go('changePassword')} />
-        <NavRow icon="log-out-outline" label="Sign out" explain="Keeps everything on this device" onPress={confirmSignOut} />
+        <NavRow icon="log-out-outline" label="Sign out" explain="You choose whether this phone keeps your data" onPress={confirmSignOut} />
       </Group>
 
       <Group title="Plan">
@@ -162,6 +186,12 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
           }
         />
       </Group>
+
+      {choicePending && (
+        <Group title="Data on this phone">
+          <NavRow icon="git-merge-outline" label="Choose what to do with the data on this phone" explain="Nothing syncs until you choose" onPress={() => useAccountChoiceStore.setState({ hidden: false })} />
+        </Group>
+      )}
 
       <Group title="Sync" footer={consentProblem ?? gate.message}>
         <InfoRow label="Last synced" value={formatSyncedAt(lastSyncedAt)} />
