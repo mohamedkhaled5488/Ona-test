@@ -1,3 +1,6 @@
+import { usePlusAction } from '../components/PlusGate';
+import { PlusGate } from '../components/PlusGate';
+import { useCapGuard } from '../components/PlusGate';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -198,6 +201,7 @@ function MyBooksListStage({
   const entries = useReadingListStore((s) => s.entries);
   const quotes = useReadingListStore((s) => s.quotes);
   const [manualOpen, setManualOpen] = useState(false);
+  const guard = useCapGuard(); // Free caps (config/plans.ts); what exists stays usable
 
   const resurfaced = useMemo(() => weeklyResurfacedQuote(quotes, todayISO()), [quotes]);
   const resurfacedEntry = resurfaced ? entries.find((e) => e.id === resurfaced.entryId) : undefined;
@@ -218,14 +222,17 @@ function MyBooksListStage({
       </View>
       <Caption style={styles.subtitle}>Quotes, reading sessions and progress for the books you're actually reading.</Caption>
 
+      {/* Plus. Every quote always stays in its book. */}
       {resurfaced && resurfacedEntry && (
-        <Pressable onPress={() => onOpenFolder(resurfacedEntry.id)}>
-          <Card style={styles.resurfaceCard}>
-            <Eyebrow style={{ color: accent }}>Worth revisiting</Eyebrow>
-            <Body style={styles.resurfaceText} numberOfLines={3}>"{resurfaced.text || '(a photo you saved)'}"</Body>
-            <Caption>{resurfacedEntry.book.title}</Caption>
-          </Card>
-        </Pressable>
+        <PlusGate feature="bookResurfacing">
+          <Pressable onPress={() => onOpenFolder(resurfacedEntry.id)}>
+            <Card style={styles.resurfaceCard}>
+              <Eyebrow style={{ color: accent }}>Worth revisiting</Eyebrow>
+              <Body style={styles.resurfaceText} numberOfLines={3}>"{resurfaced.text || '(a photo you saved)'}"</Body>
+              <Caption>{resurfacedEntry.book.title}</Caption>
+            </Card>
+          </Pressable>
+        </PlusGate>
       )}
 
       {entries.length === 0 && (
@@ -261,7 +268,7 @@ function MyBooksListStage({
         );
       })}
 
-      <PrimaryButton label="Add a book" variant="outline" onPress={() => setManualOpen(true)} style={styles.manualAddButton} />
+      <PrimaryButton label="Add a book" variant="outline" onPress={() => guard('activeBooks', () => setManualOpen(true))} style={styles.manualAddButton} />
 
       <ManualAddSheet visible={manualOpen} onClose={() => setManualOpen(false)} onCreated={onOpenFolder} />
     </>
@@ -509,6 +516,7 @@ function FolderStage({
   onLogFeeling: (entryId: string) => void;
   onDirtyChange: (dirty: boolean, save: () => void) => void;
 }) {
+  const plusAction = usePlusAction(); // PDF exports are Plus; plain export stays in Essentials mode
   const { requestDelete, showToast, showDialog } = useUi();
   const entries = useReadingListStore((s) => s.entries);
   const quotes = useReadingListStore((s) => s.quotes);
@@ -1044,10 +1052,10 @@ function FolderStage({
               label="Export as PDF"
               variant="outline"
               style={styles.exportButton}
-              onPress={async () => {
+              onPress={plusAction('pdfExports', async () => {
                 const result = await exportQuotesAsPdf(entry, quotes.filter((q) => q.entryId === entryId));
                 if (!result.ok && result.reason) showToast({ message: result.reason });
-              }}
+              })}
             />
           </View>
         </Card>

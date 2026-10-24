@@ -1,3 +1,4 @@
+import { PlusGate } from '../components/PlusGate';
 import React, { useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -97,12 +98,15 @@ export function JournalingScreen({ navigation }: Props) {
         </View>
       </Pressable>
 
+      {/* Plus. The entry itself always stays in your journal below. */}
       {onThisDay && (
-        <Card style={styles.onThisDayCard}>
-          <Eyebrow>On this day</Eyebrow>
-          <Caption>{onThisDay.date}</Caption>
-          <Body numberOfLines={3}>{onThisDay.text}</Body>
-        </Card>
+        <PlusGate feature="journalOnThisDay">
+          <Card style={styles.onThisDayCard}>
+            <Eyebrow>On this day</Eyebrow>
+            <Caption>{onThisDay.date}</Caption>
+            <Body numberOfLines={3}>{onThisDay.text}</Body>
+          </Card>
+        </PlusGate>
       )}
 
       <TextInput

@@ -1,6 +1,7 @@
 // The words and the one button for each plan state on Plan & usage. Plain
 // language; only a payment problem uses a warning tone.
 import type { Entitlement } from '../utils/entitlement';
+import { ESSENTIALS_NAME, PLUS_NAME, STATE_COPY, TRIAL_NAME } from '../config/plans';
 
 export type StateAction = 'subscribe' | 'manage' | null;
 
@@ -17,32 +18,36 @@ function day(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+// Titles are the one sentence per mode (config/plans.ts STATE_COPY); the
+// lines say what's specific to this state.
 export function stateCard(e: Entitlement): StateCardContent {
+  const essentials = STATE_COPY.essentials;
+  const plus = STATE_COPY.plus;
   switch (e.state) {
     case 'free':
-      return { title: 'Free', lines: ['Every section works on this device, for free.', 'Sync across your devices is the paid part.'], tone: 'calm', action: 'subscribe' };
+      return { title: essentials, lines: ['Every section works on this phone.', `${PLUS_NAME} adds sync across your devices and deeper insight.`], tone: 'calm', action: 'subscribe' };
     case 'trial':
       return {
-        title: `Trial, ${e.trialDaysLeft} ${e.trialDaysLeft === 1 ? 'day' : 'days'} left`,
-        lines: [`Sync is on until ${day(e.trialEndsAt)}.`, 'When the trial ends, nothing is deleted. Sync just pauses.'],
+        title: STATE_COPY.trial(e.trialDaysLeft ?? 0),
+        lines: [`Sync is on until ${day(e.trialEndsAt)}.`, `After that, Ona carries on in ${ESSENTIALS_NAME}. Nothing is deleted.`],
         tone: 'calm',
         action: 'subscribe',
       };
     case 'trialEnded':
-      return { title: 'Trial ended', lines: ['Nothing was deleted. Sync is paused.', 'Subscribe any time and syncing picks up where it left off.'], tone: 'calm', action: 'subscribe' };
+      return { title: essentials, lines: [`Your ${TRIAL_NAME} is over. Nothing was deleted, and sync is paused.`, `Choose ${PLUS_NAME} any time and syncing picks up where it left off.`], tone: 'calm', action: 'subscribe' };
     case 'subscribed':
-      return { title: 'Subscribed', lines: [`Renews on ${day(e.renewsAt)}.`], tone: 'calm', action: 'manage', actionLabel: 'Manage subscription' };
+      return { title: plus, lines: [`Renews on ${day(e.renewsAt)}.`], tone: 'calm', action: 'manage', actionLabel: 'Manage subscription' };
     case 'canceledActive':
       return {
-        title: 'Canceled, still active',
-        lines: [`Sync stays on until ${day(e.endsAt)}, then pauses. Nothing is deleted.`],
+        title: plus,
+        lines: [`Canceled: ${PLUS_NAME} stays on until ${day(e.endsAt)}, then Ona carries on in ${ESSENTIALS_NAME}. Nothing is deleted.`],
         tone: 'calm',
         action: 'manage',
         actionLabel: 'Resubscribe in Google Play',
       };
     case 'grace':
       return {
-        title: 'Payment problem',
+        title: plus,
         lines: ["Google Play couldn't take your last payment. Sync is still on while it retries.", 'Update your payment method to keep it that way.'],
         tone: 'warn',
         action: 'manage',
@@ -50,7 +55,7 @@ export function stateCard(e: Entitlement): StateCardContent {
       };
     case 'onHold':
       return {
-        title: 'On hold',
+        title: essentials,
         lines: ['Sync is paused until the payment is sorted out. Nothing was deleted.', 'Update your payment method in Google Play and sync resumes by itself.'],
         tone: 'calm',
         action: 'manage',
@@ -58,10 +63,10 @@ export function stateCard(e: Entitlement): StateCardContent {
       };
     case 'expired':
       return e.refunded
-        ? { title: 'Refunded', lines: ['Your purchase was refunded. Nothing was deleted. Sync is paused.', 'Subscribe again any time and syncing picks up where it left off.'], tone: 'calm', action: 'subscribe' }
-        : { title: 'Subscription ended', lines: ['Nothing was deleted. Sync is paused.', 'Subscribe again any time and syncing picks up where it left off.'], tone: 'calm', action: 'subscribe' };
+        ? { title: essentials, lines: ['Your purchase was refunded. Nothing was deleted, and sync is paused.', `Choose ${PLUS_NAME} again any time and syncing picks up where it left off.`], tone: 'calm', action: 'subscribe' }
+        : { title: essentials, lines: ['Your subscription ended. Nothing was deleted, and sync is paused.', `Choose ${PLUS_NAME} again any time and syncing picks up where it left off.`], tone: 'calm', action: 'subscribe' };
     case 'lifetime':
-      return { title: 'Lifetime', lines: ['Sync is yours for good. Thank you for supporting Ona.'], tone: 'calm', action: null };
+      return { title: plus, lines: ['Yours for good. Thank you for supporting Ona.'], tone: 'calm', action: null };
   }
 }
 

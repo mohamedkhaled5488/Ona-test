@@ -1,3 +1,4 @@
+import { useCapGuard } from '../components/PlusGate';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -274,6 +275,7 @@ function AddHabitSheet({ visible, onClose, onCreated }: { visible: boolean; onCl
 
 // ---------------------------------------------------------------------------
 function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void }) {
+  const guard = useCapGuard(); // Free caps (config/plans.ts); what exists stays usable
   const habits = useHabitsStore((s) => s.habits);
   const checkIns = useHabitsStore((s) => s.checkIns);
   const [addOpen, setAddOpen] = useState(false);
@@ -330,7 +332,7 @@ function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void
         </View>
       )}
 
-      <PrimaryButton label="Build a new habit" onPress={() => setAddOpen(true)} style={styles.addButton} />
+      <PrimaryButton label="Build a new habit" onPress={() => guard('buildHabits', () => setAddOpen(true))} style={styles.addButton} />
       <AddHabitSheet visible={addOpen} onClose={() => setAddOpen(false)} onCreated={onOpenHabit} />
     </>
   );

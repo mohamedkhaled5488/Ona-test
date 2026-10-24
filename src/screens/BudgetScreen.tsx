@@ -1,3 +1,5 @@
+import { usePlusAction } from '../components/PlusGate';
+import { useCapGuard } from '../components/PlusGate';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -140,6 +142,7 @@ function AddBudgetSheet({ visible, onClose, onCreated }: { visible: boolean; onC
 
 // ---------------------------------------------------------------------------
 function OverviewStage({ onOpenBudget }: { onOpenBudget: (budgetId: string) => void }) {
+  const guard = useCapGuard(); // Free caps (config/plans.ts); what exists stays usable
   const warnAt = useSettingsStore((s) => s.budgetWarnAt);
   const budgets = useBudgetStore((s) => s.budgets);
   const entries = useBudgetStore((s) => s.entries);
@@ -196,7 +199,7 @@ function OverviewStage({ onOpenBudget }: { onOpenBudget: (budgetId: string) => v
         })}
       </View>
 
-      <PrimaryButton label="New budget" onPress={() => setAddOpen(true)} style={styles.addButton} />
+      <PrimaryButton label="New budget" onPress={() => guard('budgets', () => setAddOpen(true))} style={styles.addButton} />
       <AddBudgetSheet visible={addOpen} onClose={() => setAddOpen(false)} onCreated={onOpenBudget} />
     </>
   );
@@ -313,6 +316,7 @@ function LogEntrySheet({ budget, visible, onClose, onSave }: { budget: Budget; v
 
 // ---------------------------------------------------------------------------
 function FolderStage({ budgetId, onBack, onOpenEntry }: { budgetId: string; onBack: () => void; onOpenEntry: (entryId: string) => void }) {
+  const plusAction = usePlusAction(); // PDF exports are Plus; plain export stays in Essentials mode
   const warnAt = useSettingsStore((s) => s.budgetWarnAt);
   const { requestDelete, showToast } = useUi();
   const budgets = useBudgetStore((s) => s.budgets);
@@ -501,10 +505,10 @@ function FolderStage({ budgetId, onBack, onOpenEntry }: { budgetId: string; onBa
               label="Export as PDF"
               variant="outline"
               style={styles.exportButton}
-              onPress={async () => {
+              onPress={plusAction('pdfExports', async () => {
                 const result = await exportBudgetAsPdf(budget, budgetEntries, total);
                 if (!result.ok && result.reason) showToast({ message: result.reason });
-              }}
+              })}
             />
           </View>
         </Card>

@@ -14,7 +14,7 @@ import { useConsentStatusStore } from '../../sync/accountConsent';
 import { useSyncStore } from '../../store/useSyncStore';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import { PLAY_SUBSCRIPTIONS_URL, TRIAL_DAYS } from '../../config/plans';
+import { ESSENTIALS_NAME, PLAY_SUBSCRIPTIONS_URL, PLUS_NAME, TRIAL_DAYS, TRIAL_NAME } from '../../config/plans';
 import type { Entitlement } from '../../utils/entitlement';
 import { formatDisplayDate, formatTimeOfDay } from '../../utils/date';
 import { colors, fonts, radii, spacing } from '../../theme';
@@ -29,24 +29,18 @@ type Go = (page: SettingsPage) => void;
 // Short plan name for rows and the state card.
 export function planLabel(e: Entitlement): string {
   switch (e.state) {
-    case 'free':
-      return 'Free';
     case 'trial':
-      return `Trial, ${e.trialDaysLeft} ${e.trialDaysLeft === 1 ? 'day' : 'days'} left`;
-    case 'trialEnded':
-      return 'Free (trial ended)';
+      return `${TRIAL_NAME}, ${e.trialDaysLeft} ${e.trialDaysLeft === 1 ? 'day' : 'days'} left`;
     case 'subscribed':
-      return 'Subscribed';
     case 'canceledActive':
-      return 'Canceled, still active';
     case 'grace':
-      return 'Payment problem';
-    case 'onHold':
-      return 'On hold';
-    case 'expired':
-      return 'Free (subscription ended)';
     case 'lifetime':
-      return 'Lifetime';
+      return PLUS_NAME;
+    case 'free':
+    case 'trialEnded':
+    case 'onHold':
+    case 'expired':
+      return ESSENTIALS_NAME;
   }
 }
 
@@ -137,7 +131,7 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
           </View>
         </Group>
         <Group title="Plan">
-          <NavRow icon="ribbon-outline" label="Plan & usage" explain="What's included, and how much of the free plan you use" value={planLabel(entitlement)} onPress={() => go('plan')} />
+          <NavRow icon="ribbon-outline" label="Plan & usage" explain="What's included in each mode, and what you use" value={planLabel(entitlement)} onPress={() => go('plan')} />
         </Group>
       </>
     );
@@ -153,7 +147,7 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
       </Group>
 
       <Group title="Plan">
-        <NavRow icon="ribbon-outline" label="Plan & usage" explain="What's included, and how much of the free plan you use" value={planLabel(entitlement)} onPress={() => go('plan')} />
+        <NavRow icon="ribbon-outline" label="Plan & usage" explain="What's included in each mode, and what you use" value={planLabel(entitlement)} onPress={() => go('plan')} />
         <NavRow icon="card-outline" label="Manage subscription" explain="Opens Google Play's subscriptions page" external onPress={() => void Linking.openURL(PLAY_SUBSCRIPTIONS_URL)} />
         <NavRow
           icon="refresh-outline"

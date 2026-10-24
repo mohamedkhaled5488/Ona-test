@@ -1,3 +1,5 @@
+import { PlusLockCard } from '../components/PlusGate';
+import { usePlus } from '../plans/access';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,6 +94,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   const triggers = relapseReasonCounts(tracks, habitId);
   const timing = quitTiming(feelingEntries, tracks, habitId);
   const trend = resistedUrgeTrend(feelingEntries, tracks, habitId, today);
+  const plus = usePlus();
   const hasInsights = approaches.length > 0 || triggers.length > 0 || timing || trend.direction;
 
   // --- 5. Full log ---
@@ -180,12 +183,14 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
       </Card>
 
       <DashboardSectionLabel>Insights</DashboardSectionLabel>
-      {!hasInsights && (
+      {/* Plus: the patterns. The journey, every track, the log and export stay in Essentials mode. */}
+      {!plus && <PlusLockCard feature="quitAnalysisFull" />}
+      {plus && !hasInsights && (
         <Caption style={styles.emptyText}>
           Patterns need at least 3 matching moments before they're worth calling a pattern — they'll show up here as your journey goes on.
         </Caption>
       )}
-      {approaches.length > 0 && (
+      {plus && approaches.length > 0 && (
         <InsightCard
           kind="How each approach went"
           accent={colors.amber}
@@ -193,7 +198,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
           evidence="How many times the urge passed after choosing each approach, out of the times you chose it."
         />
       )}
-      {triggers.length > 0 && (
+      {plus && triggers.length > 0 && (
         <InsightCard
           kind="What was going on"
           accent={SOFT_MISSED}
@@ -201,10 +206,10 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
           evidence="How many times each reason was tagged when a try ended. A try can have more than one."
         />
       )}
-      {timing && (
+      {plus && timing && (
         <InsightCard kind="Time of day" accent={accent} headline={timing.lines[0]} evidence={`Based on ${timing.n} logged ${timing.n === 1 ? 'moment' : 'moments'} (urges resisted and slips).`} />
       )}
-      {trend.direction && trend.currentRatio != null && (
+      {plus && trend.direction && trend.currentRatio != null && (
         <InsightCard
           kind="Resisted vs. went back"
           accent={accent}

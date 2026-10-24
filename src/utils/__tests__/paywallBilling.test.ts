@@ -184,8 +184,13 @@ describe('billing states each have a defined message', () => {
     const refundedSnap: EntitlementSnapshot = { ...forcedSnapshot('free', T), subscription: { status: 'refunded', expiresAt: null, isLifetime: false, willRenew: false } };
     const refunded = computeEntitlement(refundedSnap, T);
     expect(refunded).toMatchObject({ state: 'expired', refunded: true, syncAccess: false });
-    expect(stateCard(refunded).title).toBe('Refunded');
-    expect(stateCard(computeEntitlement(forcedSnapshot('expired', T), T)).title).toBe('Subscription ended');
+    // Named by mode since 2026-10-24 (Essentials mode); the line says it was refunded.
+    expect(stateCard(refunded).title).toBe('Essentials mode. Your data is safe on this phone.');
+    expect(stateCard(refunded).lines[0]).toMatch(/refunded/);
+    // A normal end says so in its line, and reads differently from a refund.
+    const ended = stateCard(computeEntitlement(forcedSnapshot('expired', T), T));
+    expect(ended.lines[0]).toMatch(/subscription ended/i);
+    expect(ended.lines[0]).not.toBe(stateCard(refunded).lines[0]);
   });
 
   test('grace keeps access with a soft payment note; on hold explains the fix', () => {

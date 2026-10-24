@@ -14,6 +14,9 @@ export const FEATURES: Record<FeatureFlagId, boolean> = {
   lifetimeEnabled: false,
   foundersEnabled: false,
   redeemCodeEnabled: false,
+  // Plan Builder's "Review reminders": hidden until reminders are really
+  // scheduled (AUD-16). The plan's stored interval is kept.
+  planReviewReminders: false,
 };
 
 export const FEATURE_LABELS: Record<FeatureFlagId, string> = {
@@ -22,6 +25,7 @@ export const FEATURE_LABELS: Record<FeatureFlagId, string> = {
   lifetimeEnabled: 'Lifetime plan',
   foundersEnabled: 'Founders price',
   redeemCodeEnabled: 'Redeem code button',
+  planReviewReminders: 'Plan review reminders',
 };
 
 export function useFeature(flag: FeatureFlagId): boolean {

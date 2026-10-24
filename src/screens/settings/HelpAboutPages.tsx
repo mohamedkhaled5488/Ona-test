@@ -232,14 +232,14 @@ export function DataSafetyPage() {
 // ---------------------------------------------------------------------------
 const FORCED: { id: EntitlementState | 'off'; label: string }[] = [
   { id: 'off', label: 'Real' },
-  { id: 'free', label: 'Free' },
-  { id: 'trial', label: 'Trial' },
-  { id: 'trialEnded', label: 'Trial ended' },
-  { id: 'subscribed', label: 'Subscribed' },
+  { id: 'free', label: 'Essentials mode (no account)' },
+  { id: 'trial', label: 'Plus trial' },
+  { id: 'trialEnded', label: 'Essentials mode (trial over)' },
+  { id: 'subscribed', label: 'Plus (subscription)' },
   { id: 'canceledActive', label: 'Canceled' },
   { id: 'grace', label: 'Grace' },
   { id: 'onHold', label: 'On hold' },
-  { id: 'expired', label: 'Expired' },
+  { id: 'expired', label: 'Essentials mode (subscription ended)' },
   { id: 'lifetime', label: 'Lifetime' },
 ];
 

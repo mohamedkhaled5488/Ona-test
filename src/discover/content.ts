@@ -9,6 +9,7 @@
 // "flowchart" (Plan Builder has a list and a map view), Songwriting and Mind
 // Games (held back from this launch's navigation).
 import type { RootStackParamList } from '../navigation/types';
+import { ESSENTIALS_NAME, PLUS_NAME, TRIAL_DAYS, TRIAL_NAME } from '../config/plans';
 
 export type TourGroupId = 'welcome' | 'plan' | 'reflect' | 'grow' | 'learn' | 'recap' | 'data' | 'finish';
 
@@ -269,7 +270,7 @@ export const TOUR: TourSection[] = [
       {
         key: 'data-1',
         title: 'Your data, your choice',
-        body: 'Ona works offline. Sign in to sync across devices, with a free trial and then an optional plan. Export or delete your data any time.',
+        body: `Ona works offline. Sign in for a ${TRIAL_DAYS}-day ${TRIAL_NAME} with sync and every insight; after it, Ona carries on in ${ESSENTIALS_NAME}, or choose ${PLUS_NAME}. Export or delete your data any time.`,
         feature: 'dataControl',
         mock: 'data',
       },

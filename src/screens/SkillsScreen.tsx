@@ -1,3 +1,5 @@
+import { usePlusAction } from '../components/PlusGate';
+import { useCapGuard } from '../components/PlusGate';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -166,6 +168,7 @@ function AddSkillSheet({ visible, onClose, onCreated }: { visible: boolean; onCl
 
 // ---------------------------------------------------------------------------
 function OverviewStage({ onOpenSkill }: { onOpenSkill: (skillId: string, setUp?: boolean) => void }) {
+  const guard = useCapGuard(); // Free caps (config/plans.ts); what exists stays usable
   const skills = useSkillsStore((s) => s.skills);
   const sessions = useSkillsStore((s) => s.sessions);
   const [addOpen, setAddOpen] = useState(false);
@@ -203,7 +206,7 @@ function OverviewStage({ onOpenSkill }: { onOpenSkill: (skillId: string, setUp?:
 
       <View style={styles.skillList}>{active.map(renderCard)}</View>
 
-      <PrimaryButton label="Add a skill" onPress={() => setAddOpen(true)} style={styles.addButton} />
+      <PrimaryButton label="Add a skill" onPress={() => guard('skills', () => setAddOpen(true))} style={styles.addButton} />
 
       {archived.length > 0 && (
         <>
@@ -533,6 +536,7 @@ function FolderStage({
   onOpenAnalysis: () => void;
   onOpenJourney: () => void;
 }) {
+  const plusAction = usePlusAction(); // PDF exports are Plus; plain export stays in Essentials mode
   const { requestDelete, showToast } = useUi();
   const skills = useSkillsStore((s) => s.skills);
   const sessions = useSkillsStore((s) => s.sessions);
@@ -753,7 +757,7 @@ function FolderStage({
             </Card>
           </Pressable>
         )}
-        <Pressable onPress={onOpenJourney} style={styles.flex}>
+        <Pressable onPress={plusAction('skillJourney', onOpenJourney)} style={styles.flex}>
           <Card style={styles.entryCard}>
             <Ionicons name="git-commit-outline" size={20} color={color} />
             <Body>Journey</Body>
@@ -876,10 +880,10 @@ function FolderStage({
               label="Export as PDF"
               variant="outline"
               style={styles.flex}
-              onPress={async () => {
+              onPress={plusAction('pdfExports', async () => {
                 const result = await exportSkillPortfolioAsPdf(skill, mine);
                 if (!result.ok && result.reason) showToast({ message: result.reason });
-              }}
+              })}
             />
           </View>
         </Card>

@@ -138,7 +138,8 @@ describe('plan states', () => {
       expect(card.lines.length).toBeGreaterThan(0);
       expect(card.tone).toBe(s === 'grace' ? 'warn' : 'calm');
     }
-    expect(stateCard(e('trial')).title).toBe('Trial, 12 days left');
+    // Named by mode since 2026-10-24.
+    expect(stateCard(e('trial')).title).toBe('Plus trial, 12 days left. All features on.');
     expect(stateCard(e('onHold')).actionLabel).toMatch(/payment/i);
   });
 

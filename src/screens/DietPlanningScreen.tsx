@@ -1,3 +1,4 @@
+import { useMealDateGuard } from '../components/PlusGate';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -225,6 +226,7 @@ function FavoritesModal({ visible, onClose, currency }: { visible: boolean; onCl
 }
 
 export function DietPlanningScreen() {
+  const guardMealDate = useMealDateGuard(); // Free: plan up to next week; past weeks stay editable
   const plannedMeals = useDietStore((s) => s.plannedMeals);
   const favorites = useDietStore((s) => s.favorites);
   const groceryItems = useDietStore((s) => s.groceryItems);
@@ -373,7 +375,7 @@ export function DietPlanningScreen() {
                       </Card>
                     </Pressable>
                   ))}
-                  <Pressable style={styles.addSlotButton} onPress={() => setFormState({ slot })}>
+                  <Pressable style={styles.addSlotButton} onPress={() => guardMealDate(selectedDate, () => setFormState({ slot }))}>
                     <Ionicons name="add" size={16} color={colors.teal} />
                     <Body style={styles.addSlotText}> Add {mealSlotLabels[slot].toLowerCase()}</Body>
                   </Pressable>

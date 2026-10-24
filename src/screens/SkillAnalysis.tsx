@@ -1,3 +1,5 @@
+import { usePlus } from '../plans/access';
+import { usePlusAction } from '../components/PlusGate';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -79,6 +81,7 @@ function Toggle<T extends string>({ value, options, onChange, color }: { value: 
 // what went together with the stretches of more progress — correlational, gated by the
 // thresholds in config/skillAnalysis.ts.
 export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId: string; onBack: () => void; onOpenSession: (sessionId: string) => void }) {
+  const plusAction = usePlusAction(); // PDF exports are Plus; plain export stays in Essentials mode
   const skills = useSkillsStore((s) => s.skills);
   const allSessions = useSkillsStore((s) => s.sessions);
   const feelings = useFeelingsStore((s) => s.entries);
@@ -118,7 +121,9 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
   const metric = primaryMetric(skill);
   const series = metric ? metricSeries(allSessions, skillId, metric.id) : [];
   const trend = linearTrend(series);
-  const plateaus = metric ? plateauPeriods(series, metric.direction) : [];
+  // Plateau bands are part of the skill journey (Plus); the progress chart itself stays.
+  const plusHere = usePlus();
+  const plateaus = metric && plusHere ? plateauPeriods(series, metric.direction) : [];
   const values = series.map((p) => p.value);
   const vMin = values.length ? Math.min(...values) : 0;
   const vMax = values.length ? Math.max(...values) : 1;
@@ -484,10 +489,10 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
                 label="Export as PDF"
                 variant="outline"
                 style={styles.flex}
-                onPress={async () => {
+                onPress={plusAction('pdfExports', async () => {
                   const result = await exportSkillPortfolioAsPdf(skill, sessions);
                   if (!result.ok && result.reason) showToast({ message: result.reason });
-                }}
+                })}
               />
             </View>
           </Card>

@@ -1,3 +1,4 @@
+import { useFeature } from '../config/features';
 import React, { useState } from 'react';
 import { Pressable, Share, Switch, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -155,6 +156,7 @@ export function PlanDetailScreen({ route, navigation }: Props) {
   const toggleStepDone = usePlanStore((s) => s.toggleStepDone);
   const setPlanTags = usePlanStore((s) => s.setPlanTags);
   const setReviewInterval = usePlanStore((s) => s.setReviewInterval);
+  const reviewRemindersBuilt = useFeature('planReviewReminders');
   const archivePlan = usePlanStore((s) => s.archivePlan);
   const reopenPlan = usePlanStore((s) => s.reopenPlan);
   const saveAsTemplate = usePlanStore((s) => s.saveAsTemplate);
@@ -329,37 +331,40 @@ export function PlanDetailScreen({ route, navigation }: Props) {
         />
       </Card>
 
-      <Card style={styles.metaCard}>
-        <View style={styles.reviewRow}>
-          <View style={styles.reviewLabelWrap}>
-            <Eyebrow>Review reminders</Eyebrow>
-            <Caption>Nudges you to revisit this plan periodically</Caption>
-          </View>
-          <Switch
-            value={reviewOn}
-            onValueChange={(v) => {
-              setReviewOn(v);
-              setReviewInterval(planId, v ? Number(reviewDays) || 14 : undefined);
-            }}
-            trackColor={{ true: colors.teal, false: colors.line }}
-          />
-        </View>
-        {reviewOn && (
-          <View style={styles.reviewIntervalRow}>
-            <Caption>Every</Caption>
-            <TextInput
-              value={reviewDays}
-              onChangeText={(v) => {
-                setReviewDays(v);
-                setReviewInterval(planId, parseWholeNumberInput(v) || 14);
+      {/* Hidden until review reminders are really scheduled (AUD-16). */}
+      {reviewRemindersBuilt && (
+        <Card style={styles.metaCard}>
+          <View style={styles.reviewRow}>
+            <View style={styles.reviewLabelWrap}>
+              <Eyebrow>Review reminders</Eyebrow>
+              <Caption>Nudges you to revisit this plan periodically</Caption>
+            </View>
+            <Switch
+              value={reviewOn}
+              onValueChange={(v) => {
+                setReviewOn(v);
+                setReviewInterval(planId, v ? Number(reviewDays) || 14 : undefined);
               }}
-              keyboardType="number-pad"
-              style={styles.reviewDaysInput}
+              trackColor={{ true: colors.teal, false: colors.line }}
             />
-            <Caption>days</Caption>
           </View>
-        )}
-      </Card>
+          {reviewOn && (
+            <View style={styles.reviewIntervalRow}>
+              <Caption>Every</Caption>
+              <TextInput
+                value={reviewDays}
+                onChangeText={(v) => {
+                  setReviewDays(v);
+                  setReviewInterval(planId, parseWholeNumberInput(v) || 14);
+                }}
+                keyboardType="number-pad"
+                style={styles.reviewDaysInput}
+              />
+              <Caption>days</Caption>
+            </View>
+          )}
+        </Card>
+      )}
 
       {viewMode === 'list' ? (
         <View style={styles.stepsSection}>

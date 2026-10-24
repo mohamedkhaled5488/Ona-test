@@ -1,3 +1,5 @@
+import { PlusLockCard, useExplainPlus } from '../components/PlusGate';
+import { usePlus } from '../plans/access';
 import { logFeeling } from '../feelings/logFeeling';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, PanResponder, Pressable, View } from 'react-native';
@@ -954,6 +956,8 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
   const [dimension, setDimension] = useState<TrendDimension>('pleasantness');
   const [smoothing, setSmoothing] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
+  const plus = usePlus();
+  const explainPlus = useExplainPlus();
   const [isolatedZone, setIsolatedZone] = useState<FeelingZone | null>(null);
   const [reasonFilterZone, setReasonFilterZone] = useState<FeelingZone | null>(null);
   const [reasonFilter, setReasonFilter] = useState<string | null>(null);
@@ -1161,7 +1165,7 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
         <Pressable onPress={() => setSmoothing((v) => !v)} style={[styles.toggleChip, smoothing && styles.toggleChipActive]}>
           <Caption style={smoothing ? styles.wordChipTextActive : undefined}>Smooth</Caption>
         </Pressable>
-        <Pressable onPress={() => setCompareMode((v) => !v)} style={[styles.toggleChip, compareMode && styles.toggleChipActive]}>
+        <Pressable onPress={() => (plus ? setCompareMode((v) => !v) : explainPlus('feelingsCompare'))} style={[styles.toggleChip, compareMode && styles.toggleChipActive]}>
           <Caption style={compareMode ? styles.wordChipTextActive : undefined}>Compare to last period</Caption>
         </Pressable>
       </View>
@@ -1505,6 +1509,7 @@ function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (
   const [showAllImpact, setShowAllImpact] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
   const [group, setGroup] = useState<SourceGroup>('all');
+  const plus = usePlus();
   // "All" by default, so a short history isn't split into empty windows.
   const [view, setView] = useState<AnalysisView>('all');
   const [customRange, setCustomRange] = useState({ start: addDaysISO(todayISO(), -13), end: todayISO() });
@@ -1625,7 +1630,9 @@ function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (
             </Card>
           )}
 
-          {ranking.length > 0 && (
+          {/* Pattern cards are Plus; every entry, count and tag above stays free. */}
+          {!plus && (ranking.length > 0 || cooccurrences.length > 0) && <PlusLockCard feature="feelingsPatterns" />}
+          {plus && ranking.length > 0 && (
             <>
               <Eyebrow style={styles.impactSectionLabel}>Compared with your usual</Eyebrow>
               {visibleRanking.map((impact) => (
@@ -1639,9 +1646,9 @@ function AnalysisStage({ onBack, onOpenTag }: { onBack: () => void; onOpenTag: (
             </>
           )}
 
-          {cooccurrences.length > 0 && (
+          {plus && cooccurrences.length > 0 && (
             <Card style={styles.statsCard}>
-              <Eyebrow>Often tagged together</Eyebrow>
+              <Eyebrow>Tagged together</Eyebrow>
               {cooccurrences.slice(0, 5).map((pair) => (
                 <Caption key={`${pair.tagA}-${pair.tagB}`}>{`${pair.tagA} + ${pair.tagB}: ${pair.count} check-ins`}</Caption>
               ))}

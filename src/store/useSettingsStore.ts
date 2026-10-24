@@ -17,7 +17,7 @@ import { DEFAULT_DAY_VIEW, type DayViewPrefs } from '../utils/dayView';
 export type WeekStart = 0 | 1 | 6; // Sunday, Monday, Saturday (JS getDay numbering)
 export type ThemeChoice = 'system' | 'light' | 'dark';
 export type NotificationFeature = 'tasks' | 'habits' | 'studyEnd' | 'sleep' | 'weeklyStory';
-export type FeatureFlagId = 'recapAreaPages' | 'recapStory' | 'lifetimeEnabled' | 'foundersEnabled' | 'redeemCodeEnabled';
+export type FeatureFlagId = 'recapAreaPages' | 'recapStory' | 'lifetimeEnabled' | 'foundersEnabled' | 'redeemCodeEnabled' | 'planReviewReminders';
 
 // The first day of the week from the device locale, when the platform
 // exposes it (Intl.Locale weekInfo); Monday otherwise.

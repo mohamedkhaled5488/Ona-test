@@ -1,6 +1,7 @@
 // The plans sheet, opened only when the user reaches for something paid (or
 // asks for it). Always closable, no timers, no scarcity, no guilt — and
 // nothing behind it is locked: local data and every section keep working.
+import { ESSENTIALS_NAME, PLUS_NAME } from '../config/plans';
 import React from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,9 +24,9 @@ export function PaywallSheet() {
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.content}>
-          <ScreenTitle>Sync across your devices</ScreenTitle>
-          <Body style={styles.lead}>Keep Ona the same on your phone and any other device, backed up to your account.</Body>
-          <Caption style={styles.lead}>Everything else in Ona stays free and works on this phone, with or without a plan.</Caption>
+          <ScreenTitle>{PLUS_NAME}</ScreenTitle>
+          <Body style={styles.lead}>Sync across your devices, backed up to your account, and deeper insight in every section.</Body>
+          <Caption style={styles.lead}>{`Everything you make stays yours, and every section keeps working on this phone in ${ESSENTIALS_NAME}.`}</Caption>
           <Plans onPurchased={() => close()} inSheet />
           <Pressable onPress={() => close()} hitSlop={8} accessibilityRole="button" style={styles.notNow}>
             <Caption>Not now</Caption>

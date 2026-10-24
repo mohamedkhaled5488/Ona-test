@@ -158,28 +158,35 @@ export function snapshotFromRaw(userId: string, raw: RawEntitlement, deviceNow: 
 }
 
 // ---------------------------------------------------------------------------
-// Free-plan usage (shown on Plan & usage; nothing is blocked by it yet)
+// Free-plan usage, shown on Plan & usage (the caps are enforced by
+// plans/access.ts canCreate). Quit is never capped.
 // ---------------------------------------------------------------------------
 export interface UsageInput {
   plans: Plan[];
   habits: Habit[];
-  quitTracks: QuitTrack[];
   skills: Skill[];
+  readingEntries?: { status: string }[];
+  budgets?: unknown[];
+  taskTemplates?: unknown[];
+  quitTracks?: QuitTrack[]; // accepted, never counted
 }
 
+export type CountCapId = Exclude<CapId, 'dietWeeksAhead'>;
 export interface CapUsage {
-  id: CapId;
+  id: CountCapId;
   used: number;
   cap: number;
 }
 
-// Archived items never count; a Build habit marked "formed" is finished, not active.
-export function capUsage({ plans, habits, quitTracks, skills }: UsageInput): CapUsage[] {
-  const used: Record<CapId, number> = {
+// Archived items never count; a Build habit marked "formed" is finished, not active; a finished book isn't "at a time".
+export function capUsage({ plans, habits, skills, readingEntries = [], budgets = [], taskTemplates = [] }: UsageInput): CapUsage[] {
+  const used: Record<CountCapId, number> = {
     activePlans: plans.filter((p) => p.status === 'active').length,
     buildHabits: habits.filter((h) => !h.archivedAt && h.graduationChoice !== 'formed').length,
-    quitTracks: quitTracks.filter((t) => t.status === 'active').length,
     skills: skills.filter((s) => !s.archivedAt).length,
+    activeBooks: readingEntries.filter((e) => e.status !== 'finished').length,
+    budgets: budgets.length,
+    taskTemplates: taskTemplates.length,
   };
-  return (Object.keys(FREE_CAPS) as CapId[]).map((id) => ({ id, used: used[id], cap: FREE_CAPS[id] }));
+  return (Object.keys(used) as CountCapId[]).map((id) => ({ id, used: used[id], cap: FREE_CAPS[id] }));
 }

@@ -1,6 +1,9 @@
 // Settings → Account & Subscription → Plan & usage.
 // Prices, currencies and periods come only from the store's Offering — the
 // app has no prices of its own. Only sync is paid; nothing here blocks local data.
+import { useReadingListStore } from '../../store/useReadingListStore';
+import { useBudgetStore } from '../../store/useBudgetStore';
+import { useDailyPlanningStore } from '../../store/useDailyPlanningStore';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +12,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { useUi } from '../../components/UiProvider';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { useFeature } from '../../config/features';
-import { CAP_LABELS, PLAN_COMPARISON, PLAY_SUBSCRIPTIONS_URL } from '../../config/plans';
+import { CAP_LABELS, ESSENTIALS_NAME, PLAN_COMPARISON, PLAY_SUBSCRIPTIONS_URL, PLUS_NAME } from '../../config/plans';
 import { usePlanStore } from '../../store/usePlanStore';
 import { useHabitsStore } from '../../store/useHabitsStore';
 import { useQuitHabitsStore } from '../../store/useQuitHabitsStore';
@@ -174,12 +177,14 @@ function Usage() {
   const entitlement = useEntitlement();
   const plans = usePlanStore((s) => s.plans);
   const habits = useHabitsStore((s) => s.habits);
-  const quitTracks = useQuitHabitsStore((s) => s.tracks);
   const skills = useSkillsStore((s) => s.skills);
-  const usage = capUsage({ plans, habits, quitTracks, skills });
+  const readingEntries = useReadingListStore((s) => s.entries);
+  const budgets = useBudgetStore((s) => s.budgets);
+  const taskTemplates = useDailyPlanningStore((s) => s.taskTemplates);
+  const usage = capUsage({ plans, habits, skills, readingEntries, budgets, taskTemplates });
   const unlimited = entitlement.syncAccess;
   return (
-    <Group title={unlimited ? 'Usage' : 'Free plan usage'} footer="Archived items don't count, and you can still open them any time.">
+    <Group title={unlimited ? 'Usage' : `${ESSENTIALS_NAME} usage`} footer="Archived and finished items don't count, and you can still open them any time. Quit habits never count. If you're above a number here, everything you have keeps working.">
       {usage.map((u) => (
         <View key={u.id} style={styles.usageRow} accessibilityLabel={`${CAP_LABELS[u.id]}: ${u.used}${unlimited ? '' : ` of ${u.cap}`}`}>
           <View style={styles.usageText}>
@@ -214,14 +219,14 @@ export function PlanPage() {
       <Group title="What's included">
         <View style={styles.compareHead}>
           <Caption style={styles.compareFeature} />
-          <Caption style={styles.compareCol}>Free</Caption>
-          <Caption style={styles.compareCol}>Paid</Caption>
+          <Caption style={styles.compareCol}>{ESSENTIALS_NAME}</Caption>
+          <Caption style={styles.compareCol}>{PLUS_NAME}</Caption>
         </View>
         {PLAN_COMPARISON.map((row) => (
           <View key={row.feature} style={styles.compareRow}>
             <Caption style={[styles.compareFeature, styles.ink]}>{row.feature}</Caption>
             <Caption style={styles.compareCol}>{row.free}</Caption>
-            <Caption style={styles.compareCol}>{row.paid}</Caption>
+            <Caption style={styles.compareCol}>{row.plus}</Caption>
           </View>
         ))}
       </Group>

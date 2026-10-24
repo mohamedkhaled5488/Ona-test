@@ -1,3 +1,4 @@
+import { useCapGuard } from '../components/PlusGate';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -23,6 +24,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'planBuilder'>;
 type StatusFilter = 'active' | 'archived';
 
 export function PlanListScreen({ navigation }: Props) {
+  const guard = useCapGuard(); // Free caps (config/plans.ts); what exists stays usable
   const plans = usePlanStore((s) => s.plans);
   const personalTemplates = usePlanStore((s) => s.personalTemplates);
   const createPlan = usePlanStore((s) => s.createPlan);
@@ -135,7 +137,7 @@ export function PlanListScreen({ navigation }: Props) {
         })}
       </View>
 
-      <PrimaryButton label="New Plan" style={styles.newPlanButton} onPress={openSheet} />
+      <PrimaryButton label="New Plan" style={styles.newPlanButton} onPress={() => guard('activePlans', openSheet)} />
 
       <SheetModal visible={sheetVisible} onClose={() => setSheetVisible(false)}>
         <View style={styles.modalHeader}>

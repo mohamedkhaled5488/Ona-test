@@ -1,3 +1,8 @@
+import { useUi } from '../components/UiProvider';
+import { usePaywallStore } from '../store/usePaywallStore';
+import { PlusLockCard } from '../components/PlusGate';
+import { usePlus } from '../plans/access';
+import { PLUS_FEATURES, PLUS_NAME } from '../config/plans';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Modal, Pressable, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -222,6 +227,21 @@ function PeriodSwitch({
 }) {
   const today = todayISO();
   const [calendarMonth, setCalendarMonth] = useState(customRange.end);
+  const plus = usePlus();
+  const { showDialog } = useUi();
+  const openPlans = usePaywallStore((s) => s.open);
+  // Custom ranges are Plus; Today, Week, Month and Year (every past one) are free.
+  const choose = (p: RecapPeriod) => {
+    if (p !== 'custom' || plus) return setPeriod(p);
+    showDialog({
+      title: PLUS_FEATURES.recapCustomRange.title,
+      message: `${PLUS_FEATURES.recapCustomRange.line} Every week, month and year stays free, all the way back.`,
+      actions: [
+        { label: 'Not now', style: 'cancel' },
+        { label: `See ${PLUS_NAME}`, style: 'default', onPress: () => void openPlans('userOpened') },
+      ],
+    });
+  };
   const [rangeAnchor, setRangeAnchor] = useState<string | null>(null);
   const next = shiftPeriodAnchor(period, anchor, 1);
   const canGoForward = period !== 'custom' && next <= today;
@@ -230,7 +250,7 @@ function PeriodSwitch({
     <>
       <View style={styles.segmented}>
         {PERIODS.map((p) => (
-          <Pressable key={p.id} onPress={() => setPeriod(p.id)} style={[styles.segment, period === p.id && styles.periodChipActive]} accessibilityRole="button" accessibilityState={{ selected: period === p.id }}>
+          <Pressable key={p.id} onPress={() => choose(p.id)} style={[styles.segment, period === p.id && styles.periodChipActive]} accessibilityRole="button" accessibilityState={{ selected: period === p.id }}>
             <Caption style={period === p.id ? styles.periodChipTextActive : undefined}>{p.label}</Caption>
           </Pressable>
         ))}
@@ -342,6 +362,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
   const comparison = useSettingsStore((s) => s.recapComparison);
   const areaPages = useFeature('recapAreaPages');
   const storyEnabled = useFeature('recapStory');
+  const plus = usePlus();
   const hideSensitiveTop = useSettingsStore((s) => s.hideSensitiveOnHome);
   const summary = useMemo(() => effortSummary(stats, comparison ? previous : undefined, period, isCurrent, hideSensitiveTop ? SENSITIVE_SECTIONS : []), [stats, previous, comparison, period, isCurrent, hideSensitiveTop]);
   const highlights = useMemo(() => buildHighlights(data, stats), [data, stats]);
@@ -461,7 +482,8 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
         </View>
       )}
 
-      {stats.dates.length > 1 && (
+      {stats.dates.length > 1 && !plus && <PlusLockCard feature="recapTimeChart" />}
+      {stats.dates.length > 1 && plus && (
         <Card style={styles.card}>
           <Eyebrow style={{ color: ACCENT }}>Time invested</Eyebrow>
           {points.length > 0 ? (
@@ -494,7 +516,8 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
         </Card>
       )}
 
-      {observations.length > 0 && (
+      {observations.length > 0 && !plus && <PlusLockCard feature="recapInsights" />}
+      {observations.length > 0 && plus && (
         <Card style={styles.card}>
           <Eyebrow style={{ color: ACCENT }}>A few gentle patterns</Eyebrow>
           {observations.map((o) => (
@@ -504,7 +527,8 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
         </Card>
       )}
 
-      {storyEnabled && summary.numbers.length > 0 && (
+      {storyEnabled && summary.numbers.length > 0 && !plus && <PlusLockCard feature="recapStory" />}
+      {storyEnabled && summary.numbers.length > 0 && plus && (
         <PrimaryButton label={storyTitle(period)} variant="outline" onPress={onOpenStory} style={styles.storyButton} />
       )}
     </>

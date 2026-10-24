@@ -2,6 +2,8 @@
 // utils/planningInsights.ts (correlational, never causal), how many data
 // points it's based on, and "Show the data". Below the minimum, a card says
 // how far along it is instead of guessing.
+import { PlusLockCard } from '../components/PlusGate';
+import { usePlus } from '../plans/access';
 import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -92,7 +94,9 @@ function InsightCard({
   chart,
   data,
   extra,
+  plusOnly,
 }: {
+  plusOnly?: boolean; // Plus: shown as one lock card in Essentials mode
   title: string;
   gate: Gate;
   lines: string[];
@@ -101,6 +105,8 @@ function InsightCard({
   extra?: React.ReactNode;
 }) {
   const [showData, setShowData] = useState(false);
+  const plus = usePlus();
+  if (plusOnly && !plus) return null;
   return (
     <Card style={styles.card}>
       <Eyebrow accessibilityRole="header">{title}</Eyebrow>
@@ -139,6 +145,7 @@ function InsightCard({
 }
 
 export function PlanningInsightsScreen({ navigation }: Props) {
+  const plusHere = usePlus();
   const tasks = useDailyPlanningStore((s) => s.tasks);
   const tags = useDailyPlanningStore((s) => s.tags);
   const entries = useFeelingsStore((s) => s.entries);
@@ -296,7 +303,9 @@ export function PlanningInsightsScreen({ navigation }: Props) {
         data={c.series.filter((s) => s.planned).map((s) => ({ label: gran === 'day' ? formatDisplayDate(s.start) : `Week of ${formatDisplayDate(s.start)}`, value: `${s.done} of ${s.planned}` }))}
       />
 
+      {!plusHere && <PlusLockCard feature="planningInsights" />}
       <InsightCard
+        plusOnly
         title="By tag"
         gate={all.byTag}
         lines={all.byTag.lines}
@@ -313,6 +322,7 @@ export function PlanningInsightsScreen({ navigation }: Props) {
       />
 
       <InsightCard
+        plusOnly
         title="Estimate accuracy"
         gate={all.estimate}
         lines={all.estimate.lines}
@@ -326,6 +336,7 @@ export function PlanningInsightsScreen({ navigation }: Props) {
       />
 
       <InsightCard
+        plusOnly
         title="Energy match"
         gate={all.energy}
         lines={all.energy.lines}
@@ -347,6 +358,7 @@ export function PlanningInsightsScreen({ navigation }: Props) {
       />
 
       <InsightCard
+        plusOnly
         title="Feelings after tasks"
         gate={all.feelings}
         lines={all.feelings.lines}
@@ -366,6 +378,7 @@ export function PlanningInsightsScreen({ navigation }: Props) {
       />
 
       <InsightCard
+        plusOnly
         title="Feelings after each tag"
         gate={all.feelGood}
         lines={all.feelGood.lines}
@@ -375,6 +388,7 @@ export function PlanningInsightsScreen({ navigation }: Props) {
       />
 
       <InsightCard
+        plusOnly
         title="Busy days"
         gate={all.overload}
         lines={all.overload.lines}

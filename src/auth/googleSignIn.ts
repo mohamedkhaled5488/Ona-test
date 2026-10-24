@@ -40,7 +40,7 @@ export const GOOGLE_MESSAGES: Record<GoogleFailure, string | null> = {
   inProgress: null, // already open; the open sheet is the answer
   offline: "You're offline. Connect to the internet and try again.",
   noPlayServices: "Google sign-in needs Google Play services, which aren't available on this phone. You can use email and password instead.",
-  expired: 'Your Google sign-in took too long and expired. Please try again.',
+  expired: 'Your Google sign-in took too long. Please try again.',
   unavailable: 'Google sign-in works in the installed Ona app, not in this preview. You can use email and password here.',
   notConfigured: "Google sign-in isn't set up in this version yet. You can use email and password.",
   failed: "Google sign-in didn't work this time. Please try again, or use email and password.",

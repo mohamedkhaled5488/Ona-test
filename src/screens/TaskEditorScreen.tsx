@@ -4,6 +4,7 @@
 //
 // Everything is edited on a working copy (utils/taskForm.ts) and saved in
 // one go, so leaving with changes can always ask Save / Discard / Keep editing.
+import { useCapGuard } from '../components/PlusGate';
 import { ReminderSoundPicker } from '../components/ReminderSoundPicker';
 import { PHONE_CLOCK_NOTE } from '../config/reminderWording';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
@@ -119,6 +120,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 }
 
 export function TaskEditorScreen({ route, navigation }: Props) {
+  const guard = useCapGuard(); // Free caps (config/plans.ts); what exists stays usable
   const { taskId, date } = route.params;
   const { showDialog, showToast } = useUi();
   const store = useDailyPlanningStore;
@@ -800,9 +802,11 @@ export function TaskEditorScreen({ route, navigation }: Props) {
                       setErrors((e) => ({ ...e, title: 'Give the task a title first.' }));
                       return;
                     }
-                    store.getState().addTaskTemplate(templateName, templateFieldsFromForm(form));
-                    setTemplateName(null);
-                    showToast({ message: 'Saved as a template' });
+                    guard('taskTemplates', () => {
+                      store.getState().addTaskTemplate(templateName, templateFieldsFromForm(form));
+                      setTemplateName(null);
+                      showToast({ message: 'Saved as a template' });
+                    });
                   }}
                 >
                   <Caption style={styles.linkAction}>Save</Caption>

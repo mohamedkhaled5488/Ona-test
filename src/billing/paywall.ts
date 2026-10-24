@@ -2,6 +2,7 @@
 // No dark patterns: the paywall only appears when the user reaches for a paid
 // action or opens it themselves, never at launch or on opening a section,
 // and never again within a week of being dismissed unless the user asks.
+import { ESSENTIALS_NAME, PLUS_NAME, STATE_COPY, TRIAL_NAME } from '../config/plans';
 import type { Entitlement } from '../utils/entitlement';
 
 export const PAYWALL_QUIET_DAYS = 7;
@@ -35,24 +36,24 @@ export function dueNotice(e: Entitlement, dismissed: string[]): Notice | null {
       notice = {
         kind: 'trialLastDay',
         key: `trialLastDay:${e.trialEndsAt}`,
-        title: 'Your trial ends today',
-        body: "After today, sync pauses. Everything stays on this phone, and nothing is deleted. You can subscribe any time if you'd like sync back.",
+        title: `${TRIAL_NAME}: last day`,
+        body: `From tomorrow, Ona carries on in ${ESSENTIALS_NAME}. Everything stays on this phone, and nothing is deleted. Choose ${PLUS_NAME} any time for sync and deeper insight.`,
       };
     } else if (e.trialDaysLeft <= 3) {
       notice = {
         kind: 'trialThreeDays',
         key: `trialThreeDays:${e.trialEndsAt}`,
-        title: `Your trial ends in ${e.trialDaysLeft} days`,
-        body: 'When it ends, sync pauses and everything stays on this phone. Nothing is deleted.',
+        title: STATE_COPY.trial(e.trialDaysLeft),
+        body: `When it ends, Ona carries on in ${ESSENTIALS_NAME}. Everything stays on this phone, and nothing is deleted.`,
       };
     }
   } else if ((e.state === 'trialEnded' || e.state === 'expired') && !e.syncAccess) {
-    const what = e.state === 'trialEnded' ? 'trial' : 'subscription';
+    const what = e.state === 'trialEnded' ? `Your ${TRIAL_NAME} is over` : 'Your subscription ended';
     notice = {
       kind: 'ended',
       key: `ended:${e.state}:${e.trialEndsAt ?? e.endsAt ?? ''}`,
-      title: `Your ${what} has ended`,
-      body: 'Sync is paused. Everything is still here on this phone, and nothing was deleted.',
+      title: STATE_COPY.essentials,
+      body: `${what}. Sync is paused, everything is still here, and nothing was deleted.`,
     };
   }
   return notice && !dismissed.includes(notice.key) ? notice : null;

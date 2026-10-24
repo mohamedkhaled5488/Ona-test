@@ -1,3 +1,6 @@
+import { usePlusAction } from '../components/PlusGate';
+import { PlusLockCard } from '../components/PlusGate';
+import { usePlus } from '../plans/access';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +44,7 @@ const STATUS_LABEL: Record<BuildDayStatus, string> = { done: 'Done', minimum: 'M
 // the habit's page. Same five-part skeleton as the Quit dashboard: stats,
 // summary, chart, insights, full log (with a milestone timeline alongside).
 export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitId: string; onBack: () => void; onOpenLog: (date: string) => void }) {
+  const plusAction = usePlusAction(); // PDF exports are Plus; plain export stays in Essentials mode
   const habits = useHabitsStore((s) => s.habits);
   const checkIns = useHabitsStore((s) => s.checkIns);
   const feelingEntries = useFeelingsStore((s) => s.entries);
@@ -96,6 +100,7 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
   const feelingAfter = itemFeelingInsight(habitFeelings, 'after this habit');
   const timeOfDay = habitTimeOfDay(checkIns, habitId);
   const sessionLines = sessionLengthLines(sessionMinutesByTimeOfDay(checkIns, habitId));
+  const plus = usePlus();
   const hasInsights = misses || reasons || feelingAfter || timeOfDay.kind !== 'notEnough' || !!sessionLines;
 
   // --- 5. Full log ---
@@ -159,12 +164,13 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
       </Card>
 
       <DashboardSectionLabel>Insights</DashboardSectionLabel>
-      {!hasInsights && (
+      {!plus && <PlusLockCard feature="habitAnalysisFull" />}
+      {plus && !hasInsights && (
         <Caption style={styles.emptyText}>
           Patterns need at least 3 matching check-ins before they're worth calling a pattern — keep going and they'll show up here.
         </Caption>
       )}
-      {feelingAfter && (
+      {plus && feelingAfter && (
         <InsightCard
           kind="Feelings after"
           accent={accent}
@@ -172,7 +178,7 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
           evidence={`${basedOn(feelingAfter.n)} logged after completing it.`}
         />
       )}
-      {misses && (
+      {plus && misses && (
         <InsightCard
           kind="Missed days by weekday"
           accent={SOFT_MISSED}
@@ -180,7 +186,7 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
           evidence="Missed check-ins out of all check-ins logged on each weekday. These are counts; they don't say why."
         />
       )}
-      {reasons && (
+      {plus && reasons && (
         <InsightCard
           kind="Reasons on missed days"
           accent={SOFT_MISSED}
@@ -188,7 +194,7 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
           evidence={`How many of the ${reasons.missedTotal} missed days had each reason tagged. A day can have more than one.`}
         />
       )}
-      {timeOfDay.kind !== 'notEnough' && (
+      {plus && timeOfDay.kind !== 'notEnough' && (
         <InsightCard
           kind="Time of day"
           accent={accent}
@@ -196,7 +202,7 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
           evidence={[...timeOfDay.lines.slice(1), `Based on ${timeOfDay.n} ${timeOfDay.kind === 'rates' ? 'check-ins with a planned time' : 'completions with a known time'}.`].join(' ')}
         />
       )}
-      {sessionLines && <InsightCard kind="Session length" accent={accent} headline={sessionLines.headline} evidence={sessionLines.evidence} />}
+      {plus && sessionLines && <InsightCard kind="Session length" accent={accent} headline={sessionLines.headline} evidence={sessionLines.evidence} />}
 
       <DashboardSectionLabel>Full log</DashboardSectionLabel>
       {habitCheckIns.length === 0 ? (
@@ -253,10 +259,10 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
             label="Export as PDF"
             variant="outline"
             style={styles.exportButton}
-            onPress={async () => {
+            onPress={plusAction('pdfExports', async () => {
               const result = await exportHabitReportAsPdf(habit, checkIns, feelingEntries);
               if (!result.ok && result.reason) showToast({ message: result.reason });
-            }}
+            })}
           />
         </View>
       </Card>

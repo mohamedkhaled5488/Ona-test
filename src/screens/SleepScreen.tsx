@@ -1,3 +1,6 @@
+import { FREE_SLEEP_SOUNDS, PLUS_FEATURES, PLUS_NAME } from '../config/plans';
+import { usePaywallStore } from '../store/usePaywallStore';
+import { usePlus } from '../plans/access';
 import { ReminderSoundPicker } from '../components/ReminderSoundPicker';
 import { PHONE_CLOCK_NOTE, WAKE_REMINDER } from '../config/reminderWording';
 import React, { useEffect, useRef, useState } from 'react';
@@ -111,9 +114,26 @@ function SoundMixerCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, timerMinutes]);
 
+  const plus = usePlus();
+  const { showDialog } = useUi();
+  const openPlans = usePaywallStore((s) => s.open);
+  // Free: the first FREE_SLEEP_SOUNDS sounds. One already in the mix (from
+  // a trial) keeps playing and can still be removed.
+  const locked = (id: SleepSoundId) => !plus && sleepSounds.findIndex((s) => s.id === id) >= FREE_SLEEP_SOUNDS;
   const toggleSound = (id: SleepSoundId) => {
-    if (mix.some((l) => l.soundId === id)) removeSoundFromMix(id);
-    else addSoundToMix(id);
+    if (mix.some((l) => l.soundId === id)) return removeSoundFromMix(id);
+    if (locked(id)) {
+      showDialog({
+        title: PLUS_FEATURES.sleepAllSounds.title,
+        message: `${PLUS_FEATURES.sleepAllSounds.line} The first ${FREE_SLEEP_SOUNDS} are free.`,
+        actions: [
+          { label: 'Not now', style: 'cancel' },
+          { label: `See ${PLUS_NAME}`, style: 'default', onPress: () => void openPlans('userOpened') },
+        ],
+      });
+      return;
+    }
+    addSoundToMix(id);
   };
 
   const mm = secondsLeft !== null ? Math.floor(secondsLeft / 60) : null;
@@ -130,7 +150,7 @@ function SoundMixerCard() {
           return (
             <Pressable key={sound.id} onPress={() => toggleSound(sound.id)} style={[styles.soundChip, active && { backgroundColor: withAlpha(ACCENT, 0.18), borderColor: ACCENT }]}>
               <Body style={active ? { color: ACCENT } : undefined}>{sound.label}</Body>
-              <Caption>{sound.description}</Caption>
+              <Caption>{locked(sound.id) && !active ? PLUS_NAME : sound.description}</Caption>
             </Pressable>
           );
         })}

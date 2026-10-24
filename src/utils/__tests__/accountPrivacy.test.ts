@@ -150,7 +150,8 @@ describe('trial and plan', () => {
     const usage = Object.fromEntries(capUsage({ plans, habits, quitTracks, skills }).map((u) => [u.id, u]));
     expect(usage.activePlans).toEqual({ id: 'activePlans', used: 2, cap: FREE_CAPS.activePlans });
     expect(usage.buildHabits.used).toBe(2);
-    expect(usage.quitTracks.used).toBe(1);
+    // Quit is never capped (owner's decision, 2026-10-24).
+    expect(usage.quitTracks).toBeUndefined();
     expect(usage.skills.used).toBe(1);
 
     habits[0].archivedAt = '2026-10-01';
