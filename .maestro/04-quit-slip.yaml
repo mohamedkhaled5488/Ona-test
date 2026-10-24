@@ -32,6 +32,9 @@ tags:
 - scrollUntilVisible:
     element: "Track 2"
 - assertVisible: "Your journey"
-- assertVisible: "Track 1"
 # Ona counts the day a track starts as Day 1.
 - assertVisible: "Ongoing — Day 1"
+# The ended chapter is listed below the new one (off screen on smaller
+# emulators, so scroll to it rather than assume it fits).
+- scrollUntilVisible:
+    element: "Track 1"
