@@ -204,7 +204,8 @@ describe('hidden sections and the story', () => {
   it('hides an area card only when all its sections are hidden', () => {
     const s = periodStats(sampleData(), week);
     expect(areaSummaries(s, ['journaling', 'moodCheck']).map((a) => a.area)).toContain('reflect');
-    expect(areaSummaries(s, ['journaling', 'moodCheck', 'sleep']).map((a) => a.area)).not.toContain('reflect');
+    // Reflect also holds Catch a Feeling or Idea since the Recap registry (2026-10-24).
+    expect(areaSummaries(s, ['journaling', 'moodCheck', 'sleep', 'catchAThought']).map((a) => a.area)).not.toContain('reflect');
   });
 
   it('skips story cards that have no data', () => {

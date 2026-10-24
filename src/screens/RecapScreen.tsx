@@ -44,7 +44,7 @@ import {
   EFFORT_LABEL,
   EFFORT_SECTION,
   RECAP_SECTIONS,
-  areaSummaries,
+  SENSITIVE_SECTIONS,
   buildHighlights,
   buildStory,
   effortSlots,
@@ -63,6 +63,7 @@ import {
   type RecapData,
   type StoryCard,
 } from '../utils/recapStats';
+import { areaTiles, sectionRecaps, type RecapOpen, type SectionRecap } from '../recap/registry';
 import { useRecapStore } from '../store/useRecapStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -341,9 +342,12 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
   const comparison = useSettingsStore((s) => s.recapComparison);
   const areaPages = useFeature('recapAreaPages');
   const storyEnabled = useFeature('recapStory');
-  const summary = useMemo(() => effortSummary(stats, comparison ? previous : undefined, period, isCurrent), [stats, previous, comparison, period, isCurrent]);
+  const hideSensitiveTop = useSettingsStore((s) => s.hideSensitiveOnHome);
+  const summary = useMemo(() => effortSummary(stats, comparison ? previous : undefined, period, isCurrent, hideSensitiveTop ? SENSITIVE_SECTIONS : []), [stats, previous, comparison, period, isCurrent, hideSensitiveTop]);
   const highlights = useMemo(() => buildHighlights(data, stats), [data, stats]);
-  const areas = useMemo(() => areaSummaries(stats, hidden), [stats, hidden]);
+  const hideSensitive = useSettingsStore((s) => s.hideSensitiveOnHome);
+  // Every area tile comes from the Recap registry (src/recap/registry.ts).
+  const areas = useMemo(() => areaTiles({ data, stats, today: todayISO() }, hidden, hideSensitive), [data, stats, hidden, hideSensitive]);
   const events = useMemo(() => collectRecapEvents(data), [data]);
   const counts = useMemo(() => buildActivityCounts(events), [events]);
   const observations = useMemo(() => {
@@ -437,7 +441,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
             >
               <Card style={[styles.areaCard, { borderTopColor: AREA_ACCENT[a.area] }]}>
                 <View style={styles.headerRow}>
-                  <Eyebrow style={{ color: AREA_ACCENT[a.area] }}>{AREA_TITLES[a.area]}</Eyebrow>
+                  <Eyebrow style={{ color: AREA_ACCENT[a.area] }}>{a.title}</Eyebrow>
                   <Ionicons name="chevron-forward" size={14} color={colors.inkSoft} />
                 </View>
                 {a.hasData ? (
@@ -450,7 +454,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
                 ) : (
                   <Caption style={styles.muted}>Nothing here yet</Caption>
                 )}
-                {a.area === 'reflect' ? <ZoneMixBar mix={stats.zoneMix} /> : <MiniBars values={a.bars} color={AREA_ACCENT[a.area]} />}
+                {a.area === 'reflect' && !hideSensitive ? <ZoneMixBar mix={stats.zoneMix} /> : <MiniBars values={a.bars} color={AREA_ACCENT[a.area]} />}
               </Card>
             </Pressable>
           ))}
@@ -548,15 +552,13 @@ function AreaPage({
   onBack: () => void;
 }) {
   const color = AREA_ACCENT[area];
-  const today = todayISO();
-  const show = (s: SectionId) => !hidden.includes(s);
-  const go = (s: SectionId, params?: Record<string, string>) => openSection(navigation, s, params);
-  const plan = useMemo(() => planDetails(data, stats), [data, stats]);
-  const grow = useMemo(() => growDetails(data, stats, today), [data, stats, today]);
-  const learn = useMemo(() => learnDetails(data, stats), [data, stats]);
-  const skillTime = useMemo(() => buildSkillsTimeBreakdown(data.skills, data.skillSessions, stats.range.start, stats.range.end), [data, stats.range]);
-  // In the zone order, not sorted by count.
-  const zones = (['lively', 'calm', 'tense', 'low', 'okay'] as (keyof PeriodStats['zoneMix'])[]).map((z) => [z, stats.zoneMix[z]] as [keyof PeriodStats['zoneMix'], number]).filter(([, n]) => n > 0);
+  const hideSensitive = useSettingsStore((s) => s.hideSensitiveOnHome);
+  // Every card comes from the Recap registry: one per section in this area.
+  const recaps = useMemo(() => sectionRecaps(area, { data, stats, today: todayISO() }, hidden, hideSensitive).filter((r) => r.hasData), [area, data, stats, hidden, hideSensitive]);
+  const open = (target?: RecapOpen) => {
+    if (!target) return undefined;
+    return () => ('route' in target ? navigation.navigate('planDetail', target.params) : openSection(navigation, target.section, target.params));
+  };
 
   return (
     <>
@@ -567,151 +569,48 @@ function AreaPage({
       <ScreenTitle style={{ color }}>{AREA_TITLES[area]}</ScreenTitle>
       <Caption style={styles.subtitle}>{periodLabel}</Caption>
 
-      {area === 'plan' && (
-        <>
-          {show('dailyPlanning') && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Daily Planning</Eyebrow>
-              <Row label="Tasks done" value={`${stats.tasksCompleted} of ${stats.tasksPlanned}`} onPress={() => go('dailyPlanning')} />
-              {plan.completionRate !== undefined && <Row label="Completion rate" value={`${plan.completionRate}%`} />}
-              {plan.busiestDay && <Row label="Busiest day" value={`${formatDisplayDate(plan.busiestDay.date)} · ${plan.busiestDay.done} done`} />}
-              <MiniBars values={stats.dates.length <= 31 ? stats.dates.map((d) => stats.tasksByDay[d]?.done ?? 0) : []} color={color} />
-            </Card>
-          )}
-          {show('planBuilder') && plan.plans.length > 0 && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Plans</Eyebrow>
-              {plan.plans.map((p) => (
-                <Pressable key={p.id} onPress={() => navigation.navigate('planDetail', { planId: p.id })} style={styles.planRow}>
-                  <View style={styles.row}>
-                    <Body style={styles.flex}>{p.title}</Body>
-                    <Caption>{p.done} of {p.total} steps</Caption>
-                  </View>
-                  <ProgressBar fraction={p.done / p.total} color={p.color} />
-                </Pressable>
-              ))}
-            </Card>
-          )}
-          {(show('dietPlanning') && stats.mealsPlanned > 0) || (show('budget') && plan.spending.length > 0) ? (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Meals & money</Eyebrow>
-              {show('dietPlanning') && stats.mealsPlanned > 0 && <Row label="Meals planned" value={String(stats.mealsPlanned)} onPress={() => go('dietPlanning')} />}
-              {show('budget') &&
-                plan.spending.map((b) => (
-                  <Row
-                    key={b.budgetId}
-                    label={b.name}
-                    value={`${b.mode === 'goal' ? 'Saved' : 'Spent'} ${formatMoney(b.amount, b.currency)} of ${formatMoney(b.target, b.currency)}`}
-                    onPress={() => go('budget', { openBudgetId: b.budgetId })}
-                  />
-                ))}
-            </Card>
-          ) : null}
-        </>
+      {recaps.length === 0 && (
+        <Card style={styles.card}>
+          <Caption style={styles.muted}>Nothing logged here in this period, and that's okay.</Caption>
+        </Card>
       )}
-
-      {area === 'reflect' && (
-        <>
-          {show('journaling') && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Journaling</Eyebrow>
-              <Row label="Entries" value={String(stats.journalEntries)} onPress={() => go('journaling')} />
-              <Row label="Words written" value={stats.journalWords.toLocaleString()} />
-            </Card>
-          )}
-          {show('moodCheck') && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Feelings</Eyebrow>
-              <Row label="Feelings named" value={String(stats.feelingsLogged)} onPress={() => go('moodCheck')} />
-              {zones.length > 0 && (
-                <>
-                  <ZoneMixBar mix={stats.zoneMix} />
-                  <Caption>{zones.map(([z, n]) => `${zoneMeta(z).label} ${n}`).join(' · ')}</Caption>
-                </>
-              )}
-              {stats.topFeelings.length > 0 && <Caption>Feelings you named: {stats.topFeelings.map((f) => `${f.name.toLowerCase()} ${f.count}`).join(', ')}.</Caption>}
-            </Card>
-          )}
-          {show('sleep') && stats.sleepLogs > 0 && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Sleep</Eyebrow>
-              <Row label="Nights logged" value={String(stats.sleepLogs)} onPress={() => go('sleep')} />
-              <Caption>
-                {stats.restedNights === 0
-                  ? 'None of the logged nights felt rested — worth being gentle with yourself.'
-                  : `${stats.restedNights} of ${stats.sleepLogs} logged nights felt rested.`}
-              </Caption>
-            </Card>
-          )}
-        </>
-      )}
-
-      {area === 'grow' && (
-        <>
-          {show('habitBuilder') && grow.habits.length > 0 && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Habits</Eyebrow>
-              {grow.habits.map((h) => (
-                <Pressable key={h.id} onPress={() => go('habitBuilder', { openHabitId: h.id })} style={styles.planRow}>
-                  <View style={styles.row}>
-                    <Body style={styles.flex}>{h.name}</Body>
-                    <Caption>{h.rate !== null ? `${Math.round(h.rate * 100)}%` : `${h.done} done`}</Caption>
-                  </View>
-                  {h.rate !== null && <ProgressBar fraction={h.rate} color={sectionAccents.habitBuilder} />}
-                  {h.longest > 0 && <Caption style={styles.muted}>Longest run: {h.longest} {h.unit === 'week' ? 'weeks' : 'days'}</Caption>}
-                </Pressable>
-              ))}
-            </Card>
-          )}
-          {show('quitHabit') && stats.resistedUrges > 0 && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Quitting</Eyebrow>
-              <Row label="Urges ridden out" value={String(stats.resistedUrges)} onPress={() => go('quitHabit')} />
-            </Card>
-          )}
-          {show('skills') && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Skills</Eyebrow>
-              <Row label="Practice time" value={formatDuration(skillTime.totalMinutes)} onPress={() => go('skills')} />
-              {skillTime.bySkill.map((s) => (
-                <Row key={s.skillId} label={s.skillName} value={formatDuration(s.minutes)} onPress={() => go('skills', { openSkillId: s.skillId })} />
-              ))}
-            </Card>
-          )}
-        </>
-      )}
-
-      {area === 'learn' && (
-        <>
-          {show('studySession') && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Study</Eyebrow>
-              <Row label="Focus time" value={formatDuration(stats.minutes.study)} onPress={() => go('studySession')} />
-              <Row label="Sessions" value={String(stats.studySessions)} />
-              {learn.bestFocusTime && <Caption>Most of your focus time started in the {learn.bestFocusTime}.</Caption>}
-            </Card>
-          )}
-          {show('book') && (
-            <Card style={styles.card}>
-              <Eyebrow style={{ color }}>Reading</Eyebrow>
-              <Row label="Pages read" value={String(stats.pagesRead)} onPress={() => go('book')} />
-              <Row label="Reading time" value={formatDuration(stats.minutes.reading)} />
-              {stats.quotesSaved > 0 && <Row label="Quotes saved" value={String(stats.quotesSaved)} />}
-              {learn.books.map((b) => (
-                <Pressable key={b.id} onPress={() => go('book', { openEntryId: b.id })} style={styles.planRow}>
-                  <View style={styles.row}>
-                    <Body style={styles.flex}>{b.title}</Body>
-                    <Ionicons name="chevron-forward" size={14} color={colors.inkSoft} />
-                  </View>
-                  {b.fraction !== undefined && <ProgressBar fraction={b.fraction} color={sectionAccents.book} />}
-                  {b.progress && <Caption style={styles.muted}>{b.progress}</Caption>}
-                </Pressable>
-              ))}
-            </Card>
-          )}
-        </>
-      )}
+      {recaps.map((r) => (
+        <SectionRecapCard key={r.section} recap={r} color={color} open={open} />
+      ))}
     </>
+  );
+}
+
+function SectionRecapCard({ recap, color, open }: { recap: SectionRecap; color: string; open: (t?: RecapOpen) => (() => void) | undefined }) {
+  // Zones in the fixed zone order, never sorted by count.
+  const zones = recap.zoneMix ? (['lively', 'calm', 'tense', 'low', 'okay'] as (keyof PeriodStats['zoneMix'])[]).filter((z) => recap.zoneMix![z] > 0) : [];
+  return (
+    <Card style={styles.card} testID={`recap-card-${recap.section}`}>
+      <Eyebrow style={{ color }}>{recap.title}</Eyebrow>
+      {recap.rows.map((row) => (
+        <Row key={row.label} label={row.label} value={row.value} onPress={open(row.open)} />
+      ))}
+      {zones.length > 0 && (
+        <>
+          <ZoneMixBar mix={recap.zoneMix!} />
+          <Caption>{zones.map((z) => `${zoneMeta(z).label} ${recap.zoneMix![z]}`).join(' · ')}</Caption>
+        </>
+      )}
+      {recap.items.map((item) => (
+        <Pressable key={item.id} onPress={open(item.open)} style={styles.planRow} accessibilityRole={item.open ? 'button' : undefined}>
+          <View style={styles.row}>
+            <Body style={styles.flex}>{item.title}</Body>
+            {item.open && <Ionicons name="chevron-forward" size={14} color={colors.inkSoft} />}
+          </View>
+          {item.fraction !== undefined && <ProgressBar fraction={item.fraction} color={item.color ?? color} />}
+          {item.caption ? <Caption style={styles.muted}>{item.caption}</Caption> : null}
+        </Pressable>
+      ))}
+      {recap.bars && <MiniBars values={recap.bars} color={color} />}
+      {recap.notes.map((n) => (
+        <Caption key={n}>{n}</Caption>
+      ))}
+    </Card>
   );
 }
 

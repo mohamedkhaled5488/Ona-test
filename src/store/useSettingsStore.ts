@@ -129,6 +129,9 @@ export interface SettingsData {
   hiddenRecapSections: SectionId[]; // hidden everywhere in Recap, including shared images
   shareSensitiveInRecap: boolean; // shared story cards leave out Feelings and Quit unless on
   recapComparison: boolean; // "+3 vs last week"
+  // For people who share their phone: Feelings and Quit stay out of Home
+  // (Recap). Off by default; Recap is private on the phone.
+  hideSensitiveOnHome: boolean;
 
   // Developer (debug builds only)
   devFeatureOverrides: Partial<Record<FeatureFlagId, boolean>>;
@@ -199,6 +202,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   hiddenRecapSections: [],
   shareSensitiveInRecap: false,
   recapComparison: true,
+  hideSensitiveOnHome: false,
 
   devFeatureOverrides: {},
   devSimulateOffline: false,

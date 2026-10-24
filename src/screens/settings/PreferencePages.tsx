@@ -528,6 +528,14 @@ export function SectionSettingsPage({
               <ToggleRow key={id} label={sectionTitle(id)} explain="" value={!s.hiddenRecapSections.includes(id)} onChange={() => s.toggleRecapSection(id)} />
             ))}
           </Group>
+          <Group title="Privacy on this phone" footer="Recap is private to this phone. Feelings and Quit stay out of anything you share unless you include them.">
+            <ToggleRow
+              label="Hide sensitive areas on Home"
+              explain="Feelings and Quit don't appear on Home, for when you share your phone"
+              value={s.hideSensitiveOnHome}
+              onChange={(on) => s.set('hideSensitiveOnHome', on)}
+            />
+          </Group>
           <Group title="Story and comparisons">
             <ToggleRow
               label="Compare with the previous period"

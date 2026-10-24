@@ -40,9 +40,9 @@ export type EffortKind = 'study' | 'skills' | 'reading' | 'habits';
 
 export const AREA_SECTIONS: Record<AreaId, SectionId[]> = {
   plan: ['planBuilder', 'dailyPlanning', 'dietPlanning', 'budget'],
-  reflect: ['journaling', 'moodCheck', 'sleep'],
+  reflect: ['journaling', 'moodCheck', 'sleep', 'catchAThought'],
   grow: ['habitBuilder', 'quitHabit', 'skills'],
-  learn: ['book', 'studySession'],
+  learn: ['book', 'studySession', 'songwriting', 'mindGames'],
 };
 export const AREA_TITLES: Record<AreaId, string> = { plan: 'Plan', reflect: 'Reflect', grow: 'Grow', learn: 'Learn' };
 
@@ -54,7 +54,7 @@ export const EFFORT_LABEL: Record<EffortKind, string> = { study: 'Study', skills
 export const SENSITIVE_SECTIONS: SectionId[] = ['moodCheck', 'quitHabit'];
 
 // Every section Recap can show — the "Choose what Recap shows" list.
-export const RECAP_SECTIONS: SectionId[] = [...AREA_SECTIONS.plan, ...AREA_SECTIONS.reflect, ...AREA_SECTIONS.grow, ...AREA_SECTIONS.learn, 'catchAThought', 'songwriting', 'mindGames'];
+export const RECAP_SECTIONS: SectionId[] = [...AREA_SECTIONS.plan, ...AREA_SECTIONS.reflect, ...AREA_SECTIONS.grow, ...AREA_SECTIONS.learn];
 
 const inRange = (date: string, r: DateRange) => date >= r.start && date <= r.end;
 
@@ -496,18 +496,15 @@ export function areaSummaries(stats: PeriodStats, hidden: SectionId[]): AreaSumm
 
 export interface PlanDetails {
   completionRate?: number;
-  busiestDay?: { date: string; done: number };
   plans: { id: string; title: string; color: string; done: number; total: number }[];
   spending: { budgetId: string; name: string; currency: string; mode: 'limit' | 'goal'; amount: number; target: number }[];
 }
 
 export function planDetails(data: RecapData, stats: PeriodStats): PlanDetails {
-  const busiest = [...stats.dates].sort((a, b) => (stats.tasksByDay[b]?.done ?? 0) - (stats.tasksByDay[a]?.done ?? 0))[0];
   const spendingMap = new Map<string, number>();
   for (const e of data.budgetEntries) if (inRange(e.date, stats.range)) spendingMap.set(e.budgetId, (spendingMap.get(e.budgetId) ?? 0) + e.amount);
   return {
     completionRate: stats.tasksPlanned ? Math.round((stats.tasksCompleted / stats.tasksPlanned) * 100) : undefined,
-    busiestDay: busiest && (stats.tasksByDay[busiest]?.done ?? 0) > 0 ? { date: busiest, done: stats.tasksByDay[busiest].done } : undefined,
     plans: data.plans
       .filter((p) => p.status === 'active')
       .map((p) => {
@@ -546,26 +543,11 @@ export function growDetails(data: RecapData, stats: PeriodStats, today: string):
 }
 
 export interface LearnDetails {
-  bestFocusTime?: string;
   books: { id: string; title: string; progress?: string; fraction?: number }[];
 }
 
 export function learnDetails(data: RecapData, stats: PeriodStats): LearnDetails {
-  // Best focus time of day: where most study minutes started, once there
-  // are at least three timed sessions to say anything.
-  const timed = data.studySessions.filter((s) => s.startedAt && inRange(s.date, stats.range) && s.focusMinutes > 0);
-  let bestFocusTime: string | undefined;
-  if (timed.length >= 3) {
-    const buckets: Record<string, number> = { morning: 0, afternoon: 0, evening: 0, night: 0 };
-    for (const s of timed) {
-      const h = new Date(s.startedAt!).getHours();
-      const b = h >= 5 && h < 12 ? 'morning' : h < 17 && h >= 12 ? 'afternoon' : h >= 17 && h < 22 ? 'evening' : 'night';
-      buckets[b] += s.focusMinutes;
-    }
-    bestFocusTime = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0][0];
-  }
   return {
-    bestFocusTime,
     books: data.readingEntries
       .filter((e) => e.status === 'reading' || data.readingSessions.some((s) => s.entryId === e.id && inRange(s.date, stats.range)))
       .map((e) => {
