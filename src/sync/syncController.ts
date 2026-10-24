@@ -15,7 +15,7 @@ import { canUpload, syncGate, type SyncGate } from '../utils/sync';
 import { resyncFeature } from '../utils/reminders';
 import { fingerprint, syncedCollections, toRecords } from './records';
 import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type RemoteRow, type SyncServer } from './engine';
-import { DemoModeError, dataGeneration, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
+import { DemoModeError, bumpDataGeneration, dataGeneration, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
 import { CHOICE_NEEDED, prepareAccount, useAccountChoiceStore } from './signInFlow';
 import { withoutDemoItems } from '../utils/demoLeftovers';
 
@@ -227,7 +227,11 @@ export function startSync(): () => void {
   useAccountChoiceStore.setState({ pending: null, readyFor: null, busy: false });
   unsubs.push(
     useAuthStore.subscribe((s, p) => {
+      // A token refresh (same account) changes nothing. Signing in, out,
+      // the session expiring, or another account signing in without a
+      // sign-out: a sync that's running stops writing and sending.
       if (s.session?.user.id === p.session?.user.id) return;
+      bumpDataGeneration();
       useAccountChoiceStore.setState({ pending: null, readyFor: null });
       quietly();
     })

@@ -16,6 +16,14 @@ import { themedStyles } from '../theme/runtime';
 const items = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`;
 
 export const CHOICE_COPY = {
+  adopt: {
+    title: "Add this phone's data to your account?",
+    counts: (here: number) => `${items(here)} on this phone. Your account is empty.`,
+    options: [
+      { id: 'continue', label: 'Continue', line: 'Everything here is kept in your account, and syncs from now on.' },
+      { id: 'keepSeparate', label: 'Keep separate', line: "Your account starts empty. This phone's data is kept aside, and comes back when you sign out." },
+    ],
+  },
   merge: {
     title: 'This phone and your account both have data',
     counts: (here: number, inAccount: number) => `${items(here)} on this phone, ${items(inAccount)} in your account.`,
@@ -44,8 +52,9 @@ export function AccountChoiceSheet() {
   const hide = () => useAccountChoiceStore.setState({ hidden: true });
   const { showToast } = useUi();
   if (!pending) return null;
-  const copy = pending.kind === 'merge' ? CHOICE_COPY.merge : CHOICE_COPY.otherAccount;
-  const counts = pending.kind === 'merge' ? CHOICE_COPY.merge.counts(pending.here, pending.inAccount) : CHOICE_COPY.otherAccount.counts(pending.here);
+  const copy = CHOICE_COPY[pending.kind];
+  const counts =
+    pending.kind === 'merge' ? CHOICE_COPY.merge.counts(pending.here, pending.inAccount) : pending.kind === 'adopt' ? CHOICE_COPY.adopt.counts(pending.here) : CHOICE_COPY.otherAccount.counts(pending.here);
   const choose = (id: ChoiceOption) =>
     void chooseForAccount(id).catch((e) => showToast({ message: `Couldn't do that: ${e instanceof Error ? e.message : String(e)}. Nothing was changed.` }));
   return (

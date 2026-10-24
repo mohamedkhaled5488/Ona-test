@@ -127,6 +127,8 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-091 | Diet horizon (FIX-21) | No account: plan a meal next week, then the week after, then last week | Next week and last week work; the week after explains "plans up to next week" | | | |
 | MAN-092 | Names (FIX-22) | Settings → Plan & usage, Account; signed in during the trial, then signed out | "Plus trial, N days left. All features on." / "Essentials mode. Your data is safe on this phone."; never "free version", "expired", "downgrade" or "limited" | | | |
 | MAN-093 | Never limited (FIX-21) | No account: add 3 Quit habits; open support resources; export my data | All work, with no mention of Plus | | | |
+| MAN-094 | Backup status row | Settings → Account & Subscription: signed in and synced; then airplane mode and add an entry; then pause sync | "Backed up, last synced …"; then "Offline: 1 change … isn't in your account yet"; then "Sync paused"; never "Backed up" while a change waits. Choice sheet readable with the largest text | | | |
+| MAN-095 | Killed mid-step | Sign in with data on the phone and in the account; choose Keep separate and immediately swipe Ona away; reopen | Either the choice is asked again with the phone's data intact, or it's done and the copy is listed in Privacy → Other data on this phone; nothing missing | | | |
 
 ## Sign-off
 

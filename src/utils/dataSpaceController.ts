@@ -115,6 +115,13 @@ async function load(space: DataSpace, storage: Storage, keepSamples: boolean): P
 // At app start. Reopens in Demo mode if that's where the app was; if the
 // demo data isn't all there, falls back to the user's own data.
 export async function startAppData(storage: Storage = AsyncStorage, keepSamplesOnFirstRun: boolean = __DEV__): Promise<DataSpace> {
+  // Killed in the middle of putting data aside, bringing it back or removing
+  // it: finish (or undo) that first.
+  try {
+    await recoverDataOperation(storage);
+  } catch (e) {
+    if (__DEV__) console.warn('[data] recovery', e);
+  }
   let space: DataSpace = 'real';
   try {
     if ((await storage.getItem(SPACE_KEY)) === 'demo') {
@@ -227,7 +234,13 @@ export interface ParkedCopy {
   sync: SyncState; // what was known about the server for it
 }
 export const PARKED_INDEX = 'ona.parked.index';
+// The step in progress, so a restart after Ona is killed halfway finishes it
+// or undoes it (recoverDataOperation). Written first, cleared last.
+export const DATA_OP_KEY = 'ona.parked.op';
+type DataOp = { op: 'park'; copy: ParkedCopy } | { op: 'restore'; id: string; mode: 'restored' | 'added' } | { op: 'clear' };
 const parkedKey = (id: string, section: string) => `ona.parked.${id}.${section}`;
+// The sync bookkeeping's own storage key (store/useSyncStore.ts).
+const SYNC_KEY = 'ona.sync';
 
 export async function listParked(storage: Storage = AsyncStorage): Promise<ParkedCopy[]> {
   try {
@@ -239,6 +252,14 @@ export async function listParked(storage: Storage = AsyncStorage): Promise<Parke
 }
 const saveIndex = (list: ParkedCopy[], storage: Storage) => storage.setItem(PARKED_INDEX, JSON.stringify(list));
 
+// What sync knows about the server, saved now (not when the store gets to
+// it): the order of these writes is what keeps a crash from ever leaving a
+// sync state that would delete things from the account.
+async function saveSyncState(state: SyncState, storage: Storage): Promise<void> {
+  await storage.setItem(SYNC_KEY, JSON.stringify({ state, version: 1 }));
+  useSyncStore.getState().setSyncState(state);
+}
+
 // The records the phone's own data holds right now (what a person would
 // call "my entries"): every synced collection, item by item.
 export function countActiveRecords(): number {
@@ -249,8 +270,9 @@ export function countActiveRecords(): number {
 
 // Runs `change` with the phone's own data held still, like a demo switch:
 // no sync may start, a running one finishes first, everything is saved and
-// saving stops; afterwards the stores load from storage again, and a sync
-// that started before sees the data changed and stops.
+// saving stops; afterwards (also after an error) the stores load from
+// storage again, and a sync that started before sees the data changed and
+// stops.
 function exclusively<T>(change: () => Promise<T>, storage: Storage): Promise<T> {
   const run = queue.then(async () => {
     if (isDemo()) throw new Error("That isn't available in Demo mode.");
@@ -263,13 +285,15 @@ function exclusively<T>(change: () => Promise<T>, storage: Storage): Promise<T> 
         persistence = null;
       }
       bumpDataGeneration();
-      const result = await change();
-      await hydrateLocalData(storage, false);
-      persistence = startLocalPersistence(storage);
-      bumpDataGeneration();
-      return result;
+      return await change();
     } finally {
-      setSwitchingDataSpace(false);
+      try {
+        await hydrateLocalData(storage, false);
+      } finally {
+        persistence = startLocalPersistence(storage);
+        bumpDataGeneration();
+        setSwitchingDataSpace(false);
+      }
     }
   });
   queue = run.then(
@@ -279,28 +303,84 @@ function exclusively<T>(change: () => Promise<T>, storage: Storage): Promise<T> 
   return run;
 }
 
+// --- The three operations, each in steps a restart can finish ----------------
+//
+// Park:    note → copy every section → list the copy (the point of no return)
+//          → forget the account → remove the phone's own sections → done.
+// Restore: note → bring the sections back (or add their items) → only then
+//          what was known about its account → unlist → remove the copy → done.
+// Clear:   note → forget the account → remove the phone's sections → done.
+//
+// "Forget the account" always comes before anything is removed, and a
+// restored copy's sync state only after all of it is back: so a sync never
+// sees items missing that it believes the account has (it would delete them
+// there).
+
+async function parkSteps(copy: ParkedCopy, storage: Storage, from: 'start' | 'listed'): Promise<void> {
+  if (from === 'start') {
+    for (const section of Object.keys(LOCAL_DATA)) {
+      const raw = (await storage.getItem(storageKey(section, 'real'))) as string | null;
+      if (raw) await storage.setItem(parkedKey(copy.id, section), raw);
+    }
+    await saveIndex([...(await listParked(storage)).filter((c) => c.id !== copy.id), copy], storage);
+  }
+  await saveSyncState(EMPTY_SYNC_STATE, storage);
+  for (const section of Object.keys(LOCAL_DATA)) await storage.removeItem(storageKey(section, 'real'));
+}
+
+type Envelope = { v: number; state: Record<string, unknown> };
+async function readEnvelope(key: string, storage: Storage): Promise<Envelope | null> {
+  const raw = (await storage.getItem(key)) as string | null;
+  return raw ? (JSON.parse(raw) as Envelope) : null;
+}
+
+async function restoreSteps(copy: ParkedCopy, mode: 'restored' | 'added', storage: Storage): Promise<void> {
+  if (mode === 'restored') {
+    for (const section of Object.keys(LOCAL_DATA)) {
+      const raw = (await storage.getItem(parkedKey(copy.id, section))) as string | null;
+      if (raw) await storage.setItem(storageKey(section, 'real'), raw);
+      else await storage.removeItem(storageKey(section, 'real'));
+    }
+    await saveSyncState(copy.sync, storage);
+  } else {
+    // Adding is the same however many times it runs (item by item, by id).
+    for (const section of Object.keys(LOCAL_DATA)) {
+      const there = await readEnvelope(parkedKey(copy.id, section), storage);
+      if (!there) continue;
+      const here = (await readEnvelope(storageKey(section, 'real'), storage)) ?? { v: DATA_FORMAT_VERSION, state: {} };
+      for (const c of syncedCollections().filter((x) => x.section === section)) {
+        const merged = toRecords(c.key, here.state[c.field]);
+        for (const [rid, data] of toRecords(c.key, there.state?.[c.field])) if (!merged.has(rid)) merged.set(rid, data);
+        const current = here.state[c.field] ?? (Array.isArray(there.state?.[c.field]) ? [] : undefined);
+        here.state[c.field] = fromRecords(c.key, current, merged);
+      }
+      await storage.setItem(storageKey(section, 'real'), JSON.stringify(here));
+    }
+  }
+  await removeParkedNow(copy.id, storage);
+}
+
+async function clearSteps(storage: Storage): Promise<void> {
+  await saveSyncState(EMPTY_SYNC_STATE, storage);
+  for (const section of Object.keys(LOCAL_DATA)) await storage.removeItem(storageKey(section, 'real'));
+}
+
 // Puts the phone's data aside and leaves the phone's own data empty (with
 // nothing known about any account), ready for the signed-in account's data.
 export function parkActiveData(meta: { origin: string | null; reason: ParkedReason }, storage: Storage = AsyncStorage): Promise<ParkedCopy> {
   return exclusively(async () => {
     const { owner, cursor, fingerprints } = useSyncStore.getState();
     const copy: ParkedCopy = { id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, ...meta, parkedAt: new Date().toISOString(), records: countActiveRecords(), sync: { owner, cursor, fingerprints } };
-    for (const section of Object.keys(LOCAL_DATA)) {
-      const raw = (await storage.getItem(storageKey(section, 'real'))) as string | null;
-      if (raw) await storage.setItem(parkedKey(copy.id, section), raw);
-    }
-    // The index last: a copy is listed only once all of it is stored.
-    await saveIndex([...(await listParked(storage)), copy], storage);
+    await storage.setItem(DATA_OP_KEY, JSON.stringify({ op: 'park', copy } satisfies DataOp));
+    await parkSteps(copy, storage, 'start');
     // Its reminders stop ringing on this phone (the copy keeps the items;
-    // bringing it back schedules them again: signInFlow.bringBack).
+    // bringing it back schedules them again: signInFlow.bringBack). Saving
+    // is stopped, so this only clears what's in memory.
     await wipeLocalData();
-    for (const section of Object.keys(LOCAL_DATA)) await storage.removeItem(storageKey(section, 'real'));
-    useSyncStore.getState().reset();
+    await storage.removeItem(DATA_OP_KEY);
     return copy;
   }, storage);
 }
-
-type Envelope = { v: number; state: Record<string, unknown> };
 
 // Brings a copy back. Onto an empty phone it returns exactly as it was (with
 // what was known about its account); otherwise its items are added to what's
@@ -309,34 +389,11 @@ export function restoreParked(id: string, storage: Storage = AsyncStorage): Prom
   return exclusively(async () => {
     const copy = (await listParked(storage)).find((c) => c.id === id);
     if (!copy) throw new Error('That copy is no longer on this phone.');
-    const empty = countActiveRecords() === 0;
-    if (empty) {
-      for (const section of Object.keys(LOCAL_DATA)) {
-        const raw = (await storage.getItem(parkedKey(id, section))) as string | null;
-        if (raw) await storage.setItem(storageKey(section, 'real'), raw);
-        else await storage.removeItem(storageKey(section, 'real'));
-      }
-      useSyncStore.getState().setSyncState(copy.sync);
-    } else {
-      const read = async (key: string): Promise<Envelope | null> => {
-        const raw = (await storage.getItem(key)) as string | null;
-        return raw ? (JSON.parse(raw) as Envelope) : null;
-      };
-      for (const section of Object.keys(LOCAL_DATA)) {
-        const there = await read(parkedKey(id, section));
-        if (!there) continue;
-        const here = (await read(storageKey(section, 'real'))) ?? { v: DATA_FORMAT_VERSION, state: {} };
-        for (const c of syncedCollections().filter((x) => x.section === section)) {
-          const merged = toRecords(c.key, here.state[c.field]);
-          for (const [rid, data] of toRecords(c.key, there.state?.[c.field])) if (!merged.has(rid)) merged.set(rid, data);
-          const current = here.state[c.field] ?? (Array.isArray(there.state?.[c.field]) ? [] : undefined);
-          here.state[c.field] = fromRecords(c.key, current, merged);
-        }
-        await storage.setItem(storageKey(section, 'real'), JSON.stringify(here));
-      }
-    }
-    await removeParkedNow(id, storage);
-    return empty ? 'restored' : 'added';
+    const mode = countActiveRecords() === 0 ? 'restored' : 'added';
+    await storage.setItem(DATA_OP_KEY, JSON.stringify({ op: 'restore', id, mode } satisfies DataOp));
+    await restoreSteps(copy, mode, storage);
+    await storage.removeItem(DATA_OP_KEY);
+    return mode;
   }, storage);
 }
 
@@ -356,10 +413,40 @@ export async function removeParked(id: string, storage: Storage = AsyncStorage):
 // the account, with the same hold as a switch.
 export function clearActiveData(storage: Storage = AsyncStorage): Promise<void> {
   return exclusively(async () => {
+    await storage.setItem(DATA_OP_KEY, JSON.stringify({ op: 'clear' } satisfies DataOp));
     await wipeLocalData();
-    for (const section of Object.keys(LOCAL_DATA)) await storage.removeItem(storageKey(section, 'real'));
-    useSyncStore.getState().setSyncState(EMPTY_SYNC_STATE);
+    await clearSteps(storage);
+    await storage.removeItem(DATA_OP_KEY);
   }, storage);
+}
+
+// At start-up, before anything loads: if Ona was killed in the middle of one
+// of the operations above, finish it, or (a copy that was never listed) undo
+// it. Nothing anyone made is lost either way.
+export async function recoverDataOperation(storage: Storage = AsyncStorage): Promise<DataOp['op'] | null> {
+  let op: DataOp | null = null;
+  try {
+    const raw = (await storage.getItem(DATA_OP_KEY)) as string | null;
+    op = raw ? (JSON.parse(raw) as DataOp) : null;
+  } catch {
+    op = null;
+  }
+  if (!op) return null;
+  const listed = await listParked(storage);
+  if (op.op === 'park') {
+    const copy = op.copy;
+    if (listed.some((c) => c.id === copy.id)) await parkSteps(copy, storage, 'listed');
+    // Never listed: the phone's own sections were never touched. Undo.
+    else for (const section of Object.keys(LOCAL_DATA)) await storage.removeItem(parkedKey(copy.id, section));
+  } else if (op.op === 'restore') {
+    const copy = listed.find((c) => c.id === (op as { id: string }).id);
+    if (copy) await restoreSteps(copy, op.mode, storage);
+    else for (const section of Object.keys(LOCAL_DATA)) await storage.removeItem(parkedKey(op.id, section));
+  } else {
+    await clearSteps(storage);
+  }
+  await storage.removeItem(DATA_OP_KEY);
+  return op.op;
 }
 
 // For tests: write every pending save now, instead of waiting a fixed time.

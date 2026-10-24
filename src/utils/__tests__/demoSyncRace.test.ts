@@ -40,6 +40,7 @@ import { setDataSpace } from '../dataSpace';
 import { __flushForTests, __resetForTests, startAppData, switchDataSpace } from '../dataSpaceController';
 import { LOCAL_DATA } from '../localData';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSyncStore } from '../../store/useSyncStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useEntitlementStore } from '../../store/useEntitlementStore';
 import { useJournalStore } from '../../store/useJournalStore';
@@ -84,6 +85,8 @@ test('FIX-14 entering and leaving the demo while signed in with sync on uploads 
   useJournalStore.setState({ entries: [{ id: 'mine', date: '2026-10-18', zone: 'calm', text: 'My own words', tags: [], createdAt: '2026-10-18T09:00:00.000Z', updatedAt: '2026-10-18T09:00:00.000Z' }] } as never);
   useSettingsStore.getState().setConsent({ storeData: true });
   useAuthStore.setState({ session: { user: { id: 'u1' } } as never });
+  // Already syncing with this account (so no sign-in question).
+  useSyncStore.getState().setSyncState({ owner: 'u1', cursor: null, fingerprints: {} });
   useEntitlementStore.getState().saveSnapshot({ userId: 'u1', serverTime: new Date().toISOString(), fetchedAt: Date.now(), trial: { startedAt: new Date(Date.now() - DAY).toISOString(), endsAt: new Date(Date.now() + 20 * DAY).toISOString() }, subscription: null });
   await __flushForTests();
   const stop = startSync();

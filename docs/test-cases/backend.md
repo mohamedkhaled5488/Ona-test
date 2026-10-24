@@ -48,6 +48,12 @@ Every test creates its own new accounts, so no test depends on another one.
 | BE-SYNC-006 | Privacy | Two accounts | A and B | A syncs a journal entry; B syncs | B receives nothing | backend | P0 | sync.test.ts |
 | BE-SYNC-007 | Sync | Phone of another account | Phone synced with A | Sync as B | Refused before anything is sent | backend | P0 | sync.test.ts |
 | BE-SYNC-008 | Gating | Access ends mid-use | Synced, then trial ended | Add a task; sync; new phone syncs | "Sync access has ended on the server."; the task stays on the phone; a new phone can still pull | backend | P0 | sync.test.ts |
+| BE-ACC-001 | Accounts | Phone data, empty account | New account; 2 entries on the phone | Sign in (real consent, real trial), sync | Asked with the real count (2); nothing sent; Continue sends both | backend | P0 | accounts.test.ts |
+| BE-ACC-002 | Accounts | Merge with real counts | Account has 2 rows; phone 1 | Sign in, sync | Asked with 1 here, 2 in the account; Merge: both have all 3 | backend | P0 | accounts.test.ts |
+| BE-ACC-003 | Accounts | Keep separate | Account 1 row; phone 1 | Choose Keep separate | Account unchanged; the phone's copy kept aside | backend | P0 | accounts.test.ts |
+| BE-ACC-004 | Accounts | Another account on the phone | A synced a1; signs out keeping it; B has b1 | B signs in | Asked; Keep separate: B unchanged, A unchanged | backend | P0 | accounts.test.ts |
+| BE-ACC-005 | Accounts | Merge with the trial over | Trial ended 10 days ago; account a1; phone g1 | Merge | a1 comes down; g1 waits (1 unsent, "Backup paused"); the server refuses a direct upload too | backend | P0 | accounts.test.ts |
+| BE-ACC-006 | Accounts | Remove at sign-out, sign in again | Synced j1, j2 | Sign out with Remove; sign in | Phone empty, account keeps both; both come back | backend | P0 | accounts.test.ts |
 | BE-DEL-001 | Deletion | Delete the server copy | A and B with a row in every table | A: `delete_my_server_data()` | All A's rows in 20 tables gone; account and trial kept; B untouched | backend | P0 | deletion.test.ts |
 | BE-DEL-002 | Deletion | Delete my account | As above, plus A's subscription | A: `delete_my_account()` | Account, profile, trial, subscription and every row gone; B untouched | backend | P0 | deletion.test.ts |
 | BE-DEL-003 | Deletion | Old token after deletion | Account deleted | Write with its token | Refused; nothing stored | backend | P0 | deletion.test.ts |

@@ -5,8 +5,8 @@
 // - The phone's data already belongs to this account, or the phone is
 //   empty: sync straight away (an empty phone gets the account's data; data
 //   this account left here earlier is brought back first).
-// - Data made without an account, and the account is empty: it becomes the
-//   account's (the sign-in button says "sync my data").
+// - Data made without an account, and the account is empty: one tap to
+//   confirm, with the count (Continue / Keep separate).
 // - Data made without an account, and the account already has data: the
 //   merge screen. Merge (default), keep this phone's data separate, or use
 //   the account's data only. Never decided silently.
@@ -25,10 +25,11 @@ import { isDemo } from '../utils/dataSpace';
 import { resyncFeature } from '../utils/reminders';
 
 export type AccountChoice =
+  | { kind: 'adopt'; userId: string; here: number }
   | { kind: 'merge'; userId: string; here: number; inAccount: number }
   | { kind: 'otherAccount'; userId: string; here: number; otherOwner: string };
 
-export type ChoiceOption = 'merge' | 'keepSeparate' | 'accountOnly' | 'addToAccount';
+export type ChoiceOption = 'continue' | 'merge' | 'keepSeparate' | 'accountOnly' | 'addToAccount';
 
 interface ChoiceState {
   pending: AccountChoice | null;
@@ -86,7 +87,7 @@ export function prepareAccount(userId: string, countInAccount: (userId: string) 
     }
     if (owner === null) {
       const inAccount = await countInAccount(userId);
-      if (inAccount === 0) return settle(userId);
+      if (inAccount === 0) return ask({ kind: 'adopt', userId, here });
       return ask({ kind: 'merge', userId, here, inAccount });
     }
     return ask({ kind: 'otherAccount', userId, here, otherOwner: owner });
@@ -114,7 +115,7 @@ export async function chooseForAccount(option: ChoiceOption): Promise<void> {
   if (!choice || isDemo()) return;
   useAccountChoiceStore.setState({ busy: true });
   try {
-    if (option === 'merge' || option === 'addToAccount') {
+    if (option === 'continue' || option === 'merge' || option === 'addToAccount') {
       // Everything here is added to the account by the next sync (union by
       // item; nothing deleted on either side).
       if (choice.kind === 'otherAccount') useSyncStore.getState().reset();

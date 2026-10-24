@@ -69,7 +69,8 @@ import { useSettingsStore, DEFAULT_SETTINGS } from '../../store/useSettingsStore
 import { useEntitlementStore } from '../../store/useEntitlementStore';
 import { useSyncStore } from '../../store/useSyncStore';
 import { useJournalStore } from '../../store/useJournalStore';
-import { startSync, syncInFlight } from '../../sync/syncController';
+import { startSync, syncInFlight, syncNow } from '../../sync/syncController';
+import { chooseForAccount } from '../../sync/signInFlow';
 import { startAccountConsent, noteConsentSource, useConsentStatusStore, SERVER_NEEDS_UPDATE } from '../../sync/accountConsent';
 import { startEntitlementSync } from '../entitlementBootstrap';
 import { useClock, restoreClock } from '../../test-utils';
@@ -157,11 +158,15 @@ test('JRN-SYNC-003 the server missing the 0007/0008 update: nothing is sent, not
   expect(useConsentStatusStore.getState().problem).toBe(SERVER_NEEDS_UPDATE);
 });
 
-test('JRN-SYNC-004 data written before signing in goes to the account at sign-in', async () => {
+test('JRN-SYNC-004 data written before signing in goes to the account at sign-in, after one tap (Continue)', async () => {
   await freshInstall();
   useJournalStore.setState({ entries: [entry('j0', 'Written while signed out')] } as never);
   await __flushForTests();
   signIn('u1');
+  await settle();
+  expect(serverIds()).toEqual([]); // asked first (owner's decision 2026-10-24)
+  await chooseForAccount('continue');
+  void syncNow();
   await settle();
   expect(serverIds()).toEqual(['j0']);
 });
@@ -194,6 +199,9 @@ test('JRN-SYNC-006 (point 4) turning sync off in the middle of a big upload stop
     if (batches === 1) useSettingsStore.getState().setConsent({ storeData: false }); // turned off during the first batch
   };
   signIn('u1');
+  await settle();
+  await chooseForAccount('continue');
+  void syncNow();
   await settle();
   expect(batches).toBe(1); // 650 entries would take 4 batches of 200
   expect(serverIds().length).toBe(200);

@@ -12,6 +12,7 @@ import { usePaywallStore } from '../../store/usePaywallStore';
 import { syncNow, unsentChanges } from '../../sync/syncController';
 import { SIGN_OUT_COPY, signOutAndChoose, signOutCopy, signOutFacts, useAccountChoiceStore } from '../../sync/signInFlow';
 import { canUpload } from '../../utils/sync';
+import { useBackupStatus } from '../../sync/backupStatus';
 import { useConsentStatusStore } from '../../sync/accountConsent';
 import { useSyncStore } from '../../store/useSyncStore';
 import { useBackHandler } from '../../hooks/useBackHandler';
@@ -77,6 +78,7 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
   const setSyncPaused = useAccountStore((s) => s.setSyncPaused);
   const { showDialog, showToast } = useUi();
   const choicePending = useAccountChoiceStore((s) => !!s.pending);
+  const backup = useBackupStatus();
 
   // Design 3.4: unsent changes first, then keep or remove this phone's copy.
   const confirmSignOut = () => {
@@ -189,12 +191,12 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
 
       {choicePending && (
         <Group title="Data on this phone">
-          <NavRow icon="git-merge-outline" label="Choose what to do with the data on this phone" explain="Nothing syncs until you choose" onPress={() => useAccountChoiceStore.setState({ hidden: false })} />
+          <NavRow icon="git-merge-outline" label="Waiting for your choice" explain="Choose what to do with the data on this phone. Nothing syncs until you do." onPress={() => useAccountChoiceStore.setState({ hidden: false })} />
         </Group>
       )}
 
       <Group title="Sync" footer={consentProblem ?? gate.message}>
-        <InfoRow label="Last synced" value={formatSyncedAt(lastSyncedAt)} />
+        <InfoRow label={backup.title} explain={backup.line} value={lastSyncedAt ? formatSyncedAt(lastSyncedAt) : undefined} />
         <NavRow icon="sync-outline" label={syncing ? 'Syncing…' : 'Sync now'} explain={syncError ?? undefined} onPress={syncNowPressed} />
         <ToggleRow label="Pause sync" explain="Keep using Ona normally. Nothing leaves this device while paused." value={syncPaused} onChange={setSyncPaused} />
       </Group>
