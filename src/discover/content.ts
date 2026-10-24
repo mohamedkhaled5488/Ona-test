@@ -190,12 +190,12 @@ export const TOUR: TourSection[] = [
     group: 'grow',
     title: 'Habits: Quit',
     slides: [
-      { key: 'qh-1', title: 'Ride out a craving', body: 'When an urge comes, pick what might help: an urge timer with breathing, something to do instead, or reaching out.', feature: 'quitUrge', mock: 'quit' },
-      { key: 'qh-2', title: 'Every urge you resist counts', body: 'Log the urges you rode out and see them add up.', feature: 'quitResisted', mock: 'quit' },
+      { key: 'qh-1', title: 'Ride out a craving', body: 'When a craving comes, pick what might help: breathing, something to do instead, checking the facts, or reaching out. A gentle timer keeps going while you switch.', feature: 'quitUrge', mock: 'quit' },
+      { key: 'qh-2', title: 'Every urge you resist counts', body: 'When a craving passes, it counts as an urge ridden out, and they add up on your journey.', feature: 'quitResisted', mock: 'quit' },
       {
         key: 'qh-3',
         title: 'Your journey stays',
-        body: 'A slip is part of the story, not a restart. Every day before it still counts. No punishment, no reset to zero.',
+        body: 'A slip is a hard day marked on your journey, not a restart. The journey and its day count carry on. No punishment, no reset to zero.',
         feature: 'quitJourney',
         mock: 'pattern',
         tryIt: { route: 'habitsHub', params: { initialMode: 'quit' } },

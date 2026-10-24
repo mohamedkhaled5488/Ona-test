@@ -114,21 +114,23 @@ describe('RECAP-REG: Quit, gently, with the Quit section\'s own numbers', () => 
     return data;
   }
 
-  test('RECAP-REG-010 the numbers are the Quit journey\'s: days on the journey, urges ridden out, new chapters', () => {
+  // Owner's decision 2026-10-24: a slip is "a hard day" on the journey, and
+  // the journey's day count carries on.
+  test("RECAP-REG-010 the numbers are the Quit journey's: clean days, urges ridden out, a hard day", () => {
     const data = quitData();
     const r = contributorFor('quitHabit')!.build(ctx(data));
     const days = quitJourneySeries(data.quitTracks, data.quitFeelingEntries, 'q1', TODAY).filter((d) => d.date >= WEEK.start && d.date <= WEEK.end);
     expect(r.rows).toEqual([
-      expect.objectContaining({ label: 'Days on your journey', value: String(days.filter((d) => !d.relapse).length) }),
+      expect.objectContaining({ label: 'Clean days', value: String(days.filter((d) => !d.hardDay).length) }),
       expect.objectContaining({ label: 'Urges ridden out', value: '1' }),
-      expect.objectContaining({ label: 'New chapters started', value: '1' }),
+      expect.objectContaining({ label: 'A hard day', value: '1' }),
     ]);
-    expect(r.items[0].caption).toMatch(/^Day \d+ of chapter 2/);
+    expect(r.items[0].caption).toMatch(/^Day 15 of your journey/);
   });
 
-  test('RECAP-REG-011 a slip reads as part of the journey, never as failing', () => {
+  test('RECAP-REG-011 a slip reads as part of the journey ("a hard day"), never as failing', () => {
     const text = JSON.stringify(contributorFor('quitHabit')!.build(ctx(quitData())));
-    expect(text).toMatch(/new chapter/i);
+    expect(text).toMatch(/hard day/i);
     expect(text).not.toMatch(/fail|relapse|broke|lost|reset|streak ended|back to zero/i);
   });
 });

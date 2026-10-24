@@ -25,7 +25,7 @@ afterEach(() => restoreClock());
 
 test('RECAP-C-001 Quit shows under Grow on Home, and its card on the Grow page, in gentle words', async () => {
   await renderScreen('Main', RecapScreen);
-  expect(await screen.findByText('Days on your journey')).toBeTruthy(); // the Grow tile
+  expect(await screen.findByText('Clean days')).toBeTruthy(); // the Grow tile (a slip is "a hard day": owner's decision 2026-10-24)
   const user = userEvent.setup();
   await user.press(screen.getByText('Grow'));
   expect(await screen.findByTestId('recap-card-quitHabit')).toBeTruthy();
@@ -37,7 +37,7 @@ test('RECAP-C-002 "Hide sensitive areas on Home" takes Quit (and Feelings) off H
   useSettingsStore.setState({ hideSensitiveOnHome: true });
   await renderScreen('Main', RecapScreen);
   await screen.findByText('Grow');
-  expect(screen.queryByText('Days on your journey')).toBeNull();
+  expect(screen.queryByText('Clean days')).toBeNull();
 });
 
 test('RECAP-C-003 something logged in another section appears straight away (Catch a Feeling or Idea under Reflect)', async () => {

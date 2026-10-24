@@ -26,12 +26,14 @@ import {
   daysSinceTrackStart,
   quitMilestoneMessage,
   resistedUrgeEntriesForHabit,
+  openCravingFor,
 } from '../store/useQuitHabitsStore';
 import { rotatingJourneyStat } from '../utils/habitStats';
 import { QuitHabitAnalysisStage } from './QuitHabitAnalysis';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { useHabitsStore } from '../store/useHabitsStore';
-import type { Feeling, FeelingSource, FeelingZone, QuitHabit, QuitTrack } from '../types/sections';
+import type { Feeling, FeelingSource, FeelingZone, QuitCravingSession, QuitHabit, QuitTrack } from '../types/sections';
+import { formatRideTimer, journeyCounts, journeyHeadline, sessionSeconds } from '../quit/journey';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -217,40 +219,73 @@ function SoftFeelingOffer({ habit, source }: { habit: QuitHabit; source: Feeling
 }
 
 // ---------------------------------------------------------------------------
-// The relapse flow — the part of this section that matters most to get
-// right. Nothing here calls it a failure; the old track is never deleted.
-function RelapseStage({
-  habit,
-  track,
-  onBack,
-  onDone,
-}: {
-  habit: QuitHabit;
-  track: QuitTrack;
-  onBack: () => void;
-  onDone: () => void;
-}) {
-  const addFeelingEntry = useQuitHabitsStore((s) => s.addFeelingEntry);
-  const archiveTrack = useQuitHabitsStore((s) => s.archiveTrack);
-  const startNewTrack = useQuitHabitsStore((s) => s.startNewTrack);
+// A hard day (a slip) — the part of this section that matters most to get
+// right. No shame and no reset: it's marked on the journey, the journey's day
+// count carries on, and starting a new chapter is an option afterwards, never
+// the default. Crisis and support lines are one tap away.
+function SupportLink() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  return (
+    <Pressable onPress={() => navigation.navigate('settings', { page: 'safety' })} accessibilityRole="link" hitSlop={8} style={styles.supportLink}>
+      <Ionicons name="call-outline" size={14} color={colors.inkSoft} />
+      <Caption> Need to talk to someone now? Support lines</Caption>
+    </Pressable>
+  );
+}
 
-  // No feeling step: how you feel is a gentle offer inside "reflect".
+export const SLIP_COPY = {
+  title: 'Slips happen',
+  intro: (journeyDays: number) => `What matters is what you do next. A hard day doesn't erase day ${journeyDays} of your journey, or anything you've learned along the way.`,
+  reflectHeading: "If you're up for it",
+  reflectTags: 'What was happening before? (optional)',
+  reflectText: 'Anything you want to remember about it (optional)',
+  reflectPlaceholder: 'No pressure at all. Leave it blank if you’d rather not.',
+  mark: 'Mark this hard day',
+  doneTitle: 'Marked on your journey',
+  done: (journeyDays: number) => `Day ${journeyDays} of your journey carries on. This day is on your journey, with what you wrote.`,
+  back: 'Back to my journey',
+  newChapter: 'Start a new chapter?',
+  newChapterTitle: 'Start a new chapter?',
+  newChapterMessage: 'This chapter ends today and a new one begins. Your journey, its days and everything in it stay as they are.',
+  newChapterYes: 'Start a new chapter',
+};
+
+function SlipStage({ habit, track, cravingSessionId, onBack, onDone }: { habit: QuitHabit; track: QuitTrack; cravingSessionId?: string; onBack: () => void; onDone: () => void }) {
+  const markHardDay = useQuitHabitsStore((s) => s.markHardDay);
+  const startNewChapter = useQuitHabitsStore((s) => s.startNewChapter);
+  const endCraving = useQuitHabitsStore((s) => s.endCraving);
+  const tracks = useQuitHabitsStore((s) => s.tracks);
+  const slips = useQuitHabitsStore((s) => s.slips);
+  const { showDialog } = useUi();
   const [phase, setPhase] = useState<'intro' | 'reflect' | 'done'>('intro');
   const [reflection, setReflection] = useState('');
-  // Same reasonTagOptions list as Feelings/Habits — what was going on when
-  // this track ended, for the "What was going on" card in Analysis.
   const [reasonTags, setReasonTags] = useState<string[]>([]);
-  const toggleReasonTag = (tag: string) =>
-    setReasonTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  const [slipId, setSlipId] = useState<string | null>(null);
+  const toggleReasonTag = (tag: string) => setReasonTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  const counts = journeyCounts(tracks, slips, habit.id, todayISO());
 
-  const elapsed = daysSinceTrackStart(track, todayISO());
-
-  // Documents this chapter and archives it — but doesn't decide what
-  // happens next. Starting a new track is a separate, later choice.
-  const document = () => {
-    archiveTrack(track.id, reflection, reasonTags.length > 0 ? reasonTags : undefined);
+  const mark = () => {
+    const id = markHardDay(habit.id, track.id, { reflection, reasonTags, cravingSessionId });
+    if (cravingSessionId) endCraving(cravingSessionId, 'slipped', { slipId: id });
+    setSlipId(id);
     setPhase('done');
   };
+  const askNewChapter = () =>
+    showDialog({
+      title: SLIP_COPY.newChapterTitle,
+      message: SLIP_COPY.newChapterMessage,
+      actions: [
+        { label: 'Not now', style: 'cancel' },
+        {
+          label: SLIP_COPY.newChapterYes,
+          style: 'default',
+          onPress: () => {
+            if (slipId) startNewChapter(habit.id, slipId);
+            onDone();
+          },
+        },
+      ],
+    });
 
   return (
     <>
@@ -263,11 +298,8 @@ function RelapseStage({
 
       {phase === 'intro' && (
         <>
-          <ScreenTitle>This isn't a failure</ScreenTitle>
-          <Body style={styles.relapseIntroText}>
-            Going back to {habit.name.toLowerCase()} doesn't erase day {elapsed} — or anything you felt and learned
-            along the way. Let's take a moment to understand this together, then start fresh whenever you're ready.
-          </Body>
+          <ScreenTitle>{SLIP_COPY.title}</ScreenTitle>
+          <Body style={styles.relapseIntroText}>{SLIP_COPY.intro(counts.journeyDays)}</Body>
           {habit.why && (
             <Card style={[styles.whyCard, { borderLeftColor: accent }]}>
               <Eyebrow style={{ color: accent }}>Remember why you started</Eyebrow>
@@ -275,51 +307,35 @@ function RelapseStage({
             </Card>
           )}
           <PrimaryButton label="Continue" onPress={() => setPhase('reflect')} style={styles.sheetSubmit} />
+          <SupportLink />
         </>
       )}
 
       {phase === 'reflect' && (
         <>
-          <SectionHeading>One more thing, if you're up for it</SectionHeading>
-          <Eyebrow style={styles.fieldLabel}>What was going on? (entirely optional)</Eyebrow>
+          <SectionHeading>{SLIP_COPY.reflectHeading}</SectionHeading>
+          <Eyebrow style={styles.fieldLabel}>{SLIP_COPY.reflectTags}</Eyebrow>
           <View style={styles.chipRow}>
             {reasonTagOptions.map((tag) => (
-              <Pressable key={tag} onPress={() => toggleReasonTag(tag)} style={[styles.chip, reasonTags.includes(tag) && { backgroundColor: accent }]}>
+              <Pressable key={tag} onPress={() => toggleReasonTag(tag)} style={[styles.chip, reasonTags.includes(tag) && { backgroundColor: accent }]} accessibilityRole="checkbox" accessibilityState={{ checked: reasonTags.includes(tag) }}>
                 <Body style={reasonTags.includes(tag) ? styles.chipTextActive : undefined}>{tag}</Body>
               </Pressable>
             ))}
           </View>
-          <Eyebrow style={styles.fieldLabel}>What led to this, if you're able to name it? (entirely optional)</Eyebrow>
-          <TextInput
-            value={reflection}
-            onChangeText={setReflection}
-            placeholder="No pressure at all — leave blank and continue if you'd rather not."
-            style={styles.notesInput}
-            multiline
-          />
+          <Eyebrow style={styles.fieldLabel}>{SLIP_COPY.reflectText}</Eyebrow>
+          <TextInput value={reflection} onChangeText={setReflection} placeholder={SLIP_COPY.reflectPlaceholder} style={styles.notesInput} multiline />
           <SoftFeelingOffer habit={habit} source={{ kind: 'quitHabit', refId: habit.id, trackId: track.id, slip: true }} />
-          <PrimaryButton label="Save this chapter" onPress={document} style={styles.sheetSubmit} />
+          <PrimaryButton label={SLIP_COPY.mark} onPress={mark} style={styles.sheetSubmit} />
+          <SupportLink />
         </>
       )}
 
       {phase === 'done' && (
         <>
-          <ScreenTitle>This chapter is saved</ScreenTitle>
-          <Body style={styles.relapseIntroText}>
-            Everything you just documented is part of your journey now, not erased. Start a new track whenever
-            you're ready — right now, or later.
-          </Body>
-          <PrimaryButton
-            label="Start a new track now"
-            onPress={() => {
-              startNewTrack(track.quitHabitId);
-              onDone();
-            }}
-            style={styles.sheetSubmit}
-          />
-          <Pressable onPress={onDone}>
-            <Caption style={styles.changeFeelingLink}>Not right now — I'll start when I'm ready</Caption>
-          </Pressable>
+          <ScreenTitle>{SLIP_COPY.doneTitle}</ScreenTitle>
+          <Body style={styles.relapseIntroText}>{SLIP_COPY.done(counts.journeyDays)}</Body>
+          <PrimaryButton label={SLIP_COPY.back} onPress={onDone} style={styles.sheetSubmit} />
+          <PrimaryButton label={SLIP_COPY.newChapter} variant="outline" onPress={askNewChapter} style={styles.actionButton} />
         </>
       )}
     </>
@@ -327,83 +343,9 @@ function RelapseStage({
 }
 
 // ---------------------------------------------------------------------------
-// Short, concrete things to do instead of acting on the urge — generic in
-// this first version, no personalization needed.
-const REPLACEMENT_SUGGESTIONS = [
-  'Drink a glass of water',
-  'Step outside for a minute',
-  'Stretch',
-  'Splash cold water on your face',
-];
-
-const URGE_TIMER_MINUTES = [5, 10, 15, 20];
-
-// The urge-surfing timer — a countdown paired with the existing guided
-// breathing exercise. Ending early is always available; the point of the
-// whole flow is the attempt, not completing a fixed duration.
-function UrgeTimer({ onFinish }: { onFinish: () => void }) {
-  const [durationMin, setDurationMin] = useState(() => useSettingsStore.getState().quitUrgeMinutes);
-  const [running, setRunning] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(durationMin * 60);
-  const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const start = () => {
-    setSecondsLeft(durationMin * 60);
-    setRunning(true);
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          onFinish();
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-  };
-
-  React.useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
-
-  if (!running) {
-    return (
-      <>
-        <SectionHeading>Let's ride this out together</SectionHeading>
-        <Body style={styles.relapseIntroText}>
-          Urges pass, usually within minutes, whether or not you act on them. Pick a length and give this one a
-          chance to pass on its own.
-        </Body>
-        <Eyebrow style={styles.fieldLabel}>Timer length</Eyebrow>
-        <View style={styles.durationRow}>
-          {URGE_TIMER_MINUTES.map((m) => (
-            <Pressable key={m} onPress={() => setDurationMin(m)} style={[styles.durationChip, durationMin === m && { backgroundColor: accent }]}>
-              <Body style={durationMin === m ? styles.durationChipTextActive : undefined}>{m} min</Body>
-            </Pressable>
-          ))}
-        </View>
-        <PrimaryButton label="Start" onPress={start} style={styles.sheetSubmit} />
-      </>
-    );
-  }
-
-  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-  const ss = String(secondsLeft % 60).padStart(2, '0');
-
-  return (
-    <>
-      <SectionHeading>{mm}:{ss}</SectionHeading>
-      <BreathingExercise accent={accent} />
-      <PrimaryButton
-        label="I'm done waiting"
-        variant="outline"
-        onPress={() => {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          onFinish();
-        }}
-        style={styles.sheetSubmit}
-      />
-    </>
-  );
-}
+// Short, concrete things to do instead of acting on the urge. Nothing based on
+// shock or pain (no cold water).
+const REPLACEMENT_SUGGESTIONS = ['Drink a glass of water', 'Step outside for a minute', 'Stretch', 'Make a cup of tea'];
 
 // DBT's "Check the Facts" technique — three short optional prompts rather
 // than a single free-text box, since naming each question separately is
@@ -435,125 +377,226 @@ function ReachOut({ onDone }: { onDone: () => void }) {
     <>
       <SectionHeading>Reach out</SectionHeading>
       <Body style={styles.relapseIntroText}>
-        Message or call someone — you don't have to say why, or say much at all. Just not being alone with this
-        for a few minutes can be enough.
+        Message or call someone — you don't have to say why, or say much at all. Not being alone with this for a few minutes can help.
       </Body>
-      <PrimaryButton
-        label="Open Messages"
-        variant="outline"
-        onPress={() => { Linking.openURL('sms:').catch(() => {}); }}
-        style={styles.actionButton}
-      />
+      <PrimaryButton label="Open Messages" variant="outline" onPress={() => { Linking.openURL('sms:').catch(() => {}); }} style={styles.actionButton} />
       <PrimaryButton label="I reached out" onPress={onDone} style={styles.sheetSubmit} />
-      <Pressable onPress={onDone}>
-        <Caption style={styles.changeFeelingLink}>I'll just wait it out here instead</Caption>
-      </Pressable>
     </>
   );
 }
 
-type UrgeApproach = 'rideItOut' | 'doSomethingInstead' | 'checkFacts' | 'reachOut';
-const APPROACH_LABELS: Record<UrgeApproach, string> = {
+// The tools in this first version of the craving flow (the full toolkit
+// comes next). Labels are what Analysis groups by, so they stay as they were.
+type CravingTool = 'rideItOut' | 'doSomethingInstead' | 'checkFacts' | 'reachOut';
+const TOOL_LABELS: Record<CravingTool, string> = {
   rideItOut: 'Riding it out',
   doSomethingInstead: 'Doing something instead',
   checkFacts: 'Checking the facts',
   reachOut: 'Reaching out',
 };
+const TOOL_LINES: Record<CravingTool, { title: string; line: string }> = {
+  rideItOut: { title: 'Breathe and ride it out', line: 'Guided breathing while the craving rises and fades.' },
+  doSomethingInstead: { title: 'Do something instead', line: 'A few quick, concrete things to do right now.' },
+  checkFacts: { title: 'Check the facts', line: "A short guided look at what's actually true right now." },
+  reachOut: { title: 'Reach out', line: "Message or call someone. You don't have to be alone with this." },
+};
 
-// The resisted-urge flow — feeling, then a menu of evidence-based approaches
-// (not just one timer), then a no-judgment check-in. Logged as a resisted
-// urge regardless of outcome; the point is the attempt, not a pass/fail
-// grade — but the outcome and chosen approach are both saved so Analysis can
-// learn what's actually worked for this specific user over time.
-function UrgeStage({ habit, track, onDone }: { habit: QuitHabit; track: QuitTrack; onBack: () => void; onDone: () => void }) {
-  const addFeelingEntry = useQuitHabitsStore((s) => s.addFeelingEntry);
+export const CRAVING_COPY = {
+  title: "You're doing something hard. Let's ride this out.",
+  rate: 'How strong is it? (optional)',
+  skip: 'Skip',
+  timer: (t: string) => `Riding it out: ${t}`,
+  pick: 'What might help right now?',
+  tryElse: 'Try something else',
+  okay: "I'm okay now",
+  rideLine: 'Cravings rise, peak and fade, often within a short time.',
+  afterTitle: 'How strong is it now? (optional)',
+  passed: 'It passed',
+  stillHere: 'Still here',
+  slipped: 'I slipped',
+  stillHereLine: "That's okay. Try another, or keep breathing. The timer keeps going.",
+  passedTitle: 'It passed',
+  passedLine: (n: number, habit: string) => `That's ${n} ${n === 1 ? 'urge' : 'urges'} ridden out on ${habit.toLowerCase()}.`,
+  resume: (t: string) => `Riding it out: ${t}. Continue`,
+};
+
+function RatingChips({ value, onChange, label }: { value?: number; onChange: (n: number) => void; label: string }) {
+  return (
+    <View style={styles.ratingRow} accessibilityLabel={label}>
+      {Array.from({ length: 11 }, (_, n) => (
+        <Pressable key={n} onPress={() => onChange(n)} style={[styles.ratingChip, value === n && { backgroundColor: accent }]} accessibilityRole="button" accessibilityLabel={`${n} out of 10`} accessibilityState={{ selected: value === n }}>
+          <Body style={value === n ? styles.chipTextActive : undefined}>{n}</Body>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+// "Riding it out: 4:12", always visible, read from when the session started
+// (right after the phone was locked or Ona was closed).
+function RideTimer({ session }: { session: QuitCravingSession }) {
+  const [, tick] = useState(0);
+  React.useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <Caption style={styles.rideTimer} accessibilityLiveRegion="none">
+      {CRAVING_COPY.timer(formatRideTimer(sessionSeconds(session, Date.now())))}
+    </Caption>
+  );
+}
+
+// Tapping "I'm craving it": the session going on for this habit, or a new one.
+function startOrResumeCraving(habitId: string, trackId: string): string {
+  const store = useQuitHabitsStore.getState();
+  return openCravingFor(store.cravingSessions, habitId)?.id ?? store.startCraving(habitId, trackId);
+}
+
+// "I'm craving it": an optional rating, a tool (switch any time, the timer
+// keeps going), then how it went. It passed: a resisted urge, counted quietly.
+// Still here: back to the tools. I slipped: the hard-day flow, with no shame.
+function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; track: QuitTrack; onDone: () => void; onSlipped: (sessionId: string) => void }) {
+  const store = useQuitHabitsStore.getState();
+  const sessions = useQuitHabitsStore((s) => s.cravingSessions);
   const feelingEntries = useQuitHabitsStore((s) => s.feelingEntries);
   const tracks = useQuitHabitsStore((s) => s.tracks);
+  // Started when "I'm craving it" was tapped (startOrResumeCraving); reopening
+  // brings the same session back, with its timer right.
+  const [sessionId] = useState(() => openCravingFor(useQuitHabitsStore.getState().cravingSessions, habit.id)?.id ?? '');
+  const session = sessions.find((s) => s.id === sessionId);
+  const [phase, setPhase] = useState<'rate' | 'tools' | 'tool' | 'after' | 'passed'>(() => (session && session.tools.length ? 'tools' : 'rate'));
+  const [tool, setTool] = useState<CravingTool | null>(null);
+  const [doneEntryId, setDoneEntryId] = useState<string | null>(null);
+  const [stillHere, setStillHere] = useState(false);
+  if (!session) return null;
 
-  // Straight to what might help; noting a feeling is offered at the end.
-  const [phase, setPhase] = useState<'menu' | 'approach' | 'outcome' | 'done'>('menu');
-  const [urgeEntryId, setUrgeEntryId] = useState<string | null>(null);
-  const [approach, setApproach] = useState<UrgeApproach | null>(null);
-  const [approachDetail, setApproachDetail] = useState<string | null>(null);
-
-  const finish = (urgePassed: boolean) => {
-    const label = approachDetail ?? (approach ? APPROACH_LABELS[approach] : undefined);
-    setUrgeEntryId(addFeelingEntry(track.id, undefined, undefined, undefined, false, true, label, urgePassed));
-    setPhase('done');
+  const pick = (t: CravingTool) => {
+    store.tryCravingTool(sessionId, t);
+    setTool(t);
+    setPhase('tool');
   };
-
-  const resistedCount = resistedUrgeEntriesForHabit(feelingEntries, tracks, habit.id).length;
+  const passed = () => {
+    const last = (session.tools[session.tools.length - 1]?.toolId ?? tool ?? 'rideItOut') as CravingTool;
+    const entryId = store.addFeelingEntry(track.id, undefined, undefined, undefined, false, true, TOOL_LABELS[last] ?? last, true);
+    store.endCraving(sessionId, 'passed', { resistedEntryId: entryId });
+    setDoneEntryId(entryId);
+    setPhase('passed');
+  };
+  const resisted = resistedUrgeEntriesForHabit(feelingEntries, tracks, habit.id).length;
+  const footer = (
+    <View style={styles.cravingFooter}>
+      <PrimaryButton label={CRAVING_COPY.tryElse} variant="outline" onPress={() => setPhase('tools')} style={styles.secondaryActionButton} />
+      <PrimaryButton label={CRAVING_COPY.okay} variant="outline" onPress={() => setPhase('after')} style={styles.secondaryActionButton} />
+    </View>
+  );
 
   return (
     <>
-      {phase === 'menu' && (
+      {phase !== 'passed' && <RideTimer session={session} />}
+
+      {phase === 'rate' && (
         <>
-          <SectionHeading>What would help right now?</SectionHeading>
-          <Caption style={styles.subtitle}>Pick whatever feels right — there's no wrong choice here.</Caption>
-          <Pressable onPress={() => { setApproach('rideItOut'); setPhase('approach'); }}>
-            <Card style={styles.approachCard}>
-              <Body>Ride it out</Body>
-              <Caption>A short timer with guided breathing while the urge passes on its own.</Caption>
-            </Card>
+          <ScreenTitle>{CRAVING_COPY.title}</ScreenTitle>
+          <Eyebrow style={styles.fieldLabel}>{CRAVING_COPY.rate}</Eyebrow>
+          <RatingChips
+            label={CRAVING_COPY.rate}
+            value={session.ratingBefore}
+            onChange={(n) => {
+              store.updateCraving(sessionId, { ratingBefore: n });
+              setPhase('tools');
+            }}
+          />
+          <Pressable onPress={() => setPhase('tools')} accessibilityRole="button" hitSlop={8}>
+            <Caption style={styles.changeFeelingLink}>{CRAVING_COPY.skip}</Caption>
           </Pressable>
-          <Pressable onPress={() => { setApproach('doSomethingInstead'); setPhase('approach'); }}>
-            <Card style={styles.approachCard}>
-              <Body>Do something instead</Body>
-              <Caption>A few quick, concrete things to do right now.</Caption>
-            </Card>
-          </Pressable>
-          <Pressable onPress={() => { setApproach('checkFacts'); setPhase('approach'); }}>
-            <Card style={styles.approachCard}>
-              <Body>Check the facts</Body>
-              <Caption>A short guided look at what's actually true right now.</Caption>
-            </Card>
-          </Pressable>
-          <Pressable onPress={() => { setApproach('reachOut'); setPhase('approach'); }}>
-            <Card style={styles.approachCard}>
-              <Body>Reach out</Body>
-              <Caption>Message or call someone — you don't have to be alone with this.</Caption>
-            </Card>
-          </Pressable>
+          <SupportLink />
         </>
       )}
 
-      {phase === 'approach' && approach === 'rideItOut' && <UrgeTimer onFinish={() => setPhase('outcome')} />}
+      {phase === 'tools' && (
+        <>
+          <SectionHeading>{CRAVING_COPY.pick}</SectionHeading>
+          {stillHere && <Caption style={styles.subtitle}>{CRAVING_COPY.stillHereLine}</Caption>}
+          {(Object.keys(TOOL_LINES) as CravingTool[]).map((t) => (
+            <Pressable key={t} onPress={() => pick(t)} accessibilityRole="button" accessibilityLabel={TOOL_LINES[t].title}>
+              <Card style={styles.approachCard}>
+                <Body>{TOOL_LINES[t].title}</Body>
+                <Caption>{TOOL_LINES[t].line}</Caption>
+              </Card>
+            </Pressable>
+          ))}
+          <Pressable onPress={() => setPhase('after')} accessibilityRole="button" hitSlop={8}>
+            <Caption style={styles.changeFeelingLink}>{CRAVING_COPY.okay}</Caption>
+          </Pressable>
+          <SupportLink />
+        </>
+      )}
 
-      {phase === 'approach' && approach === 'doSomethingInstead' && (
+      {phase === 'tool' && tool === 'rideItOut' && (
+        <>
+          <SectionHeading>{TOOL_LINES.rideItOut.title}</SectionHeading>
+          <Caption style={styles.subtitle}>{CRAVING_COPY.rideLine}</Caption>
+          <BreathingExercise accent={accent} />
+          {footer}
+        </>
+      )}
+
+      {phase === 'tool' && tool === 'doSomethingInstead' && (
         <>
           <SectionHeading>Pick one</SectionHeading>
           <View style={styles.list}>
             {REPLACEMENT_SUGGESTIONS.map((s) => (
-              <Pressable key={s} onPress={() => { setApproachDetail(s); setPhase('outcome'); }}>
+              <Pressable key={s} onPress={() => setPhase('after')} accessibilityRole="button">
                 <Card style={styles.approachCard}>
                   <Body>{s}</Body>
                 </Card>
               </Pressable>
             ))}
           </View>
+          {footer}
         </>
       )}
 
-      {phase === 'approach' && approach === 'checkFacts' && <CheckTheFacts onDone={() => setPhase('outcome')} />}
-
-      {phase === 'approach' && approach === 'reachOut' && <ReachOut onDone={() => setPhase('outcome')} />}
-
-      {phase === 'outcome' && (
+      {phase === 'tool' && tool === 'checkFacts' && (
         <>
-          <SectionHeading>Did the urge pass?</SectionHeading>
-          <Body style={styles.relapseIntroText}>Either way, you rode it out instead of acting on it — that counts.</Body>
-          <PrimaryButton label="Yes, it passed" onPress={() => finish(true)} style={styles.sheetSubmit} />
-          <PrimaryButton label="Not really, but I didn't act on it" variant="outline" onPress={() => finish(false)} style={styles.actionButton} />
+          <CheckTheFacts onDone={() => setPhase('after')} />
+          {footer}
         </>
       )}
 
-      {phase === 'done' && (
+      {phase === 'tool' && tool === 'reachOut' && (
         <>
-          <ScreenTitle>Urge resisted</ScreenTitle>
-          <Body style={styles.relapseIntroText}>
-            You've resisted {resistedCount} {resistedCount === 1 ? 'urge' : 'urges'} on {habit.name.toLowerCase()} so far.
-          </Body>
-          {urgeEntryId && <SoftFeelingOffer habit={habit} source={{ kind: 'quitHabit', refId: habit.id, linkId: urgeEntryId }} />}
+          <ReachOut onDone={() => setPhase('after')} />
+          {footer}
+        </>
+      )}
+
+      {phase === 'after' && (
+        <>
+          <SectionHeading>{CRAVING_COPY.afterTitle}</SectionHeading>
+          <RatingChips label={CRAVING_COPY.afterTitle} value={session.ratingAfter} onChange={(n) => store.updateCraving(sessionId, { ratingAfter: n })} />
+          <PrimaryButton label={CRAVING_COPY.passed} onPress={passed} style={styles.sheetSubmit} />
+          <PrimaryButton
+            label={CRAVING_COPY.stillHere}
+            variant="outline"
+            onPress={() => {
+              store.endCraving(sessionId, 'stillHere');
+              setStillHere(true);
+              setPhase('tools');
+            }}
+            style={styles.actionButton}
+          />
+          <PrimaryButton label={CRAVING_COPY.slipped} variant="outline" onPress={() => onSlipped(sessionId)} style={styles.actionButton} />
+          <SupportLink />
+        </>
+      )}
+
+      {phase === 'passed' && (
+        <>
+          <ScreenTitle>{CRAVING_COPY.passedTitle}</ScreenTitle>
+          <Body style={styles.relapseIntroText}>{CRAVING_COPY.passedLine(resisted, habit.name)}</Body>
+          {doneEntryId && <SoftFeelingOffer habit={habit} source={{ kind: 'quitHabit', refId: habit.id, linkId: doneEntryId }} />}
           <PrimaryButton label="Done" onPress={onDone} style={styles.sheetSubmit} />
         </>
       )}
@@ -617,12 +660,13 @@ function JourneyStage({
   const buildHabits = useHabitsStore((s) => s.habits);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [feelingSheetOpen, setFeelingSheetOpen] = useState(false);
-  // Captures the track being relapsed on at the moment "I went back to it" is
-  // tapped — archiving it mid-flow makes activeTrackFor() stop finding it,
-  // and RelapseStage must keep rendering (through its "chapter saved" step)
-  // regardless of that, so it can't be re-derived live from the store.
-  const [relapsingTrack, setRelapsingTrack] = useState<QuitTrack | null>(null);
+  // The chapter a hard day is being marked in, captured when tapped: starting
+  // a new chapter from the slip flow mustn't make the flow lose its place.
+  const [slipping, setSlipping] = useState<{ track: QuitTrack; cravingSessionId?: string } | null>(null);
   const [urgingTrack, setUrgingTrack] = useState<QuitTrack | null>(null);
+  const slips = useQuitHabitsStore((s) => s.slips);
+  const cravingSessions = useQuitHabitsStore((s) => s.cravingSessions);
+  const primary = useSettingsStore((s) => s.quitPrimaryNumber);
 
   const habit = habits.find((h) => h.id === habitId);
 
@@ -641,25 +685,32 @@ function JourneyStage({
   const today = todayISO();
   const active = activeTrackFor(tracks, habitId);
 
-  if (relapsingTrack) {
+  if (slipping) {
+    return <SlipStage habit={habit} track={slipping.track} cravingSessionId={slipping.cravingSessionId} onBack={() => setSlipping(null)} onDone={() => setSlipping(null)} />;
+  }
+
+  if (urgingTrack) {
     return (
-      <RelapseStage
+      <CravingStage
         habit={habit}
-        track={relapsingTrack}
-        onBack={() => setRelapsingTrack(null)}
-        onDone={() => setRelapsingTrack(null)}
+        track={urgingTrack}
+        onDone={() => setUrgingTrack(null)}
+        onSlipped={(cravingSessionId) => {
+          setUrgingTrack(null);
+          setSlipping({ track: urgingTrack, cravingSessionId });
+        }}
       />
     );
   }
 
-  if (urgingTrack) {
-    return <UrgeStage habit={habit} track={urgingTrack} onBack={() => setUrgingTrack(null)} onDone={() => setUrgingTrack(null)} />;
-  }
-
   const ascendingTracks = tracksForHabit(tracks, habitId);
   const numberedTracks = ascendingTracks.map((t, i) => ({ track: t, number: i + 1 })).reverse();
-  const elapsed = active ? daysSinceTrackStart(active, today) : 0;
-  const milestone = active ? quitMilestoneMessage(elapsed) : undefined;
+  const counts = journeyCounts(tracks, slips, habitId, today);
+  const headline = journeyHeadline(counts, primary);
+  const shownNumber = primary === 'clean' ? counts.cleanDays : primary === 'run' ? counts.currentRun : counts.journeyDays;
+  const journeyStart = ascendingTracks.reduce((min, t) => (t.startDate < min ? t.startDate : min), ascendingTracks[0]?.startDate ?? today);
+  const milestone = active ? quitMilestoneMessage(counts.journeyDays) : undefined;
+  const openCraving = openCravingFor(cravingSessions, habitId);
   const rotatingStat = active ? rotatingJourneyStat(feelingEntries, tracks, habitId, today) : undefined;
   const pairedHabit = habit.replacementHabitId ? buildHabits.find((h) => h.id === habit.replacementHabitId) : undefined;
 
@@ -687,10 +738,24 @@ function JourneyStage({
 
       <SectionHeading>{habit.name}</SectionHeading>
 
+      {ascendingTracks.length > 0 && (
+        <>
+          <StreakVisual elapsed={shownNumber} />
+          <Body style={styles.journeyHeadline} accessibilityRole="header">{headline.headline}</Body>
+          <Caption style={styles.sinceText}>{headline.smaller.join(' · ')}</Caption>
+          <Caption style={styles.sinceText}>Since {formatDisplayDate(journeyStart)}</Caption>
+        </>
+      )}
+
       {active ? (
         <>
-          <StreakVisual elapsed={elapsed} />
-          <Caption style={styles.sinceText}>Since {formatDisplayDate(active.startDate)}</Caption>
+          {openCraving && (
+            <Pressable onPress={() => setUrgingTrack(active)} accessibilityRole="button">
+              <Card style={[styles.rotatingStatCard, { borderLeftColor: accent }]}>
+                <Caption style={{ color: accent }}>{CRAVING_COPY.resume(formatRideTimer(sessionSeconds(openCraving, Date.now())))}</Caption>
+              </Card>
+            </Pressable>
+          )}
 
           {milestone && (
             <Card style={styles.milestoneCard}>
@@ -718,21 +783,24 @@ function JourneyStage({
             <PrimaryButton
               label="I'm craving it"
               variant="outline"
-              onPress={() => setUrgingTrack(active)}
+              onPress={() => {
+                startOrResumeCraving(habitId, active.id);
+                setUrgingTrack(active);
+              }}
               style={styles.secondaryActionButton}
             />
             <PrimaryButton
-              label="I went back to it"
+              label="I had a hard day"
               variant="outline"
-              onPress={() => setRelapsingTrack(active)}
+              onPress={() => setSlipping({ track: active })}
               style={styles.secondaryActionButton}
             />
           </View>
         </>
       ) : (
         <>
-          <Body style={styles.emptyText}>No active track right now — start whenever you're ready.</Body>
-          <PrimaryButton label="Start a new track" onPress={() => startNewTrack(habitId)} style={styles.actionButton} />
+          <Body style={styles.emptyText}>No chapter going on right now. Start one whenever you're ready; your journey carries on either way.</Body>
+          <PrimaryButton label="Start a new chapter" onPress={() => startNewTrack(habitId)} style={styles.actionButton} />
         </>
       )}
 
@@ -877,6 +945,7 @@ function TrackDetailStage({ habitId, trackId, onBack }: { habitId: string; track
 function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void }) {
   const habits = useQuitHabitsStore((s) => s.habits);
   const tracks = useQuitHabitsStore((s) => s.tracks);
+  const slips = useQuitHabitsStore((s) => s.slips);
   const [addOpen, setAddOpen] = useState(false);
   const today = todayISO();
 
@@ -890,16 +959,15 @@ function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void
 
       <View style={styles.list}>
         {habits.map((h) => {
-          const active = activeTrackFor(tracks, h.id);
-          const elapsed = active ? daysSinceTrackStart(active, today) : 0;
+          const counts = journeyCounts(tracks, slips, h.id, today);
           const attempts = tracksForHabit(tracks, h.id).length;
           return (
             <Pressable key={h.id} onPress={() => onOpenHabit(h.id)}>
               <Card style={[styles.habitCard, { borderLeftColor: accent, borderLeftWidth: 3 }]}>
                 <Body>{h.name}</Body>
                 <Caption>
-                  {active ? `Day ${elapsed}` : 'No active track'}
-                  {attempts > 1 ? ` · ${attempts} chapters so far` : ''}
+                  {`Day ${counts.journeyDays} of your journey`}
+                  {attempts > 1 ? ` · ${attempts} chapters` : ''}
                 </Caption>
               </Card>
             </Pressable>
@@ -1171,5 +1239,43 @@ const styles = themedStyles(() => ({
   },
   secondaryActionButton: {
     flex: 1,
+  },
+  journeyHeadline: {
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontFamily: fonts.bodyMedium,
+  },
+  supportLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginTop: spacing.lg,
+    minHeight: 44,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  ratingChip: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  rideTimer: {
+    alignSelf: 'center',
+    color: colors.inkSoft,
+    marginBottom: spacing.sm,
+  },
+  cravingFooter: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
 }));

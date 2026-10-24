@@ -731,6 +731,37 @@ export interface QuitTrack {
   relapseReasonTags?: string[];
 }
 
+// A hard day (a slip), marked on the journey. The journey and its day count
+// carry on; starting a new chapter afterwards is a separate, optional choice.
+export interface QuitSlip {
+  id: string;
+  quitHabitId: string;
+  trackId: string; // the chapter it happened in
+  date: string; // ISO date on this phone when it was marked (local)
+  createdAt: string; // ISO datetime
+  reflection?: string; // "What was happening before?" (optional)
+  reasonTags?: string[]; // same list as Feelings/Habits
+  cravingSessionId?: string; // marked from a craving session ("I slipped")
+}
+
+// One time "I'm craving it" was tapped: from start to how it ended. The timer
+// reads from startedAt, so it's right after the phone was locked or Ona closed.
+export interface QuitCravingSession {
+  id: string;
+  quitHabitId: string;
+  trackId: string;
+  startedAt: string; // ISO datetime
+  endedAt?: string; // unset while it's going on
+  ratingBefore?: number; // 0–10, optional
+  ratingAfter?: number; // 0–10, optional
+  tools: { toolId: string; startedAt: string; endedAt?: string }[];
+  outcome?: 'passed' | 'stillHere' | 'slipped';
+  triggerTag?: string;
+  note?: string;
+  resistedEntryId?: string; // the resisted-urge entry, when it passed
+  slipId?: string;
+}
+
 // A documented feeling — either "anytime" or as part of a relapse moment.
 export interface QuitFeelingEntry {
   id: string;

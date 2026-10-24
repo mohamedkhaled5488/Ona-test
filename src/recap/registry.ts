@@ -11,6 +11,7 @@ import type { RecapPeriod } from '../utils/feelingsStats';
 import { AREA_TITLES, bucketSeries, summarySentence, formatDuration, growDetails, learnDetails, planDetails, type AreaId, type PeriodStats, type RecapData } from '../utils/recapStats';
 import { buildSkillsTimeBreakdown } from '../utils/recap';
 import { quitJourneySeries } from '../utils/habitStats';
+import { journeyCounts, localDateOf, sessionSeconds } from '../quit/journey';
 import { formatMoney } from '../data/currencies';
 import { sectionAccents } from '../theme';
 
@@ -171,34 +172,42 @@ export const RECAP_CONTRIBUTORS: RecapContributor[] = [
     title: 'Quitting',
     sensitive: true,
     build: ({ data, stats, today }) => {
-      // The same journey the Quit section draws, cut to this period.
+      // The same journey the Quit section draws, cut to this period: clean
+      // days, urges ridden out, hard days (never "failed"), and the time and
+      // tools used to ride cravings out.
       const end = stats.range.end < today ? stats.range.end : today;
+      const slips = data.quitSlips ?? [];
+      const sessions = (data.quitCravingSessions ?? []).filter((c) => inRange(localDateOf(c.startedAt), stats));
       const items: RecapItem[] = [];
-      let journeyDays = 0;
+      let clean = 0;
       let urges = 0;
-      let chapters = 0;
+      let hard = 0;
       for (const h of data.quitHabits) {
-        const days = quitJourneySeries(data.quitTracks, data.quitFeelingEntries, h.id, end).filter((d) => inRange(d.date, stats));
+        const days = quitJourneySeries(data.quitTracks, data.quitFeelingEntries, h.id, end, slips).filter((d) => inRange(d.date, stats));
         if (!days.length) continue;
-        const own = days.filter((d) => !d.relapse).length;
+        const ownClean = days.filter((d) => !d.hardDay).length;
         const ownUrges = days.reduce((n, d) => n + d.resistedCount, 0);
-        const ownChapters = days.filter((d) => d.relapse).length;
-        journeyDays += own;
+        const ownHard = days.filter((d) => d.hardDay).length;
+        clean += ownClean;
         urges += ownUrges;
-        chapters += ownChapters;
-        const last = days[days.length - 1];
+        hard += ownHard;
+        const counts = journeyCounts(data.quitTracks, slips, h.id, end);
         items.push({
           id: h.id,
           title: h.name,
-          caption: [`Day ${last.dayCount} of chapter ${last.trackNumber}`, ownUrges ? plural(ownUrges, 'urge ridden out', 'urges ridden out') : '', ownChapters ? plural(ownChapters, 'new chapter started', 'new chapters started') : ''].filter(Boolean).join(' · '),
+          caption: [`Day ${counts.journeyDays} of your journey`, ownUrges ? plural(ownUrges, 'urge ridden out', 'urges ridden out') : '', ownHard ? plural(ownHard, 'hard day', 'hard days') : ''].filter(Boolean).join(' · '),
           open: { section: 'quitHabit', params: { openHabitId: h.id } },
         });
       }
+      const seconds = sessions.reduce((n, c) => n + sessionSeconds(c, Date.parse(`${end}T23:59:59`)), 0);
+      const tools = new Set(sessions.flatMap((c) => c.tools.map((t) => t.toolId)));
       return recap('quitHabit', 'Quitting', items.length > 0, items.length ? [
-        { label: 'Days on your journey', value: String(journeyDays), open: { section: 'quitHabit' } },
+        { label: 'Clean days', value: String(clean), open: { section: 'quitHabit' } },
         { label: 'Urges ridden out', value: String(urges) },
-        ...(chapters ? [{ label: 'New chapters started', value: String(chapters) }] : []),
-      ] : [], { items, notes: chapters ? ['A new chapter is part of the journey, not a step back.'] : [] });
+        ...(hard ? [{ label: hard === 1 ? 'A hard day' : 'Hard days', value: String(hard) }] : []),
+        ...(seconds >= 60 ? [{ label: 'Time riding out cravings', value: formatDuration(Math.round(seconds / 60)) }] : []),
+        ...(tools.size ? [{ label: 'Tools tried', value: String(tools.size) }] : []),
+      ] : [], { items, notes: hard ? ['A hard day is part of the journey, not a step back.'] : [] });
     },
   },
   {

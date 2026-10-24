@@ -5,6 +5,7 @@
 // Persisted on the device (AsyncStorage), versioned, and migrated on app
 // updates. Settings never need an account and are never paywalled.
 import { create } from 'zustand';
+import type { QuitPrimaryNumber } from '../quit/journey';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -116,6 +117,7 @@ export interface SettingsData {
   feelingsReasonTags: boolean;
   feelingsPatternsDefault: PatternsView;
   quitUrgeMinutes: number; // Quit a Habit: urge-timer length
+  quitPrimaryNumber: QuitPrimaryNumber; // Quit a Habit: the journey's main number
   studyDefaultPreset: string; // Study: id from data/studyPresets
   bookTrackBy: 'pages' | 'percent';
   budgetCurrency: string; // prefills the inline selector
@@ -189,6 +191,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   feelingsReasonTags: true,
   feelingsPatternsDefault: 'month',
   quitUrgeMinutes: 15,
+  quitPrimaryNumber: 'journey',
   studyDefaultPreset: 'classic',
   bookTrackBy: 'pages',
   budgetCurrency: 'USD',

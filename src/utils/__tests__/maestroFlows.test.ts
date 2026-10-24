@@ -36,6 +36,9 @@ const DYNAMIC: Record<string, string> = {
   'Track 1': '<Body>Track {number}</Body>',
   'Track 2': '<Body>Track {number}</Body>',
   'Ongoing — Day 1': 'Ongoing — Day {daysSinceTrackStart(track, today)}',
+  'Riding it out: \\d+:\\d\\d': 'timer: (t: string) => `Riding it out: ${t}`',
+  'Day 1 of your journey': 'const journey = `Day ${c.journeyDays} of your journey`',
+  '.*Day 1 of your journey carries on.*': 'Day ${journeyDays} of your journey carries on.',
   'Marked done today.*': "Marked {todayEntry.done ? 'done' : 'missed'}",
   '(Home|Check .* for a confirmation link, then come back and sign in.)':'for a confirmation link, then come back and sign in.',
 };

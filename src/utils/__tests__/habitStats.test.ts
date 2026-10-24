@@ -160,20 +160,25 @@ describe('urgeTimeOfDayPattern', () => {
 });
 
 describe('resistedUrgeTrend', () => {
-  it('compares the resisted/relapse ratio of the last 30 days against the 30 before that', () => {
+  // Urges ridden out against hard days (owner's decision 2026-10-24: a slip
+  // is a hard day marked on the journey; older chapter ends count the same).
+  it('compares urges ridden out with hard days, the last 30 days against the 30 before that', () => {
     const tracks = [{ id: TRACK_ID, quitHabitId: HABIT_ID, startDate: '2026-01-01', createdAt: '2026-01-01T00:00:00Z', status: 'active' as const }];
     const entries = [
-      // last 30 days: 2 resisted, 0 relapses -> ratio 1.0
+      // last 30 days: 2 ridden out, no hard day -> ratio 1.0
       quitFeelingEntry({ hour: 12, isResistedUrge: true, daysAgo: 5 }),
       quitFeelingEntry({ hour: 12, isResistedUrge: true, daysAgo: 10 }),
-      // 30-60 days ago: 1 resisted, 1 relapse -> ratio 0.5
+      // 30-60 days ago: 1 ridden out, 1 hard day -> ratio 0.5
       quitFeelingEntry({ hour: 12, isResistedUrge: true, daysAgo: 40 }),
-      quitFeelingEntry({ hour: 12, isRelapseMoment: true, daysAgo: 45 }),
     ];
-    const trend = resistedUrgeTrend(entries, tracks, HABIT_ID, '2026-10-01');
+    const slips = [{ id: 's1', quitHabitId: HABIT_ID, trackId: TRACK_ID, date: '2026-08-17', createdAt: '2026-08-17T12:00:00Z' }];
+    const trend = resistedUrgeTrend(entries, tracks, HABIT_ID, '2026-10-01', slips);
     expect(trend.currentRatio).toBe(1);
     expect(trend.previousRatio).toBe(0.5);
     expect(trend.direction).toBe('more');
+    // An older chapter's end counts as a hard day too.
+    const old = [{ ...tracks[0], status: 'archived' as const, endDate: '2026-08-17' }, { id: 't2', quitHabitId: HABIT_ID, startDate: '2026-08-17', createdAt: '2026-08-17T20:00:00Z', status: 'active' as const }];
+    expect(resistedUrgeTrend(entries, old, HABIT_ID, '2026-10-01').previousRatio).toBe(0.5);
   });
 });
 
@@ -291,7 +296,7 @@ describe('Quit dashboard builders', () => {
   it('quitJourneySeries climbs within a track and drops back to day 1 when a new track starts the same day', () => {
     const tracks = [track('a', '2026-09-01', '2026-09-03'), track('b', '2026-09-03')];
     const days = quitJourneySeries(tracks, [], HABIT_ID, '2026-09-05');
-    expect(days.map((d) => [d.date, d.trackNumber, d.dayCount, d.relapse])).toEqual([
+    expect(days.map((d) => [d.date, d.trackNumber, d.dayCount, d.hardDay])).toEqual([
       ['2026-09-01', 1, 1, false],
       ['2026-09-02', 1, 2, false],
       ['2026-09-03', 2, 1, true], // relapse on track 1, fresh start on track 2

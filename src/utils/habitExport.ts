@@ -1,5 +1,5 @@
 import { Platform, Share } from 'react-native';
-import type { FeelingCheckIn, Habit, HabitCheckIn, PersonalFeeling, QuitFeelingEntry, QuitHabit, QuitTrack } from '../types/sections';
+import type { FeelingCheckIn, Habit, HabitCheckIn, PersonalFeeling, QuitFeelingEntry, QuitHabit, QuitTrack, QuitSlip } from '../types/sections';
 import { findFeeling, zoneMeta } from '../data/feelingsWheel';
 import { formatDisplayDate } from './date';
 import { frequencyLabel } from './habitFrequency';
@@ -130,10 +130,13 @@ function quitStatsLine(tracks: QuitTrack[], entries: QuitFeelingEntry[], habitId
 
 function describeEvent(e: QuitLogEvent, personal: PersonalFeeling[]): { cls: string; title: string; lines: string[]; note?: string } {
   if (e.kind === 'trackStart') return { cls: '', title: `Track ${e.trackNumber} started`, lines: [] };
+  if (e.kind === 'hardDay') {
+    return { cls: 'relapse', title: `A hard day (track ${e.trackNumber})`, lines: e.reasonTags?.length ? [`What was happening: ${e.reasonTags.join(', ')}`] : [], note: e.reflection };
+  }
   if (e.kind === 'trackEnd') {
     return {
       cls: 'relapse',
-      title: `Went back to it — track ${e.trackNumber} ended after ${e.days} day${e.days === 1 ? '' : 's'}`,
+      title: `${e.afterHardDay ? '' : 'A hard day — '}track ${e.trackNumber} ended after ${e.days} day${e.days === 1 ? '' : 's'}`,
       lines: e.reasonTags?.length ? [`What was going on: ${e.reasonTags.join(', ')}`] : [],
       note: e.reflection,
     };
@@ -153,13 +156,13 @@ function describeEvent(e: QuitLogEvent, personal: PersonalFeeling[]): { cls: str
 }
 
 // Oldest first in an export — it reads as the story of the journey.
-function chronological(tracks: QuitTrack[], entries: QuitFeelingEntry[], habitId: string): QuitLogEvent[] {
-  return quitJourneyLog(tracks, entries, habitId).reverse();
+function chronological(tracks: QuitTrack[], entries: QuitFeelingEntry[], habitId: string, slips: QuitSlip[]): QuitLogEvent[] {
+  return quitJourneyLog(tracks, entries, habitId, slips).reverse();
 }
 
-export function buildQuitJourneyText(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string): string {
+export function buildQuitJourneyText(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string, slips: QuitSlip[] = []): string {
   const header = [`${habit.name} — the journey since ${formatDisplayDate(habit.createdAt)}`, habit.why ? `Why: ${habit.why}` : '', quitStatsLine(tracks, entries, habit.id, today)].filter(Boolean);
-  const body = chronological(tracks, entries, habit.id)
+  const body = chronological(tracks, entries, habit.id, slips)
     .map((e) => {
       const d = describeEvent(e, personal);
       return [`${formatDisplayDate(e.date)} — ${d.title}`, ...d.lines, ...(d.note ? [d.note] : [])].join('\n');
@@ -168,12 +171,12 @@ export function buildQuitJourneyText(habit: QuitHabit, tracks: QuitTrack[], entr
   return [...header, '', body].join('\n').trim();
 }
 
-export async function shareQuitJourneyAsText(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string): Promise<void> {
-  await Share.share({ message: buildQuitJourneyText(habit, tracks, entries, personal, today) });
+export async function shareQuitJourneyAsText(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string, slips: QuitSlip[] = []): Promise<void> {
+  await Share.share({ message: buildQuitJourneyText(habit, tracks, entries, personal, today, slips) });
 }
 
-export function buildQuitJourneyHtml(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string): string {
-  const rows = chronological(tracks, entries, habit.id)
+export function buildQuitJourneyHtml(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string, slips: QuitSlip[] = []): string {
+  const rows = chronological(tracks, entries, habit.id, slips)
     .map((e) => {
       const d = describeEvent(e, personal);
       return `
@@ -196,6 +199,6 @@ export function buildQuitJourneyHtml(habit: QuitHabit, tracks: QuitTrack[], entr
     </html>`;
 }
 
-export function exportQuitJourneyAsPdf(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string) {
-  return shareHtmlAsPdf(buildQuitJourneyHtml(habit, tracks, entries, personal, today));
+export function exportQuitJourneyAsPdf(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string, slips: QuitSlip[] = []) {
+  return shareHtmlAsPdf(buildQuitJourneyHtml(habit, tracks, entries, personal, today, slips));
 }

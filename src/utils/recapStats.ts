@@ -24,6 +24,7 @@ import { findFeeling, zoneMeta } from '../data/feelingsWheel';
 import { bookProgress, describeProgress } from './bookProgress';
 import { computePlanProgress, flattenSteps } from '../store/usePlanStore';
 import { addDaysISO } from './date';
+import { localDateOf } from '../quit/journey';
 
 // The app's zone order, used wherever Recap lists feelings (never sorted by count).
 const RECAP_ZONE_ORDER: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay'];
@@ -95,6 +96,8 @@ export function withoutHidden(data: RecapData, hidden: SectionId[]): RecapData {
     quitHabits: keep('quitHabit', data.quitHabits),
     quitTracks: keep('quitHabit', data.quitTracks),
     quitFeelingEntries: keep('quitHabit', data.quitFeelingEntries),
+    quitSlips: keep('quitHabit', data.quitSlips ?? []),
+    quitCravingSessions: keep('quitHabit', data.quitCravingSessions ?? []),
     bestMoments: data.bestMoments.filter((m) => !h.has(m.sourceSection)),
   };
 }
@@ -212,7 +215,7 @@ export function periodStats(data: RecapData, range: DateRange): PeriodStats {
     sleepLogs: sleepIn.length,
     restedNights: sleepIn.filter((l) => l.quality >= 4).length,
     habitCompletions: data.habitCheckIns.filter((c) => c.done && inRange(c.date, range)).length,
-    resistedUrges: data.quitFeelingEntries.filter((e) => e.isResistedUrge && inRange(e.createdAt.slice(0, 10), range)).length,
+    resistedUrges: data.quitFeelingEntries.filter((e) => e.isResistedUrge && inRange(localDateOf(e.createdAt), range)).length,
     skillSessions: data.skillSessions.filter((s) => inRange(s.date, range)).length,
     studySessions: data.studySessions.filter((s) => inRange(s.date, range)).length,
     readingSessions: readingIn.length,

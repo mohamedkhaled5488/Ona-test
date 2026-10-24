@@ -151,18 +151,20 @@ function useRecapData(): RecapData {
   const quitHabits = useQuitHabitsStore((s) => s.habits);
   const quitTracks = useQuitHabitsStore((s) => s.tracks);
   const quitFeelingEntries = useQuitHabitsStore((s) => s.feelingEntries);
+  const quitSlips = useQuitHabitsStore((s) => s.slips);
+  const quitCravingSessions = useQuitHabitsStore((s) => s.cravingSessions);
   const bestMoments = useRecapStore((s) => s.bestMoments);
 
   return useMemo(
     () => ({
       tasks, journalEntries, thoughts, studySessions, meals, songs, gameResults, feelingCheckIns, sleepLogs,
       readingEntries, readingSessions, quotes, plans, skills, skillSessions, habits, habitCheckIns, budgets,
-      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, bestMoments,
+      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, quitSlips, quitCravingSessions, bestMoments,
     }),
     [
       tasks, journalEntries, thoughts, studySessions, meals, songs, gameResults, feelingCheckIns, sleepLogs,
       readingEntries, readingSessions, quotes, plans, skills, skillSessions, habits, habitCheckIns, budgets,
-      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, bestMoments,
+      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, quitSlips, quitCravingSessions, bestMoments,
     ]
   );
 }

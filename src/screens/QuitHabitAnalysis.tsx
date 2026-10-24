@@ -55,6 +55,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   const habits = useQuitHabitsStore((s) => s.habits);
   const tracks = useQuitHabitsStore((s) => s.tracks);
   const feelingEntries = useQuitHabitsStore((s) => s.feelingEntries);
+  const slips = useQuitHabitsStore((s) => s.slips);
   const personalFeelings = useFeelingsStore((s) => s.personalFeelings);
   const { showToast } = useUi();
   const [search, setSearch] = useState('');
@@ -87,19 +88,19 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
 
   // --- 3. The journey, day by day (a slip stays part of it; nothing drops to zero) ---
   const period = patternRange(range, today, journeyStart);
-  const days = quitDayStatuses(habitId, tracks, feelingEntries, period.start, period.end, today);
+  const days = quitDayStatuses(habitId, tracks, feelingEntries, period.start, period.end, today, slips);
 
   // --- 4. Insights ---
   const approaches = approachResults(feelingEntries, tracks, habitId);
-  const triggers = relapseReasonCounts(tracks, habitId);
+  const triggers = relapseReasonCounts(tracks, habitId, undefined, slips);
   const timing = quitTiming(feelingEntries, tracks, habitId);
-  const trend = resistedUrgeTrend(feelingEntries, tracks, habitId, today);
+  const trend = resistedUrgeTrend(feelingEntries, tracks, habitId, today, slips);
   const plus = usePlus();
   const hasInsights = approaches.length > 0 || triggers.length > 0 || timing || trend.direction;
 
   // --- 5. Full log ---
   const q = search.trim().toLowerCase();
-  const log = quitJourneyLog(tracks, feelingEntries, habitId).filter((e) => !q || logSearchText(e, personalFeelings).includes(q));
+  const log = quitJourneyLog(tracks, feelingEntries, habitId, slips).filter((e) => !q || logSearchText(e, personalFeelings).includes(q));
 
   return (
     <>
@@ -203,7 +204,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
           kind="What was going on"
           accent={SOFT_MISSED}
           headline={triggers.map((t) => `${t.tag} ${t.count}`).join(' · ')}
-          evidence="How many times each reason was tagged when a try ended. A try can have more than one."
+          evidence="How many times each reason was tagged on a hard day. A day can have more than one."
         />
       )}
       {plus && timing && (
@@ -211,7 +212,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
       )}
       {plus && trend.direction && trend.currentRatio != null && (
         <InsightCard
-          kind="Resisted vs. went back"
+          kind="Urges ridden out and hard days"
           accent={accent}
           headline={
             trend.direction === 'same'
@@ -247,14 +248,14 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
             label="Share as text"
             variant="outline"
             style={styles.exportButton}
-            onPress={() => shareQuitJourneyAsText(habit, tracks, feelingEntries, personalFeelings, today)}
+            onPress={() => shareQuitJourneyAsText(habit, tracks, feelingEntries, personalFeelings, today, slips)}
           />
           <PrimaryButton
             label="Export as PDF"
             variant="outline"
             style={styles.exportButton}
             onPress={async () => {
-              const result = await exportQuitJourneyAsPdf(habit, tracks, feelingEntries, personalFeelings, today);
+              const result = await exportQuitJourneyAsPdf(habit, tracks, feelingEntries, personalFeelings, today, slips);
               if (!result.ok && result.reason) showToast({ message: result.reason });
             }}
           />
@@ -271,7 +272,8 @@ function feelingName(id: string | undefined, personal: { id: string; name: strin
 
 function logSearchText(e: QuitLogEvent, personal: { id: string; name: string }[]): string {
   const parts = [formatDisplayDate(e.date), `track ${e.trackNumber}`];
-  if (e.kind === 'trackEnd') parts.push('went back to it', e.reflection ?? '', ...(e.reasonTags ?? []));
+  if (e.kind === 'trackEnd') parts.push('ended', e.reflection ?? '', ...(e.reasonTags ?? []));
+  if (e.kind === 'hardDay') parts.push('a hard day slip', e.reflection ?? '', ...(e.reasonTags ?? []));
   if (e.kind === 'trackStart') parts.push('started');
   if (e.kind === 'feeling') {
     parts.push(feelingName(e.entry.feelingId, personal), e.entry.note ?? '', e.entry.approach ?? '');
@@ -291,15 +293,29 @@ function LogRow({ event: e, personalFeelings }: { event: QuitLogEvent; personalF
       </Card>
     );
   }
+  if (e.kind === 'hardDay') {
+    return (
+      <Card style={[styles.logCard, { borderLeftColor: SOFT_MISSED }]}>
+        <View style={styles.logHeader}>
+          <Body style={{ color: SOFT_MISSED }}>A hard day</Body>
+          <Caption>{formatDisplayDate(e.date)}</Caption>
+        </View>
+        {e.reasonTags && e.reasonTags.length > 0 && <Caption>What was happening: {e.reasonTags.join(', ')}</Caption>}
+        {e.reflection && <Caption style={styles.note}>"{e.reflection}"</Caption>}
+        <Caption style={styles.trackTag}>Track {e.trackNumber}</Caption>
+      </Card>
+    );
+  }
   if (e.kind === 'trackEnd') {
     return (
       <Card style={[styles.logCard, { borderLeftColor: SOFT_MISSED }]}>
         <View style={styles.logHeader}>
-          <Body style={{ color: SOFT_MISSED }}>Went back to it</Body>
+          <Body style={{ color: SOFT_MISSED }}>{e.afterHardDay ? `Track ${e.trackNumber} ended` : 'A hard day'}</Body>
           <Caption>{formatDisplayDate(e.date)}</Caption>
         </View>
         <Caption>
           Track {e.trackNumber} ended after {e.days} {e.days === 1 ? 'day' : 'days'}
+          {e.afterHardDay ? ', and a new chapter started' : ''}
         </Caption>
         {e.reasonTags && e.reasonTags.length > 0 && <Caption>What was going on: {e.reasonTags.join(', ')}</Caption>}
         {e.reflection && <Caption style={styles.note}>"{e.reflection}"</Caption>}

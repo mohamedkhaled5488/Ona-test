@@ -50,7 +50,7 @@ export const LOCAL_DATA: Record<string, { store: DataStore; keys: string[]; pref
   skills: { store: useSkillsStore as never, keys: ['skills', 'sessions'] },
   habits: { store: useHabitsStore as never, keys: ['habits', 'checkIns'] },
   budget: { store: useBudgetStore as never, keys: ['budgets', 'entries'] },
-  quitHabit: { store: useQuitHabitsStore as never, keys: ['habits', 'tracks', 'feelingEntries'] },
+  quitHabit: { store: useQuitHabitsStore as never, keys: ['habits', 'tracks', 'feelingEntries', 'slips', 'cravingSessions'] },
   recap: { store: useRecapStore as never, keys: ['bestMoments'] },
 };
 

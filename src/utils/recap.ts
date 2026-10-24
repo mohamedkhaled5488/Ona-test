@@ -6,29 +6,8 @@
 // zustand pattern). Nothing in this file imports a store or calls a mutator.
 // Recap is a window onto the other sections, never a connector: it reads,
 // it never writes anything back into another section's data.
-import type {
-  Budget,
-  BudgetEntry,
-  CapturedThought,
-  DailyTask,
-  FeelingCheckIn,
-  GameResult,
-  Habit,
-  HabitCheckIn,
-  JournalEntry,
-  Plan,
-  PlannedMeal,
-  PracticeSession,
-  QuitFeelingEntry,
-  QuitHabit,
-  QuitTrack,
-  ReadingListEntry,
-  SectionId,
-  Skill,
-  SleepLogEntry,
-  Song,
-  StudySession,
-} from '../types/sections';
+import type { Budget, BudgetEntry, CapturedThought, DailyTask, FeelingCheckIn, GameResult, Habit, HabitCheckIn, JournalEntry, Plan, PlannedMeal, PracticeSession, QuitFeelingEntry, QuitHabit, QuitTrack, ReadingListEntry, SectionId, Skill, SleepLogEntry, Song, StudySession, QuitSlip, QuitCravingSession } from '../types/sections';
+import { localDateOf } from '../quit/journey';
 import { resolveTaskDone, resolveTaskTitle } from '../store/useDailyPlanningStore';
 import { totalPracticeMinutes as skillTotalMinutes, sessionsForSkill } from '../store/useSkillsStore';
 import { habitStreak, daysElapsed as habitDaysElapsed } from '../store/useHabitsStore';
@@ -69,6 +48,8 @@ export interface RecapSourceData {
   quitHabits: QuitHabit[];
   quitTracks: QuitTrack[];
   quitFeelingEntries: QuitFeelingEntry[];
+  quitSlips?: QuitSlip[];
+  quitCravingSessions?: QuitCravingSession[];
 }
 
 const thoughtKindLabel: Record<CapturedThought['kind'], string> = {
@@ -206,7 +187,7 @@ export function collectRecapEvents(data: RecapSourceData): RecapEvent[] {
     const feeling = feelings.find((f) => f.id === entry.feelingId);
     events.push({
       id: `quit-${entry.id}`,
-      date: entry.createdAt.slice(0, 10),
+      date: localDateOf(entry.createdAt), // the phone's day, not UTC's
       sectionId: 'quitHabit',
       title: `Checked in on quitting ${habit?.name ?? 'a habit'}${feeling ? `: ${feeling.name}` : ''}`,
       detail: entry.note,

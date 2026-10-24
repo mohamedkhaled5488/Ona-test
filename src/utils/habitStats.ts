@@ -4,7 +4,8 @@
 // card shows the counts behind a pattern in a fixed order (week order,
 // morning to night, the reason list's own order) for the user to read. Reuses feelingsStats'
 // own threshold and zone helpers directly rather than re-deriving them.
-import type { Habit, HabitCheckIn, HabitFrequency, FeelingCheckIn, FeelingZone, QuitFeelingEntry, QuitTrack } from '../types/sections';
+import type { Habit, HabitCheckIn, HabitFrequency, FeelingCheckIn, FeelingZone, QuitFeelingEntry, QuitSlip, QuitTrack } from '../types/sections';
+import { hardDayDates, localDateOf } from '../quit/journey';
 import { completionRate, isScheduledDay, longestFrequencyStreak } from './habitFrequency';
 import { ANALYSIS_MIN_TAG_COUNT, mostCommonZone } from './feelingsStats';
 import { reasonTagOptions, zoneMeta } from '../data/feelingsWheel';
@@ -112,11 +113,16 @@ export interface RelapseTriggerStat {
 
 // What was going on when tracks ended, each reason with its count, in the
 // reason list's order (not ranked).
-export function relapseReasonCounts(tracks: QuitTrack[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): RelapseTriggerStat[] {
+export function relapseReasonCounts(tracks: QuitTrack[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT, slips: QuitSlip[] = []): RelapseTriggerStat[] {
   const counts = new Map<string, number>();
+  const add = (tag: string) => counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  const mine = slips.filter((s) => s.quitHabitId === habitId);
+  mine.forEach((s) => (s.reasonTags ?? []).forEach(add));
+  // Chapters ended before slips were marked on their own (a chapter started
+  // anew after a marked slip carries the same tags: counted once).
   tracksForHabit(tracks, habitId)
-    .filter((t) => t.status === 'archived')
-    .forEach((t) => (t.relapseReasonTags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)));
+    .filter((t) => t.status === 'archived' && !mine.some((s) => s.trackId === t.id && s.date === t.endDate))
+    .forEach((t) => (t.relapseReasonTags ?? []).forEach(add));
   const total = [...counts.values()].reduce((a, b) => a + b, 0);
   if (total < minCount) return [];
   return inReasonOrder([...counts.entries()].map(([tag, count]) => ({ tag, count })));
@@ -268,18 +274,21 @@ export interface ResistedUrgeTrend {
 
 // How the ratio of resisted urges to relapses is changing — "resisting more
 // often than last month," purely factual.
-export function resistedUrgeTrend(feelingEntries: QuitFeelingEntry[], tracks: QuitTrack[], habitId: string, today: string): ResistedUrgeTrend {
+export function resistedUrgeTrend(feelingEntries: QuitFeelingEntry[], tracks: QuitTrack[], habitId: string, today: string, slips: QuitSlip[] = []): ResistedUrgeTrend {
   const trackIds = new Set(tracksForHabit(tracks, habitId).map((t) => t.id));
-  const relevant = feelingEntries.filter((e) => trackIds.has(e.trackId) && (e.isResistedUrge || e.isRelapseMoment));
+  // Urges ridden out against hard days (a slip marked, or an older chapter's
+  // end), each on the phone's own calendar day.
+  const resistedDays = feelingEntries.filter((e) => trackIds.has(e.trackId) && e.isResistedUrge).map((e) => localDateOf(e.createdAt));
+  const hardDays = [...hardDayDates(tracks, slips, habitId)];
   const cutoff = addDaysISO(today, -30);
   const prevCutoff = addDaysISO(today, -60);
-  const ratioOf = (list: QuitFeelingEntry[]): number | null => {
-    const resisted = list.filter((e) => e.isResistedUrge).length;
-    const relapses = list.filter((e) => e.isRelapseMoment).length;
-    return resisted + relapses > 0 ? resisted / (resisted + relapses) : null;
+  const ratioIn = (from: string, to: string): number | null => {
+    const resisted = resistedDays.filter((d) => d >= from && d < to).length;
+    const hard = hardDays.filter((d) => d >= from && d < to).length;
+    return resisted + hard > 0 ? resisted / (resisted + hard) : null;
   };
-  const currentRatio = ratioOf(relevant.filter((e) => e.createdAt.slice(0, 10) >= cutoff));
-  const previousRatio = ratioOf(relevant.filter((e) => e.createdAt.slice(0, 10) >= prevCutoff && e.createdAt.slice(0, 10) < cutoff));
+  const currentRatio = ratioIn(cutoff, addDaysISO(today, 1));
+  const previousRatio = ratioIn(prevCutoff, cutoff);
   let direction: ResistedUrgeTrend['direction'] = null;
   if (currentRatio != null && previousRatio != null) {
     direction = currentRatio > previousRatio ? 'more' : currentRatio < previousRatio ? 'fewer' : 'same';
@@ -491,14 +500,14 @@ export interface QuitJourneyDay {
   trackNumber: number; // 1-based, in the order tracks were started
   dayCount: number; // which day of that track this date was
   resistedCount: number;
-  relapse: boolean; // a track ended (went back to it) on this date
+  hardDay: boolean; // a hard day (a slip) was marked, or an older chapter ended, on this date
 }
 
 // One entry per day across the whole journey, not just the current track —
 // the day count climbs within each track and drops when a new one starts,
 // so the whole journey's shape reads at a glance. Days between an archived
 // track and the next one starting are simply absent (a gap, not a zero).
-export function quitJourneySeries(tracks: QuitTrack[], feelingEntries: QuitFeelingEntry[], habitId: string, today: string): QuitJourneyDay[] {
+export function quitJourneySeries(tracks: QuitTrack[], feelingEntries: QuitFeelingEntry[], habitId: string, today: string, slips: QuitSlip[] = []): QuitJourneyDay[] {
   const ordered = [...tracksForHabit(tracks, habitId)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   if (ordered.length === 0) return [];
   const trackIds = new Set(ordered.map((t) => t.id));
@@ -506,10 +515,10 @@ export function quitJourneySeries(tracks: QuitTrack[], feelingEntries: QuitFeeli
   feelingEntries
     .filter((e) => trackIds.has(e.trackId) && e.isResistedUrge)
     .forEach((e) => {
-      const d = e.createdAt.slice(0, 10);
+      const d = localDateOf(e.createdAt); // the phone's day, not UTC's
       resistedByDate.set(d, (resistedByDate.get(d) ?? 0) + 1);
     });
-  const relapseDates = new Set(ordered.filter((t) => t.status === 'archived' && t.endDate).map((t) => t.endDate!));
+  const hardDates = hardDayDates(ordered, slips, habitId);
   const journeyStart = ordered.reduce((min, t) => (t.startDate < min ? t.startDate : min), ordered[0].startDate);
 
   const days: QuitJourneyDay[] = [];
@@ -526,7 +535,7 @@ export function quitJourneySeries(tracks: QuitTrack[], feelingEntries: QuitFeeli
       trackNumber: covering.number,
       dayCount: dayNumber(covering.track.startDate, date),
       resistedCount: resistedByDate.get(date) ?? 0,
-      relapse: relapseDates.has(date),
+      hardDay: hardDates.has(date),
     });
   });
   return days;
@@ -534,32 +543,39 @@ export function quitJourneySeries(tracks: QuitTrack[], feelingEntries: QuitFeeli
 
 export type QuitLogEvent =
   | { kind: 'trackStart'; at: string; date: string; trackNumber: number }
-  | { kind: 'trackEnd'; at: string; date: string; trackNumber: number; days: number; reflection?: string; reasonTags?: string[] }
+  | { kind: 'trackEnd'; at: string; date: string; trackNumber: number; days: number; reflection?: string; reasonTags?: string[]; afterHardDay?: boolean }
+  | { kind: 'hardDay'; at: string; date: string; trackNumber: number; reflection?: string; reasonTags?: string[] }
   | { kind: 'feeling'; at: string; date: string; trackNumber: number; entry: QuitFeelingEntry };
 
 // Everything that ever happened on this habit's journey, newest first —
 // every track starting and ending, every relapse, resisted urge, feeling and
 // note — merged into one list instead of split per track.
-export function quitJourneyLog(tracks: QuitTrack[], feelingEntries: QuitFeelingEntry[], habitId: string): QuitLogEvent[] {
+export function quitJourneyLog(tracks: QuitTrack[], feelingEntries: QuitFeelingEntry[], habitId: string, slips: QuitSlip[] = []): QuitLogEvent[] {
   const ordered = [...tracksForHabit(tracks, habitId)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const numberOf = new Map(ordered.map((t, i) => [t.id, i + 1]));
   const events: QuitLogEvent[] = [];
   ordered.forEach((t, i) => {
     events.push({ kind: 'trackStart', at: t.createdAt, date: t.startDate, trackNumber: i + 1 });
     if (t.status === 'archived' && t.endDate) {
+      // Ended after a hard day marked on its own: that day says the rest.
+      const marked = slips.some((s) => s.trackId === t.id && s.date === t.endDate);
       events.push({
         kind: 'trackEnd',
+        afterHardDay: marked,
         at: `${t.endDate}T23:59:59`,
         date: t.endDate,
         trackNumber: i + 1,
         days: daysSinceTrackStart(t, t.endDate),
-        reflection: t.relapseReflection,
-        reasonTags: t.relapseReasonTags,
+        reflection: marked ? undefined : t.relapseReflection,
+        reasonTags: marked ? undefined : t.relapseReasonTags,
       });
     }
   });
+  slips
+    .filter((s) => numberOf.has(s.trackId))
+    .forEach((s) => events.push({ kind: 'hardDay', at: s.createdAt, date: s.date, trackNumber: numberOf.get(s.trackId)!, reflection: s.reflection, reasonTags: s.reasonTags }));
   feelingEntries
     .filter((e) => numberOf.has(e.trackId))
-    .forEach((e) => events.push({ kind: 'feeling', at: e.createdAt, date: e.createdAt.slice(0, 10), trackNumber: numberOf.get(e.trackId)!, entry: e }));
+    .forEach((e) => events.push({ kind: 'feeling', at: e.createdAt, date: localDateOf(e.createdAt), trackNumber: numberOf.get(e.trackId)!, entry: e }));
   return events.sort((a, b) => b.at.localeCompare(a.at));
 }

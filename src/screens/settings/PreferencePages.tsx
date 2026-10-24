@@ -1,5 +1,6 @@
 // Appearance & Language, Sound, and the per-section settings pages.
 import { REMINDER_SOUND } from '../../config/reminderWording';
+import type { QuitPrimaryNumber } from '../../quit/journey';
 import { resyncAllReminders } from '../../utils/reminders';
 import React from 'react';
 import { Pressable, View } from 'react-native';
@@ -442,6 +443,17 @@ export function SectionSettingsPage({
               options={[5, 10, 15, 20].map((m) => ({ id: m, label: `${m} min` }))}
               value={s.quitUrgeMinutes}
               onChange={(id) => s.set('quitUrgeMinutes', id)}
+            />
+            <ChoiceRow<QuitPrimaryNumber>
+              label="Main number on the journey"
+              explain="The other two stay, smaller. A hard day never resets the journey."
+              options={[
+                { id: 'journey', label: 'Journey days' },
+                { id: 'clean', label: 'Clean days' },
+                { id: 'run', label: 'Current run' },
+              ]}
+              value={s.quitPrimaryNumber}
+              onChange={(id) => s.set('quitPrimaryNumber', id)}
             />
           </Group>
           <Group title="Feelings" footer="Off by default. When on, it's a gentle offer at the end, never a step you have to go through. You can always note a feeling from the journey page.">

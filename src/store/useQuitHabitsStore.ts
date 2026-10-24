@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { FeelingZone, QuitFeelingEntry, QuitHabit, QuitTrack } from '../types/sections';
+import type { FeelingZone, QuitCravingSession, QuitFeelingEntry, QuitHabit, QuitSlip, QuitTrack } from '../types/sections';
 import { genId } from '../utils/id';
 import { daysBetweenISODates, todayISO } from '../utils/date';
 
@@ -8,6 +8,8 @@ interface QuitHabitsState {
   habits: QuitHabit[];
   tracks: QuitTrack[];
   feelingEntries: QuitFeelingEntry[];
+  slips: QuitSlip[];
+  cravingSessions: QuitCravingSession[];
 
   // Creates the habit and its first track together — returns both ids.
   addQuitHabit: (name: string, why: string | undefined) => { habitId: string; trackId: string };
@@ -38,6 +40,19 @@ interface QuitHabitsState {
   // chooses when they're ready, not something that happens automatically
   // just because a track was archived. Returns the new track's id.
   startNewTrack: (habitId: string) => string;
+
+  // A hard day, marked on the journey: the chapter and the day count carry
+  // on. Returns the slip's id.
+  markHardDay: (habitId: string, trackId: string, details?: { reflection?: string; reasonTags?: string[]; cravingSessionId?: string }) => string;
+  // "Start a new chapter?" after a hard day (never by default): the current
+  // chapter ends on that day, with its reflection, and a new one starts.
+  startNewChapter: (habitId: string, slipId: string) => string | undefined;
+
+  // Craving sessions ("I'm craving it"): started, a tool tried, ended.
+  startCraving: (habitId: string, trackId: string, ratingBefore?: number) => string;
+  updateCraving: (id: string, patch: Partial<Pick<QuitCravingSession, 'ratingBefore' | 'ratingAfter' | 'triggerTag' | 'note'>>) => void;
+  tryCravingTool: (id: string, toolId: string) => void;
+  endCraving: (id: string, outcome: NonNullable<QuitCravingSession['outcome']>, links?: { resistedEntryId?: string; slipId?: string }) => void;
 }
 
 export const useQuitHabitsStore = create<QuitHabitsState>()(
@@ -45,6 +60,8 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
     habits: [],
     tracks: [],
     feelingEntries: [],
+    slips: [],
+    cravingSessions: [],
 
     addQuitHabit: (name, why) => {
       const habitId = genId('quithabit');
@@ -68,6 +85,8 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
         state.habits = state.habits.filter((h) => h.id !== id);
         state.tracks = state.tracks.filter((t) => t.quitHabitId !== id);
         state.feelingEntries = state.feelingEntries.filter((e) => !trackIds.has(e.trackId));
+        state.slips = state.slips.filter((x) => x.quitHabitId !== id);
+        state.cravingSessions = state.cravingSessions.filter((x) => x.quitHabitId !== id);
       }),
 
     addFeelingEntry: (trackId, feelingId, zone, note, isRelapseMoment, isResistedUrge, approach, urgePassed) => {
@@ -121,8 +140,88 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
       });
       return newTrackId;
     },
+
+    markHardDay: (habitId, trackId, details = {}) => {
+      const id = genId('slip');
+      set((state) => {
+        state.slips.unshift({
+          id,
+          quitHabitId: habitId,
+          trackId,
+          date: todayISO(),
+          createdAt: new Date().toISOString(),
+          reflection: details.reflection?.trim() || undefined,
+          reasonTags: details.reasonTags?.length ? details.reasonTags : undefined,
+          cravingSessionId: details.cravingSessionId,
+        });
+      });
+      return id;
+    },
+
+    startNewChapter: (habitId, slipId) => {
+      let newTrackId: string | undefined;
+      set((state) => {
+        const slip = state.slips.find((x) => x.id === slipId);
+        const track = state.tracks.find((t) => t.quitHabitId === habitId && t.status === 'active');
+        if (!slip || !track) return;
+        track.status = 'archived';
+        track.endDate = slip.date;
+        track.relapseReflection = slip.reflection;
+        track.relapseReasonTags = slip.reasonTags;
+        newTrackId = genId('track');
+        state.tracks.unshift({ id: newTrackId, quitHabitId: habitId, startDate: todayISO(), createdAt: new Date().toISOString(), status: 'active' });
+      });
+      return newTrackId;
+    },
+
+    startCraving: (habitId, trackId, ratingBefore) => {
+      const id = genId('craving');
+      set((state) => {
+        state.cravingSessions.unshift({ id, quitHabitId: habitId, trackId, startedAt: new Date().toISOString(), ratingBefore, tools: [] });
+      });
+      return id;
+    },
+
+    updateCraving: (id, patch) =>
+      set((state) => {
+        const c = state.cravingSessions.find((x) => x.id === id);
+        if (c) Object.assign(c, patch);
+      }),
+
+    tryCravingTool: (id, toolId) =>
+      set((state) => {
+        const c = state.cravingSessions.find((x) => x.id === id);
+        if (!c || c.endedAt) return;
+        const at = new Date().toISOString();
+        const open = c.tools[c.tools.length - 1];
+        if (open && !open.endedAt) {
+          if (open.toolId === toolId) return;
+          open.endedAt = at;
+        }
+        c.tools.push({ toolId, startedAt: at });
+      }),
+
+    endCraving: (id, outcome, links = {}) =>
+      set((state) => {
+        const c = state.cravingSessions.find((x) => x.id === id);
+        if (!c) return;
+        const at = new Date().toISOString();
+        const open = c.tools[c.tools.length - 1];
+        if (open && !open.endedAt) open.endedAt = at;
+        c.outcome = outcome;
+        // "Still here" keeps the session (and its timer) going.
+        if (outcome !== 'stillHere') c.endedAt = at;
+        if (links.resistedEntryId) c.resistedEntryId = links.resistedEntryId;
+        if (links.slipId) c.slipId = links.slipId;
+      }),
   }))
 );
+
+// The craving session going on for a habit (started, not yet ended), if any:
+// reopening Ona brings it back with its timer right.
+export function openCravingFor(sessions: QuitCravingSession[], habitId: string): QuitCravingSession | undefined {
+  return sessions.find((s) => s.quitHabitId === habitId && !s.endedAt);
+}
 
 // --- Pure helpers ---
 

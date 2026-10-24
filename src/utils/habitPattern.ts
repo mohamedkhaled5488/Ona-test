@@ -3,7 +3,7 @@
 // The x-axis always spans the whole selected period: every day from the
 // range's start to its end is present, even with nothing logged (a past bug
 // cut the chart off after day 21).
-import type { Habit, HabitCheckIn, QuitFeelingEntry, QuitTrack } from '../types/sections';
+import type { Habit, HabitCheckIn, QuitFeelingEntry, QuitTrack, QuitSlip } from '../types/sections';
 import { addDaysISO, daysBetweenISODates, daysInMonthISO } from './date';
 import { isScheduledDay, weekStart } from './habitFrequency';
 
@@ -84,11 +84,11 @@ export function weeklyCompletion(habit: Pick<Habit, 'id' | 'createdAt' | 'freque
 // between = after a slip, before the next start.
 export type QuitDayStatus = 'clean' | 'resisted' | 'slip' | 'between' | 'future' | 'before';
 
-export function quitDayStatuses(habitId: string, tracks: QuitTrack[], entries: QuitFeelingEntry[], start: string, end: string, today: string): { date: string; status: QuitDayStatus }[] {
+export function quitDayStatuses(habitId: string, tracks: QuitTrack[], entries: QuitFeelingEntry[], start: string, end: string, today: string, slips: QuitSlip[] = []): { date: string; status: QuitDayStatus }[] {
   const mine = tracks.filter((t) => t.quitHabitId === habitId).sort((a, b) => a.startDate.localeCompare(b.startDate));
   const ids = new Set(mine.map((t) => t.id));
   const resistedDays = new Set(entries.filter((e) => ids.has(e.trackId) && e.isResistedUrge).map((e) => localDay(e.createdAt)));
-  const slipDays = new Set([...mine.filter((t) => t.endDate).map((t) => t.endDate!), ...entries.filter((e) => ids.has(e.trackId) && e.isRelapseMoment).map((e) => localDay(e.createdAt))]);
+  const slipDays = new Set([...mine.filter((t) => t.endDate).map((t) => t.endDate!), ...entries.filter((e) => ids.has(e.trackId) && e.isRelapseMoment).map((e) => localDay(e.createdAt)), ...slips.filter((s) => s.quitHabitId === habitId).map((s) => s.date)]);
   const first = mine[0]?.startDate;
   return daysOf(start, end).map((date) => {
     if (date > today) return { date, status: 'future' };

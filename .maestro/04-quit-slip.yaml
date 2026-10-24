@@ -1,5 +1,6 @@
-# E2E-005 Quit journey with a slip: the tone stays kind, the chapter is
-# saved, and a new track starts.
+# E2E-005 Quit: ride out a craving (the timer runs while you pick a tool),
+# then a hard day: marked on the journey with no shame, and the journey's day
+# count carries on (no new chapter unless chosen).
 appId: app.ona
 tags:
   - core
@@ -13,28 +14,35 @@ tags:
 - hideKeyboard
 - tapOn: "Start"
 - extendedWaitUntil:
-    visible: "I went back to it"
+    visible: "I'm craving it"
     timeout: 10000
-- tapOn: "I went back to it"
-- assertVisible: "This isn't a failure"
-- assertNotVisible: ".*(You failed|relapse|Relapse|start over from zero).*"
-- tapOn: "Continue"
-- assertVisible: "One more thing, if you're up for it"
-- tapOn: "Save this chapter"
-- assertVisible: "This chapter is saved"
+# A craving: a gentle timer, a tool, and how it went.
+- tapOn: "I'm craving it"
+- assertVisible: "You're doing something hard. Let's ride this out."
+- tapOn: "Skip"
+- assertVisible: 'Riding it out: \d+:\d\d'
+- tapOn: "Breathe and ride it out"
+- tapOn: "I'm okay now"
+- tapOn: "It passed"
+- assertVisible: "It passed"
 - runFlow:
     when:
       visible: "Want to note how you're feeling?"
     commands:
       - tapOn: "Skip"
-- tapOn: "Start a new track now"
-# The journey keeps both chapters: the one that ended, and the new one.
-- scrollUntilVisible:
-    element: "Track 2"
-- assertVisible: "Your journey"
-# Ona counts the day a track starts as Day 1.
-- assertVisible: "Ongoing — Day 1"
-# The ended chapter is listed below the new one (off screen on smaller
-# emulators, so scroll to it rather than assume it fits).
+- tapOn: "Done"
+# A hard day.
+- tapOn: "I had a hard day"
+- assertVisible: "Slips happen"
+- assertNotVisible: ".*(You failed|failure|relapse|Relapse|start over from zero).*"
+- tapOn: "Continue"
+- assertVisible: "If you're up for it"
+- tapOn: "Mark this hard day"
+- assertVisible: "Marked on your journey"
+- assertVisible: ".*Day 1 of your journey carries on.*"
+- tapOn: "Back to my journey"
+# The journey carries on: the same chapter, no reset.
+- assertVisible: "Day 1 of your journey"
+- assertNotVisible: "Track 2"
 - scrollUntilVisible:
     element: "Track 1"

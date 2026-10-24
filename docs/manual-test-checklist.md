@@ -129,6 +129,8 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-093 | Never limited (FIX-21) | No account: add 3 Quit habits; open support resources; export my data | All work, with no mention of Plus | | | |
 | MAN-094 | Backup status row | Settings → Account & Subscription: signed in and synced; then airplane mode and add an entry; then pause sync | "Backed up, last synced …"; then "Offline: 1 change … isn't in your account yet"; then "Sync paused"; never "Backed up" while a change waits. Choice sheet readable with the largest text | | | |
 | MAN-095 | Killed mid-step | Sign in with data on the phone and in the account; choose Keep separate and immediately swipe Ona away; reopen | Either the choice is asked again with the phone's data intact, or it's done and the copy is listed in Privacy → Other data on this phone; nothing missing | | | |
+| MAN-096 | Craving on a phone | Quit → I'm craving it; rate 7; Breathe; lock the phone 4 min; unlock and open Ona | "Riding it out" shows about 4 minutes; Try something else keeps the timer; It passed counts one urge ridden out; nothing flashes, no sound unless chosen | | | |
+| MAN-097 | A hard day | Quit → I had a hard day → Continue → tag one reason → Mark this hard day | "Slips happen" with no blame; "Day N of your journey carries on"; the journey still shows the same Track; Support lines open the support page; the headline after: "Day N of your journey", "Current run: 0 days" | | | |
 
 ## Sign-off
 
