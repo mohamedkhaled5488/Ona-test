@@ -157,7 +157,6 @@ describe('recap totals', () => {
     const summary = effortSummary(s, prev, 'week', true);
     expect(summary.numbers.map((n) => n.id)).toEqual(['time', 'tasks', 'pages', 'habits']);
     expect(summary.numbers[0].display).toBe('3 h 45 min');
-    expect(summary.sentence).toBe('This week you focused for 3 h 45 min, finished 2 tasks and read 55 pages.');
     expect(summary.numbers[0].delta).toBe('+3 h 15 min vs last week'); // last week had 30 min
     expect(summary.numbers[1].delta).toBe('+2 vs last week');
   });
@@ -175,10 +174,8 @@ describe('empty periods', () => {
     const s = periodStats(emptyData(), range);
     const summary = effortSummary(s, undefined, 'week', true);
     expect(summary.numbers).toEqual([]);
-    expect(summary.sentence).toMatch(/quiet so far/);
-    expect(effortSummary(s, undefined, 'week', false).sentence).toBe('Nothing was logged that week.');
     expect(buildHighlights(emptyData(), s)).toEqual([]);
-    expect(buildStory(emptyData(), s, [], 'week', true, '2026-10-07')).toEqual([]);
+    expect(buildStory(emptyData(), s, [], 'week', true, '2026-10-07', 'This week')).toEqual([]);
     expect(areaSummaries(s, []).every((a) => !a.hasData)).toBe(true);
   });
 });
@@ -195,7 +192,7 @@ describe('hidden sections and the story', () => {
     expect(s.resistedUrges).toBe(0);
     const summary = effortSummary(s, undefined, 'week', true);
     expect(summary.numbers.find((n) => n.id === 'pages')).toBeUndefined();
-    const story = buildStory(data, s, buildHighlights(data, s), 'week', true, '2026-10-07');
+    const story = buildStory(data, s, buildHighlights(data, s), 'week', true, '2026-10-07', 'This week');
     expect(story.find((c) => c.id === 'feelings')).toBeUndefined();
     expect(story.find((c) => c.id === 'urges')).toBeUndefined();
     expect(story.some((c) => [c.headline, ...c.lines].join(' ').includes('Reading'))).toBe(false);
@@ -212,7 +209,7 @@ describe('hidden sections and the story', () => {
     const data = { ...emptyData(), studySessions: [study('a', '2026-10-05', 30), study('b', '2026-10-06', 40)] };
     const s = periodStats(data, week);
     const summary = effortSummary(s, undefined, 'week', true);
-    const ids = buildStory(data, s, buildHighlights(data, s), 'week', true, '2026-10-07').map((c) => c.id);
+    const ids = buildStory(data, s, buildHighlights(data, s), 'week', true, '2026-10-07', 'This week').map((c) => c.id);
     // No "fullest day": Recap doesn't rank days, so with only this there's no win card.
     expect(ids).toEqual(['effort', 'time']);
   });
@@ -221,7 +218,7 @@ describe('hidden sections and the story', () => {
     const data = sampleData();
     const s = periodStats(data, week);
     const summary = effortSummary(s, undefined, 'week', true);
-    const story = buildStory(data, s, buildHighlights(data, s), 'week', true, '2026-10-07');
+    const story = buildStory(data, s, buildHighlights(data, s), 'week', true, '2026-10-07', 'This week');
     expect(story.map((c) => c.id)).toEqual(expect.arrayContaining(['feelings', 'urges']));
     const shared = shareableStoryCards(story, false).map((c) => c.id);
     expect(shared).not.toContain('feelings');
@@ -238,7 +235,7 @@ describe('hidden sections and the story', () => {
     const s = periodStats(data, week);
     const highlights = buildHighlights(data, s);
     expect(highlights[0]).toMatchObject({ id: 'moment-2026-10-06', sensitive: true });
-    const story = buildStory(data, s, highlights, 'week', true, '2026-10-07');
+    const story = buildStory(data, s, highlights, 'week', true, '2026-10-07', 'This week');
     expect(shareableStoryCards(story, false).find((c) => c.id === 'moment')).toBeUndefined();
   });
 });

@@ -6,7 +6,7 @@
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 
 import { sectionsMeta } from '../../data/sectionsMeta';
-import { RECAP_CONTRIBUTORS, areaTiles, contributorFor, sectionRecaps, visibleContributors, type RecapContext } from '../../recap/registry';
+import { RECAP_CONTRIBUTORS, areaTiles, contributorFor, recapSentence, sectionRecaps, visibleContributors, type RecapContext } from '../../recap/registry';
 import { AREA_SECTIONS, periodStats, shareableStoryCards, buildStory, type RecapData } from '../recapStats';
 import { quitJourneySeries } from '../habitStats';
 import { buildSkillsTimeBreakdown } from '../recap';
@@ -152,7 +152,7 @@ test('RECAP-REG-030 Feelings and Quit: on Home by default; hidden with "Hide sen
   expect(hidden).not.toContain('moodCheck');
   expect(hidden).not.toContain('quitHabit');
   expect(sectionRecaps('grow', ctx(data), [], true).map((r) => r.section)).not.toContain('quitHabit');
-  const story = buildStory(data, ctx(data).stats, [], 'week' as never, true, TODAY);
+  const story = buildStory(data, ctx(data).stats, [], 'week' as never, true, TODAY, recapSentence(ctx(data), 'week', true, [], true));
   expect(shareableStoryCards(story.filter(Boolean) as never, false).some((c: { sensitive: boolean }) => c.sensitive)).toBe(false);
 });
 
@@ -167,4 +167,48 @@ test('RECAP-REG-050 a month covers its last day (an entry on Oct 31 is in Octobe
   const data = emptyData();
   data.journalEntries.push({ id: 'j31', date: '2026-10-31', zone: 'calm', text: 'Last day', tags: [], createdAt: at('2026-10-31'), updatedAt: at('2026-10-31') } as never);
   expect(contributorFor('journaling')!.build(ctx(data, { start: '2026-10-01', end: '2026-10-31' })).rows[0].value).toBe('1');
+});
+
+describe('RECAP-REG-050 the Home summary sentence comes from the registry', () => {
+  test('RECAP-REG-050 each section with something this week is named, in registry order, with no list of its own', () => {
+    for (const [section, add] of Object.entries(ADD)) {
+      const data = emptyData();
+      add(data);
+      const title = contributorFor(section as SectionId)!.title;
+      expect({ section, sentence: recapSentence(ctx(data), 'week', true, [], false) }).toEqual({ section, sentence: `This week you spent time in ${title}.` });
+    }
+  });
+
+  test('RECAP-REG-051 several sections: registry order; more than four are counted, not ranked', () => {
+    const data = emptyData();
+    ADD.journaling(data);
+    ADD.dailyPlanning(data);
+    ADD.quitHabit(data);
+    const titles = RECAP_CONTRIBUTORS.filter((c) => ['journaling', 'dailyPlanning', 'quitHabit'].includes(c.section)).map((c) => c.title);
+    expect(recapSentence(ctx(data), 'week', true, [], false)).toBe(`This week you spent time in ${titles[0]}, ${titles[1]} and ${titles[2]}.`);
+    const all = emptyData();
+    Object.values(ADD).forEach((add) => add(all));
+    const first = RECAP_CONTRIBUTORS.slice(0, 3).map((c) => c.title);
+    expect(recapSentence(ctx(all), 'week', true, [], false)).toBe(`This week you spent time in ${first.join(', ')} and ${RECAP_CONTRIBUTORS.length - 3} more sections.`);
+  });
+
+  test('RECAP-REG-052 a section added to the registry is in the sentence with no other change', () => {
+    const extra = { section: 'songwriting' as SectionId, area: 'learn' as const, title: 'A new section', build: () => ({ section: 'songwriting' as SectionId, title: 'A new section', hasData: true, rows: [], items: [], notes: [] }) };
+    RECAP_CONTRIBUTORS.push(extra);
+    try {
+      expect(recapSentence(ctx(emptyData()), 'week', true, [], false)).toBe('This week you spent time in A new section.');
+    } finally {
+      RECAP_CONTRIBUTORS.pop();
+    }
+  });
+
+  test('RECAP-REG-053 hidden sections, and Feelings and Quit with "Hide sensitive areas", stay out', () => {
+    const data = emptyData();
+    ADD.quitHabit(data);
+    ADD.moodCheck(data);
+    ADD.journaling(data);
+    expect(recapSentence(ctx(data), 'week', true, [], true)).toBe(`This week you spent time in ${contributorFor('journaling')!.title}.`);
+    expect(recapSentence(ctx(data), 'week', true, ['journaling'], true)).toMatch(/quiet so far/);
+    expect(recapSentence(ctx(emptyData()), 'week', false, [], false)).toBe('Nothing was logged that week.');
+  });
 });

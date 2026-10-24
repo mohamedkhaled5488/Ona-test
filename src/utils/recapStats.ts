@@ -260,6 +260,16 @@ export function periodLead(period: RecapPeriod, isCurrent: boolean): string {
   return { today: 'On that day', week: 'That week', month: 'That month', year: 'That year', custom: 'In this period' }[period];
 }
 
+// The one-line summary, from the sections that have something in the period
+// (in the Recap registry's order, never ranked). See recapSentence in
+// src/recap/registry.ts, which supplies the titles.
+export function summarySentence(sections: string[], period: RecapPeriod, isCurrent: boolean): string {
+  const lead = periodLead(period, isCurrent);
+  if (sections.length === 0) return isCurrent ? `${lead} is quiet so far — nothing logged yet, and that's okay.` : `Nothing was logged ${lead.toLowerCase()}.`;
+  const named = sections.length > 4 ? [...sections.slice(0, 3), plural(sections.length - 3, 'more section', 'more sections')] : sections;
+  return `${lead} you spent time in ${joinList(named)}.`;
+}
+
 export function storyTitle(period: RecapPeriod): string {
   return { today: 'Your day in Ona', week: 'Your week in Ona', month: 'Your month in Ona', year: 'Your year in Ona', custom: 'Your time in Ona' }[period];
 }
@@ -325,7 +335,7 @@ export function effortSummary(
   period: RecapPeriod,
   isCurrent: boolean,
   excludeSections: SectionId[] = []
-): { numbers: BigNumber[]; sentence: string } {
+): { numbers: BigNumber[] } {
   const used = CANDIDATES.filter((c) => c.value(stats) > 0 && !excludeSections.includes(c.section(stats))).slice(0, 4);
   const numbers = used.map((c) => {
     const value = c.value(stats);
@@ -339,14 +349,7 @@ export function effortSummary(
       delta: previous ? neutralDelta(value, c.value(previous), !!c.isTime, period) : undefined,
     };
   });
-  const lead = periodLead(period, isCurrent);
-  const sentence =
-    used.length === 0
-      ? isCurrent
-        ? `${lead} is quiet so far — nothing logged yet, and that's okay.`
-        : `Nothing was logged ${lead.toLowerCase()}.`
-      : `${lead} you ${joinList(used.slice(0, 3).map((c) => c.phrase(c.value(stats))))}.`;
-  return { numbers, sentence };
+  return { numbers };
 }
 
 // ---------------------------------------------------------------------------
@@ -601,16 +604,17 @@ export function buildStory(
   highlights: Highlight[],
   period: RecapPeriod,
   includesToday: boolean,
-  today: string
+  today: string,
+  opening: string // recapSentence(..., hideSensitive: true): the card stays shareable
 ): StoryCard[] {
   const cards: (StoryCard | null)[] = [];
 
   // Feelings get their own card, so the opening card leaves them out and
   // stays shareable.
-  const opening = effortSummary(stats, undefined, period, includesToday, SENSITIVE_SECTIONS);
+  const numbers = effortSummary(stats, undefined, period, includesToday, SENSITIVE_SECTIONS).numbers;
   cards.push(
-    opening.numbers.length
-      ? { id: 'effort', title: storyTitle(period), headline: opening.sentence, lines: opening.numbers.map((n) => `${n.display} · ${n.label.toLowerCase()}`), sensitive: false }
+    numbers.length
+      ? { id: 'effort', title: storyTitle(period), headline: opening, lines: numbers.map((n) => `${n.display} · ${n.label.toLowerCase()}`), sensitive: false }
       : null
   );
 
@@ -620,7 +624,7 @@ export function buildStory(
           id: 'time',
           title: 'Where your time went',
           headline: formatDuration(stats.totalMinutes),
-          lines: [...EFFORT_KINDS].filter((k) => stats.minutes[k] > 0).sort((a, b) => stats.minutes[b] - stats.minutes[a]).map((k) => `${EFFORT_LABEL[k]} — ${formatDuration(stats.minutes[k])}`),
+          lines: EFFORT_KINDS.filter((k) => stats.minutes[k] > 0).map((k) => `${EFFORT_LABEL[k]} — ${formatDuration(stats.minutes[k])}`),
           sensitive: false,
         }
       : null

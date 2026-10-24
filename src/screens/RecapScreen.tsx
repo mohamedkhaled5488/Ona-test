@@ -68,7 +68,7 @@ import {
   type RecapData,
   type StoryCard,
 } from '../utils/recapStats';
-import { areaTiles, sectionRecaps, type RecapOpen, type SectionRecap } from '../recap/registry';
+import { areaTiles, recapSentence, sectionRecaps, type RecapOpen, type SectionRecap } from '../recap/registry';
 import { useRecapStore } from '../store/useRecapStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -365,6 +365,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
   const plus = usePlus();
   const hideSensitiveTop = useSettingsStore((s) => s.hideSensitiveOnHome);
   const summary = useMemo(() => effortSummary(stats, comparison ? previous : undefined, period, isCurrent, hideSensitiveTop ? SENSITIVE_SECTIONS : []), [stats, previous, comparison, period, isCurrent, hideSensitiveTop]);
+  const sentence = useMemo(() => recapSentence({ data, stats, today: todayISO() }, period, isCurrent, hidden, hideSensitiveTop), [data, stats, period, isCurrent, hidden, hideSensitiveTop]);
   const highlights = useMemo(() => buildHighlights(data, stats), [data, stats]);
   const hideSensitive = useSettingsStore((s) => s.hideSensitiveOnHome);
   // Every area tile comes from the Recap registry (src/recap/registry.ts).
@@ -417,7 +418,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
             ))}
           </View>
         )}
-        <Body style={styles.sentence}>{summary.sentence}</Body>
+        <Body style={styles.sentence}>{sentence}</Body>
       </Card>
 
       {period === 'today' && <DayList navigation={navigation} data={data} date={stats.range.start} />}
@@ -803,7 +804,7 @@ export function RecapScreen({ navigation }: Props) {
   const isCurrent = today >= range.start && today <= range.end;
   const label = describePeriod(period, range.start, range.end);
 
-  const story = useMemo(() => buildStory(data, stats, buildHighlights(data, stats), period, isCurrent, today), [data, stats, period, isCurrent, today]);
+  const story = useMemo(() => buildStory(data, stats, buildHighlights(data, stats), period, isCurrent, today, recapSentence({ data, stats, today }, period, isCurrent, hidden, true)), [data, stats, period, isCurrent, today, hidden]);
 
   const openDay = (date: string) => {
     setPeriod('today');

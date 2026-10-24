@@ -41,8 +41,8 @@ test('IOS-CFG-002 no microphone permission: Ona never records audio', () => {
 
 test('IOS-CFG-003 every permission Ona asks for has its own plain explanation', () => {
   const picker = pluginOptions('expo-image-picker') as { cameraPermission?: string; photosPermission?: string };
-  if (/launchCameraAsync|requestCameraPermissionsAsync/.test(srcText)) expect(picker.cameraPermission).toMatch(/^Ona uses your camera to .{10,}/);
-  if (/launchImageLibraryAsync|requestMediaLibraryPermissionsAsync/.test(srcText)) expect(picker.photosPermission).toMatch(/^Ona uses your photo library to .{10,}/);
+  if (/launchCameraAsync|requestCameraPermissionsAsync/.test(srcText)) expect(picker.cameraPermission).toMatch(/^Ona uses your camera (to|when) .{10,}/);
+  if (/launchImageLibraryAsync|requestMediaLibraryPermissionsAsync/.test(srcText)) expect(picker.photosPermission).toMatch(/^Ona uses your photo library (to|when) .{10,}/);
   if (/authenticateAsync/.test(srcText)) expect((pluginOptions('expo-local-authentication') as { faceIDPermission?: string }).faceIDPermission).toMatch(/^Ona uses Face ID to .{10,}/);
 });
 
@@ -100,4 +100,27 @@ test('IOS-CFG-008 TestFlight / App Store builds come from a store profile with a
   expect(eas.build.production.environment).toBe('production');
   expect(eas.build['development-simulator'].ios.simulator).toBe(true);
   expect(app.ios.buildNumber).toBeUndefined(); // EAS keeps the build number
+});
+
+test('IOS-CFG-012 the photo and camera strings name every place Ona asks for a photo', () => {
+  const picker = pluginOptions('expo-image-picker') as { cameraPermission: string; photosPermission: string };
+  const uses: [string, RegExp, ('camera' | 'photos')[]][] = [
+    ['BudgetScreen', /receipt/, ['camera', 'photos']],
+    ['BookScreen', /book (cover|page)/, ['camera', 'photos']],
+    ['HabitBuilderScreen', /habit/, ['camera', 'photos']],
+    ['SkillsScreen', /skill/, ['camera', 'photos']],
+    ['SkillParts', /skill/, ['photos']],
+    ['TaskEditorScreen', /task/, ['photos']],
+  ];
+  for (const [screen, words, kinds] of uses) {
+    const src = fs.readFileSync(path.join(ROOT, 'src/screens', `${screen}.tsx`), 'utf8');
+    for (const kind of kinds) {
+      const call = kind === 'camera' ? /launchCameraAsync/ : /launchImageLibraryAsync/;
+      expect({ screen, kind, uses: call.test(src) }).toEqual({ screen, kind, uses: true });
+      expect({ screen, kind, named: words.test(kind === 'camera' ? picker.cameraPermission : picker.photosPermission) }).toEqual({ screen, kind, named: true });
+    }
+  }
+  // A new screen asking for a photo has to be added above (and to the strings).
+  const askers = fs.readdirSync(path.join(ROOT, 'src/screens'), { withFileTypes: true }).filter((e) => /\.tsx$/.test(e.name) && /launch(Camera|ImageLibrary)Async/.test(fs.readFileSync(path.join(ROOT, 'src/screens', e.name), 'utf8'))).map((e) => e.name.replace('.tsx', ''));
+  expect(askers.sort()).toEqual(uses.map((u) => u[0]).sort());
 });

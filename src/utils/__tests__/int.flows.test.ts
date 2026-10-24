@@ -156,7 +156,7 @@ describe('INT-REC: Recap totals equal the sections\' own data', () => {
     useQuitHabitsStore.getState().addFeelingEntry(trackId, undefined, undefined, undefined, false, true);
     const data = withoutHidden(recapData(), []);
     const s = periodStats(data, { start: '2026-10-12', end: TODAY });
-    const story = buildStory(data, s, buildHighlights(data, s), 'week', true, TODAY);
+    const story = buildStory(data, s, buildHighlights(data, s), 'week', true, TODAY, 'This week');
     const shared = shareableStoryCards(story, false).map((c) => c.id);
     expect(shared).not.toContain('feelings');
     expect(shared).not.toContain('urges');

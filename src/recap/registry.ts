@@ -7,7 +7,8 @@
 // Wording follows the design philosophy: counts in a fixed order, never a
 // ranking; Quit as a journey, a slip as a new chapter, never "failed".
 import type { FeelingZone, SectionId } from '../types/sections';
-import { AREA_TITLES, bucketSeries, formatDuration, growDetails, learnDetails, planDetails, type AreaId, type PeriodStats, type RecapData } from '../utils/recapStats';
+import type { RecapPeriod } from '../utils/feelingsStats';
+import { AREA_TITLES, bucketSeries, summarySentence, formatDuration, growDetails, learnDetails, planDetails, type AreaId, type PeriodStats, type RecapData } from '../utils/recapStats';
 import { buildSkillsTimeBreakdown } from '../utils/recap';
 import { quitJourneySeries } from '../utils/habitStats';
 import { formatMoney } from '../data/currencies';
@@ -295,4 +296,12 @@ export function areaTiles(ctx: RecapContext, hidden: SectionId[], hideSensitive:
       hasData: withData.length > 0,
     };
   });
+}
+
+// Home's summary sentence (and the story's opening card): the sections with
+// something in the period, in registry order. No list of its own, so a new
+// section is in the sentence as soon as it registers.
+export function recapSentence(ctx: RecapContext, period: RecapPeriod, isCurrent: boolean, hidden: SectionId[], hideSensitive: boolean): string {
+  const titles = visibleContributors(hidden, hideSensitive).filter((c) => c.build(ctx).hasData).map((c) => c.title);
+  return summarySentence(titles, period, isCurrent);
 }
