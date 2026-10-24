@@ -18,7 +18,7 @@ mkdir -p maestro-reports maestro-screens maestro-debug
 # responding on CI right after boot, covering the first flow's screen):
 # wait for boot, unlock, close any system dialog, and give it a moment.
 adb wait-for-device
-until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '')" = "1" ]; do sleep 2; done
+until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
 adb shell input keyevent 82 > /dev/null 2>&1
 adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1
 sleep 20
