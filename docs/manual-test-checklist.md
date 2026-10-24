@@ -103,6 +103,27 @@ For each row, record Pass / Fail, the device, the build number (Settings → Abo
 | MAN-072 | Battery | Use Ona normally for a day, plus one hour of Sleep sounds with the screen off | Battery use looks normal in Android's battery settings; Ona isn't listed as draining in the background | | | |
 | MAN-073 | Warmth | One hour of Sleep sounds | The phone doesn't get noticeably warm | | | |
 
+## 9. The three reported problems, and the plans
+
+Do these on the new build after installing it **over** the previous APK (to check the move of old reminders), then once on a fresh install. For the plan rows, Ona without an account is in Essentials mode; a new account is in the Plus trial.
+
+| ID | Check | How | Expected | A | B | Notes |
+|---|---|---|---|---|---|---|
+| MAN-080 | Wake-up reminder sound (FIX-18) | Sleep → Wake-up reminder 2 minutes away; pick each sound and tap its preview; lock the phone | The preview and the reminder play the sound chosen, at the alarm volume. The screen says "Wake-up reminder" and "For important wake-ups, use your phone's clock."; no "alarm", no fade-in | | | |
+| MAN-081 | Reminders kept after the update (FIX-18) | Before installing the new build, set a task reminder and a wake-up reminder for later today; install over it | Both still arrive, now with their chosen sound | | | |
+| MAN-082 | Exact timing (FIX-18) | Android 12+: phone Settings → Apps → Special access → Alarms & reminders | Ona is listed; with it off, reminders still arrive (maybe a little late) | | | |
+| MAN-083 | Changing the default sound (FIX-18) | Set two task reminders on the default sound; change the default sound in Settings | Both reminders arrive with the new sound | | | |
+| MAN-084 | Quit in Recap (FIX-19) | Start a Quit journey; ride out one urge; open Home → Recap → this week | Quit shows days on the journey and urges ridden out; a slip reads "a new chapter" | | | |
+| MAN-085 | Every section in Recap (FIX-19) | Add one thing in Budget, Songwriting, Mind Games and Catch a Thought; open Recap | Each appears with its own tile; no "best", "most" or "busiest" anywhere | | | |
+| MAN-086 | Hide sensitive areas (FIX-19) | Settings → Hide sensitive areas on Home; then share a Recap story | Feelings and Quit are off Home and out of the story; still in their own sections | | | |
+| MAN-087 | Feelings from every section (FIX-20) | Log a feeling from a task, a habit, a skill session, Quit, a journal entry and Identify the Feeling | All six show in the feelings log, the graph, Analysis and Recap, with where they came from | | | |
+| MAN-088 | Feelings survive a reinstall (FIX-17, FIX-20) | Signed in: do MAN-087, close Ona, wait 10 s, uninstall, reinstall, sign in | All six feelings come back without tapping Sync now | | | |
+| MAN-089 | Essentials mode: over a cap (FIX-21) | No account: create 3 habits; tap Build a new habit | A calm explanation with "Not now" and "See Plus"; the 3 habits open and edit normally | | | |
+| MAN-090 | Essentials mode: locked features (FIX-21) | No account: open Recap observations, Planning insights, a Feelings pattern card, a PDF export | Each shows a titled card or dialog with one line and "See Plus"; no blurred numbers, no countdown | | | |
+| MAN-091 | Diet horizon (FIX-21) | No account: plan a meal next week, then the week after, then last week | Next week and last week work; the week after explains "plans up to next week" | | | |
+| MAN-092 | Names (FIX-22) | Settings → Plan & usage, Account; signed in during the trial, then signed out | "Plus trial, N days left. All features on." / "Essentials mode. Your data is safe on this phone."; never "free version", "expired", "downgrade" or "limited" | | | |
+| MAN-093 | Never limited (FIX-21) | No account: add 3 Quit habits; open support resources; export my data | All work, with no mention of Plus | | | |
+
 ## Sign-off
 
 | Release candidate | Result | Open failures | Signed off by | Date |

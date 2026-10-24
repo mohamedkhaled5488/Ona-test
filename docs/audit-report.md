@@ -44,6 +44,18 @@ Also worth doing soon: run the end-to-end flows, and add a linter (AUD-14). The 
 | FIX-21 | Medium | Plans | The plan rules were written in several places (the comparison, the paywall sheet, the tour, store text) and the app enforced only some of them: Recap, Feelings, Planning insights, On this day, PDF exports, sleep sounds and quote resurfacing were described as Plus but open to everyone, Budget/Diet/templates had no cap in code, Quit was capped at 1 track, and "Review reminders" was advertised but not built | Reading the plan table against the screens | One config (src/config/plans.ts) holds the caps, the Plus features and the comparison; every cap is checked where things are created (archived items don't count; over a cap nothing is hidden, locked or deleted); every Plus feature shows a calm lock card or explanation, never blurred data. Recap: totals and full history in Essentials mode. Diet: plan up to next week, past weeks stay editable. Quit, crisis resources and the data export are never capped. Review reminders hidden behind a feature flag until built | plansConfig.test.ts PLAN-CFG-001..014 |
 | FIX-22 | Low (wording) | Plans | The modes had several names ("Free", "free version", "Trial", "expired", "downgrade", "limited") | Reading the copy | One name each, from the config: "Plus trial, N days left. All features on.", "Essentials mode. Your data is safe on this phone.", "Plus." A test fails if a banned word or another name appears anywhere a person can read | planNaming.test.ts NAME-001..006 |
 
+## Why the earlier tests missed the three reported problems
+
+All 1,165 tests passed with each of these problems present, so none of the existing tests caught them. The reasons:
+
+| Problem | What the old tests checked | Why that wasn't enough | What catches it now |
+|---|---|---|---|
+| Sleep wake-up reminder had no ringtone and promised a fade-in (FIX-18) | The settings store kept `defaultAlarmSound`; reminders were scheduled (notifications mocked) | Jest mocks the phone's notification system, so the sound, the Android channel and the volume stream were never exercised; no test read the wording | sleepReminder.test.ts REM-001..022 (sound passed to every schedule call, channel per sound on the alarm stream, one-time channel move, wording); MAN-080..083 on a phone |
+| Quit (and Budget, Songwriting, Mind Games, Catch a Thought) missing from Recap (FIX-19) | recapStats.test.ts checked the totals for sections Recap already had, and hiding Feelings/Quit from shared cards | It tested what was there, not what was missing: nothing asked "does every section appear?" | recapRegistry.test.ts fails if any section has no Recap contributor; MAN-084..086 |
+| Feelings from other sections missing from Analysis (FIX-20) | int.flows.test.ts INT-FEEL-001 covered a task's feeling end to end | Only one of the six sources was tested, through one of three save paths. The loss couldn't be reproduced in code; most likely those feelings were lost on uninstall before FIX-17, which no test simulated then | feelingSourcesContract.test.ts runs every source through log, graph, Analysis, Recap, reopen and sync, and fails if a screen saves around logFeeling(); journeySignIn.test.ts JRN-SYNC-007..010 for the uninstall loss; MAN-087..088 |
+
+The lesson, applied in the new tests: a contract test that loops over every section or source (from one list in code) catches the next missing section too. A test that names the sections it knows about does not.
+
 ## Regression and safety checks added in Stage 8
 
 | ID | What it guards | Test |
