@@ -18,12 +18,13 @@ import { spacing } from '../../theme';
 import { formatClockTime } from '../../utils/date';
 import { themedStyles } from '../../theme/runtime';
 import { ChoiceRow, Group, NavRow, Notice, ToggleRow } from './SettingsParts';
+import { PHONE_CLOCK_NOTE, REMINDER_SOUND, TROUBLESHOOTING } from '../../config/reminderWording';
 
 const FEATURES: { id: NotificationFeature; label: string; explain: string }[] = [
-  { id: 'tasks', label: 'Daily task reminders', explain: 'Alarms you set on tasks in Daily Planning' },
+  { id: 'tasks', label: 'Daily task reminders', explain: 'Reminders you set on tasks in Daily Planning' },
   { id: 'habits', label: 'Habit and practice reminders', explain: 'Cue reminders for Build habits and Skills' },
   { id: 'studyEnd', label: 'Study session end', explain: 'When a focus block or break ends, even if your phone is locked' },
-  { id: 'sleep', label: 'Bedtime reminder and gentle wake', explain: 'The ones you set up in Sleep' },
+  { id: 'sleep', label: 'Bedtime and wake-up reminders', explain: 'The ones you set up in Sleep' },
   { id: 'weeklyStory', label: 'Weekly "Your week in Ona" story', explain: 'Evening of the first day of your week' },
 ];
 
@@ -104,16 +105,17 @@ export function NotificationsPage() {
         ))}
       </Group>
 
-      <Group title="Alarm sound" footer="Used for task alarms. Each task can still pick its own.">
+      <Group title={REMINDER_SOUND.groupTitle} footer={`Each task and the wake-up reminder can still pick their own. ${PHONE_CLOCK_NOTE}`}>
         <ChoiceRow
-          label="Default alarm sound"
-          explain="Tap one to hear it"
+          label={REMINDER_SOUND.settingLabel}
+          explain={REMINDER_SOUND.settingExplain}
           options={alarmSoundOptions.map((o) => ({ id: o.id, label: o.label }))}
           value={defaultAlarmSound}
           onChange={(id) => {
             set('defaultAlarmSound', id);
             playAlarmPreview(id);
-            void resyncFeature('tasks');
+            // Every reminder that uses the default (tasks, habits, skills, Sleep).
+            void resyncAllReminders();
           }}
         />
       </Group>
@@ -125,8 +127,8 @@ export function NotificationsPage() {
             <NavRow label="Starts" value={formatClockTime(quiet.start)} onPress={() => setPicking('start')} />
             <NavRow label="Ends" value={formatClockTime(quiet.end)} onPress={() => setPicking('end')} />
             <ToggleRow
-              label="Include alarms I set"
-              explain="Off: task alarms, the wake alarm and study timers still ring"
+              label="Include reminders I set"
+              explain="Off: task reminders, the wake-up reminder and study timers still sound"
               value={quiet.includeAlarms}
               onChange={(on) => changeQuiet({ includeAlarms: on })}
             />
@@ -134,13 +136,11 @@ export function NotificationsPage() {
         )}
       </Group>
 
-      <Group title="Reminders arriving late?">
-        <Caption style={styles.help}>
-          Some phone makers delay notifications to save battery. If reminders arrive late, allow exact alarms and turn off battery optimization for Ona.
-        </Caption>
+      <Group title="Reminders late or silent?">
+        <Caption style={styles.help}>{Platform.OS === 'android' ? TROUBLESHOOTING.android : TROUBLESHOOTING.ios}</Caption>
         {Platform.OS === 'android' && (
           <>
-            <NavRow label="Allow exact alarms" external onPress={() => openAndroidSettings('android.settings.REQUEST_SCHEDULE_EXACT_ALARM')} />
+            <NavRow label="Allow exact reminders" explain="Android calls this Alarms & reminders" external onPress={() => openAndroidSettings('android.settings.REQUEST_SCHEDULE_EXACT_ALARM')} />
             <NavRow label="Battery optimization" external onPress={() => openAndroidSettings('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS')} />
           </>
         )}
@@ -148,7 +148,7 @@ export function NotificationsPage() {
       </Group>
 
       <Group>
-        <NavRow icon="notifications-outline" label="Send test notification" explain="Arrives right away, with your default alarm sound" onPress={() => void test()} />
+        <NavRow icon="notifications-outline" label="Send test notification" explain="Arrives right away, with your default reminder sound" onPress={() => void test()} />
       </Group>
 
       <TimePickerModal

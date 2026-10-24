@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { SleepLogEntry, SleepMixLayer, SleepSoundId, WindDownItem } from '../types/sections';
+import type { AlarmSoundId, SleepLogEntry, SleepMixLayer, SleepSoundId, WindDownItem } from '../types/sections';
 import { defaultWindDownItems } from '../data/sleepSounds';
 import { genId } from '../utils/id';
 import { todayISO } from '../utils/date';
@@ -23,7 +23,10 @@ interface SleepState {
 
   windDownItems: WindDownItem[];
   bedtime: ReminderSlot;
-  wakeAlarm: ReminderSlot & { fadeInMinutes: number };
+  // The wake-up reminder (a gentle notification, not a ringing alarm). The
+  // name stays for saved data. fadeInMinutes is kept for old data only:
+  // notifications can't fade in.
+  wakeAlarm: ReminderSlot & { fadeInMinutes: number; sound?: AlarmSoundId };
 
   logs: SleepLogEntry[];
 
@@ -41,6 +44,7 @@ interface SleepState {
 
   setBedtime: (time: string | undefined, enabled: boolean) => Promise<void>;
   setWakeAlarm: (time: string | undefined, enabled: boolean, fadeInMinutes?: number) => Promise<void>;
+  setWakeSound: (sound: AlarmSoundId) => Promise<void>;
 
   logSleep: (date: string, quality: 1 | 2 | 3 | 4 | 5, note: string | undefined) => void;
   deleteLog: (id: string) => void;
@@ -142,6 +146,7 @@ export const useSleepStore = create<SleepState>()(
           ? await scheduleReminder({
               feature: 'sleep',
               alarm: true,
+              soundId: get().wakeAlarm.sound,
               title: 'Time to wake up',
               date: todayISO(),
               scheduledTime: time,
@@ -150,8 +155,18 @@ export const useSleepStore = create<SleepState>()(
             })
           : [];
       set((state) => {
-        state.wakeAlarm = { time, enabled, fadeInMinutes: resolvedFadeIn, notificationIds: ids };
+        state.wakeAlarm = { ...state.wakeAlarm, time, enabled, fadeInMinutes: resolvedFadeIn, notificationIds: ids };
       });
+    },
+
+    // Choosing a sound reschedules the reminder with it (the old one is
+    // cancelled first, inside setWakeAlarm).
+    setWakeSound: async (sound) => {
+      set((state) => {
+        state.wakeAlarm.sound = sound;
+      });
+      const { time, enabled } = get().wakeAlarm;
+      if (time && enabled) await get().setWakeAlarm(time, enabled);
     },
 
     logSleep: (date, quality, note) =>

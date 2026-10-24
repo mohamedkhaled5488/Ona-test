@@ -38,11 +38,17 @@ For each row, record Pass / Fail, the device, the build number (Settings → Abo
 | ID | Check | How | Expected | A | B | Notes |
 |---|---|---|---|---|---|---|
 | MAN-020 | Permission | Set the first reminder | Android asks once; denying keeps Ona working and explains how to turn it on | | | |
-| MAN-021 | Task reminder | Task at a time 2 minutes away, reminder at the time | Rings on time with the chosen sound, also with the screen off | | | |
-| MAN-022 | Each alarm sound | Try chime, ping, ascend | Each plays as named; volume follows the phone's alarm volume | | | |
-| MAN-023 | Edit and delete | Change the task's time; then delete the task | The old reminder never rings; none rings after deleting | | | |
-| MAN-024 | Habit reminder | Set one for 2 minutes away | Rings once; tapping it opens that habit | | | |
-| MAN-025 | After restart | Restart the phone | Future reminders still ring | | | |
+| MAN-021 | Task reminder | Task at a time 2 minutes away, reminder at the time | Arrives on time and plays the chosen sound once, also with the screen off | | | |
+| MAN-022 | Each reminder sound | In Settings → Notifications & Reminders, tap Default, Chime, Ping, Ascend | Each previews as named; the reminder plays the one chosen, at the alarm volume (Android) | | | |
+| MAN-023 | Edit and delete | Change the task's time; then delete the task | The old reminder never arrives; none arrives after deleting | | | |
+| MAN-024 | Habit reminder | Set one for 2 minutes away | Arrives once; tapping it opens that habit | | | |
+| MAN-025 | After restart | Restart the phone | Future reminders still arrive | | | |
+| MAN-026 | Wake-up reminder: locked phone | Sleep → Wake-up reminder 2 minutes away, sound Chime; lock the phone | Arrives on time with Chime, once. Nothing claims it rings until dismissed | | | |
+| MAN-027 | Wake-up reminder: Ona closed | As above, then swipe Ona away from recent apps | Still arrives with its sound | | | |
+| MAN-028 | Silent mode | Ringer on silent (Android) / silent switch on (iPhone) | Android: still heard (alarm volume). iPhone: silent, as the troubleshooting text says | | | |
+| MAN-029 | Do Not Disturb / Focus | Turn on Do Not Disturb or a Focus | Behaves as the phone's settings decide; the troubleshooting text says so | | | |
+| MAN-030a | Exact reminders (Android 12+) | Settings → Notifications & Reminders → Allow exact reminders | Ona is listed under "Alarms & reminders"; with it on, reminders arrive on the minute | | | |
+| MAN-030b | Upgrade from an older version (Android) | Install over an older APK with reminders set | Every reminder still arrives, with its sound (the one-time channel move) | | | |
 
 ## 4. Sound (Sleep and Study)
 

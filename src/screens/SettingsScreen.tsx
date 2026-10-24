@@ -36,7 +36,7 @@ function RootPage({ go }: { go: (page: SettingsPage) => void }) {
           value={planLabel(entitlement)}
           onPress={() => go('account')}
         />
-        <NavRow icon="notifications-outline" label="Notifications & Reminders" explain="What can notify you, quiet hours, alarm sound" onPress={() => go('notifications')} />
+        <NavRow icon="notifications-outline" label="Notifications & Reminders" explain="What can notify you, quiet hours, reminder sound" onPress={() => go('notifications')} />
         <NavRow icon="shield-checkmark-outline" label="Privacy, Security & Data" explain="Consent, export, delete" onPress={() => go('privacy')} />
         <NavRow icon="color-palette-outline" label="Appearance & Language" explain="Theme, text size, week start" onPress={() => go('appearance')} />
         <NavRow icon="musical-notes-outline" label="Sound" explain="Background playback, study and sleep defaults" onPress={() => go('sound')} />

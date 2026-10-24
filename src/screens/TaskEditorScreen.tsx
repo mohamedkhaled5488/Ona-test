@@ -4,6 +4,8 @@
 //
 // Everything is edited on a working copy (utils/taskForm.ts) and saved in
 // one go, so leaving with changes can always ask Save / Discard / Keep editing.
+import { ReminderSoundPicker } from '../components/ReminderSoundPicker';
+import { PHONE_CLOCK_NOTE } from '../config/reminderWording';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Image, Linking, Pressable, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -26,7 +28,6 @@ import { useDailyPlanningStore, findTask, resolveTaskTitle, resolveTaskDone, vis
 import { usePlanStore, selectStepAtPath } from '../store/usePlanStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { alarmSoundOptions, alarmSoundLabel } from '../data/alarmSounds';
-import { playAlarmPreview } from '../utils/alarmPreview';
 import { addDaysISO, formatClockTime, formatDisplayDate, rotateWeekdays, todayISO } from '../utils/date';
 import { REPEAT_LABELS, allSubtasksDone } from '../utils/taskRepeat';
 import {
@@ -469,7 +470,7 @@ export function TaskEditorScreen({ route, navigation }: Props) {
           )}
         </Section>
 
-        <Section title="Reminders" hint={timed ? undefined : form.allDay ? 'All-day tasks have no reminders.' : 'Add a start time to set a reminder.'}>
+        <Section title="Reminders" hint={timed ? PHONE_CLOCK_NOTE : form.allDay ? 'All-day tasks have no reminders.' : 'Add a start time to set a reminder.'}>
           {timed &&
             form.reminders.map((r) => (
               <View key={r.id} style={styles.reminderBlock}>
@@ -484,21 +485,10 @@ export function TaskEditorScreen({ route, navigation }: Props) {
                   </Pressable>
                 </View>
                 {soundFor === r.id && (
-                  <View style={styles.chipRow}>
-                    {alarmSoundOptions.map((opt) => (
-                      <Chip
-                        key={opt.id}
-                        role="radio"
-                        label={opt.label}
-                        icon="musical-note-outline"
-                        active={(r.sound ?? 'default') === opt.id}
-                        onPress={() => {
-                          update({ reminders: form.reminders.map((x) => (x.id === r.id ? { ...x, sound: opt.id as AlarmSoundId } : x)) });
-                          playAlarmPreview(opt.id);
-                        }}
-                      />
-                    ))}
-                  </View>
+                  <ReminderSoundPicker
+                    value={r.sound}
+                    onChange={(id) => update({ reminders: form.reminders.map((x) => (x.id === r.id ? { ...x, sound: id } : x)) })}
+                  />
                 )}
               </View>
             ))}

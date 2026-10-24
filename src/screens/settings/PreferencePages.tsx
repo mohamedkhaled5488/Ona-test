@@ -1,4 +1,6 @@
 // Appearance & Language, Sound, and the per-section settings pages.
+import { REMINDER_SOUND } from '../../config/reminderWording';
+import { resyncAllReminders } from '../../utils/reminders';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -268,14 +270,14 @@ export function SectionSettingsPage({
               onChange={(id) => s.set('dailyDefaultReminder', id)}
             />
             <ChoiceRow
-              label="Default alarm sound"
-              explain="Tap one to hear it. Shared with Notifications."
+              label={REMINDER_SOUND.settingLabel}
+              explain={REMINDER_SOUND.settingExplain}
               options={alarmSoundOptions.map((o) => ({ id: o.id, label: o.label }))}
               value={s.defaultAlarmSound}
               onChange={(id) => {
                 s.set('defaultAlarmSound', id);
                 playAlarmPreview(id);
-                void resyncFeature('tasks');
+                void resyncAllReminders();
               }}
             />
             <ChoiceRow<number | null>

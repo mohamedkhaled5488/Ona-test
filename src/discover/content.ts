@@ -162,7 +162,7 @@ export const TOUR: TourSection[] = [
     slides: [
       { key: 'sl-1', title: 'Wind down', body: 'A wind-down checklist and a bedtime reminder help the evening slow down.', feature: 'sleepWindDown', mock: 'sleep' },
       { key: 'sl-2', title: 'Sounds for sleep', body: 'Mix ambient sounds like rain or brown noise, each at its own volume, with a sleep timer that fades out.', feature: 'sleepSounds', mock: 'sleep' },
-      { key: 'sl-3', title: 'Wake gently', body: 'Note how you slept, and wake up with a gentle alarm.', feature: 'sleepLog', mock: 'sleep', tryIt: { route: 'sleep' } },
+      { key: 'sl-3', title: 'Gentle mornings', body: 'Note how you slept, and get a gentle reminder in the morning.', feature: 'sleepLog', mock: 'sleep', tryIt: { route: 'sleep' } },
     ],
   },
 

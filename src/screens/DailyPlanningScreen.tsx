@@ -36,7 +36,8 @@ import {
 } from '../utils/dayView';
 import { usePlanStore, selectStepAtPath, flattenSteps } from '../store/usePlanStore';
 import { alarmSoundOptions, alarmSoundLabel } from '../data/alarmSounds';
-import { playAlarmPreview } from '../utils/alarmPreview';
+import { ReminderSoundPicker } from '../components/ReminderSoundPicker';
+import { PHONE_CLOCK_NOTE } from '../config/reminderWording';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { weekStartFor } from '../utils/feelingsStats';
@@ -337,6 +338,7 @@ function TaskRow({
   const updateTaskTitle = useDailyPlanningStore((s) => s.updateTaskTitle);
   const setReminder = useDailyPlanningStore((s) => s.setReminder);
   const setAlarmSound = useDailyPlanningStore((s) => s.setAlarmSound);
+  const defaultSound = useSettingsStore((s) => s.defaultAlarmSound);
   const allTags = useDailyPlanningStore((s) => s.tags);
   const addSubtask = useDailyPlanningStore((s) => s.addSubtask);
   const toggleSubtask = useDailyPlanningStore((s) => s.toggleSubtask);
@@ -497,31 +499,10 @@ function TaskRow({
             <>
               <Pressable style={styles.soundRow} onPress={() => setShowSound((v) => !v)}>
                 <Ionicons name="musical-notes-outline" size={13} color={colors.inkSoft} />
-                <Caption> Sound: {alarmSoundLabel(task.reminders[0]?.sound)}</Caption>
+                <Caption> Sound: {alarmSoundLabel(task.reminders[0]?.sound ?? defaultSound)}</Caption>
               </Pressable>
-              {showSound && (
-                <View style={styles.reminderOptions}>
-                  {alarmSoundOptions.map((opt) => (
-                    <Pressable
-                      key={opt.id}
-                      onPress={() => {
-                        setAlarmSound(task.id, opt.id);
-                        playAlarmPreview(opt.id);
-                      }}
-                      style={[
-                        styles.optionChip,
-                        (task.reminders[0]?.sound ?? 'default') === opt.id && styles.optionChipActive,
-                      ]}
-                    >
-                      <Caption
-                        style={(task.reminders[0]?.sound ?? 'default') === opt.id ? styles.optionChipTextActive : undefined}
-                      >
-                        {opt.label}
-                      </Caption>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+              {showSound && <ReminderSoundPicker value={task.reminders[0]?.sound} onChange={(id) => setAlarmSound(task.id, id)} />}
+              <Caption style={styles.clockNote}>{PHONE_CLOCK_NOTE}</Caption>
             </>
           )}
         </>
@@ -1522,6 +1503,7 @@ const styles = themedStyles(() => ({
   newTaskButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center', marginLeft: spacing.sm },
   moreDetails: { alignSelf: 'flex-start', paddingVertical: 4 },
   reminderOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+  clockNote: { color: colors.inkSoft, marginTop: spacing.xs },
   soundRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
   optionChip: {
     paddingVertical: 4,

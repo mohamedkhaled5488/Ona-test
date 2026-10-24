@@ -35,6 +35,7 @@ import { DemoFrame } from './src/demo/DemoBanner';
 import { useDailyPlanningStore } from './src/store/useDailyPlanningStore';
 import { startSync } from './src/sync/syncController';
 import { startAccountConsent } from './src/sync/accountConsent';
+import { migrateReminderChannels } from './src/utils/reminders';
 import { installDevLog } from './src/utils/devLog';
 import { colors } from './src/theme';
 import { applyTheme, themeVersion } from './src/theme/runtime';
@@ -107,6 +108,8 @@ export default function App() {
         const stopSync = startSync();
         // Monthly tasks and series with an end get their next reminders scheduled.
         void useDailyPlanningStore.getState().refreshRollingReminders();
+        // Once: move scheduled reminders to the current Android sound channels.
+        void migrateReminderChannels();
         stop = () => {
           stopConsent();
           stopSync();

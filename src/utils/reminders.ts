@@ -9,7 +9,9 @@ import { useSkillsStore } from '../store/useSkillsStore';
 import { useSleepStore } from '../store/useSleepStore';
 import { useStudyStore } from '../store/useStudyStore';
 import { useSettingsStore, type NotificationFeature } from '../store/useSettingsStore';
-import { cancelReminders, scheduleAt, scheduleWeeklyStoryReminder } from './notifications';
+import { Platform } from 'react-native';
+import { CHANNEL_VERSION, cancelReminders, deleteLegacyChannels, scheduleAt, scheduleWeeklyStoryReminder } from './notifications';
+import { isDemo } from './dataSpace';
 
 export async function syncWeeklyStoryReminder(): Promise<void> {
   const { weeklyStoryNotificationIds, notify, weekStartsOn, set } = useSettingsStore.getState();
@@ -87,4 +89,16 @@ export function watchStudyEndReminders(): () => void {
       void syncStudyEndReminder(false);
     }
   });
+}
+
+// Moves every scheduled reminder to the current Android channels once (see
+// CHANNEL_VERSION in notifications.ts): reschedule everything, then remove the
+// old channels. Call after the user's data has loaded. Never in the demo.
+export async function migrateReminderChannels(): Promise<boolean> {
+  if (Platform.OS !== 'android' || isDemo()) return false;
+  if (useSettingsStore.getState().reminderChannelVersion >= CHANNEL_VERSION) return false;
+  await resyncAllReminders();
+  await deleteLegacyChannels();
+  useSettingsStore.getState().set('reminderChannelVersion', CHANNEL_VERSION);
+  return true;
 }

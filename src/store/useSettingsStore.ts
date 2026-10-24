@@ -65,6 +65,9 @@ export interface SettingsData {
   defaultAlarmSound: AlarmSoundId;
   quietHours: QuietHours;
   weeklyStoryNotificationIds: string[];
+  // Which version of Android's reminder sound channels this phone's
+  // scheduled reminders use (see migrateReminderChannels in utils/reminders.ts).
+  reminderChannelVersion: number;
 
   // Privacy — three separate consents, never bundled.
   consent: Consent;
@@ -144,6 +147,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   defaultAlarmSound: 'default',
   quietHours: { enabled: false, start: '22:00', end: '07:00', includeAlarms: false },
   weeklyStoryNotificationIds: [],
+  reminderChannelVersion: 1,
 
   consent: { storeData: false, analytics: false, tips: false },
 

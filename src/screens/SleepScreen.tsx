@@ -1,3 +1,5 @@
+import { ReminderSoundPicker } from '../components/ReminderSoundPicker';
+import { PHONE_CLOCK_NOTE, WAKE_REMINDER } from '../config/reminderWording';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
@@ -366,33 +368,42 @@ function SleepLogCard() {
   );
 }
 
+// A gentle wake-up reminder: a notification that plays its sound once at the
+// chosen time. Not an alarm (src/config/reminderWording.ts).
 function WakeAlarmCard() {
   const wakeAlarm = useSleepStore((s) => s.wakeAlarm);
   const setWakeAlarm = useSleepStore((s) => s.setWakeAlarm);
+  const setWakeSound = useSleepStore((s) => s.setWakeSound);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const on = wakeAlarm.enabled && !!wakeAlarm.time;
 
   return (
     <Card style={[styles.card, { borderLeftColor: ACCENT, borderLeftWidth: 3 }]}>
-      <Eyebrow style={{ color: ACCENT }}>Gentle wake alarm</Eyebrow>
-      <Caption style={styles.hint}>Fades in over {wakeAlarm.fadeInMinutes} minutes instead of jolting you awake.</Caption>
+      <Eyebrow style={{ color: ACCENT }}>{WAKE_REMINDER.title}</Eyebrow>
+      <Caption style={styles.hint}>{WAKE_REMINDER.hint}</Caption>
 
       <View style={styles.reminderRow}>
         <View style={styles.reminderText}>
-          <Body>{wakeAlarm.enabled && wakeAlarm.time ? formatClockTime(wakeAlarm.time) : 'Not set'}</Body>
-          <Caption>{wakeAlarm.enabled ? 'Repeats every day' : 'Off'}</Caption>
+          <Body>{on ? formatClockTime(wakeAlarm.time!) : WAKE_REMINDER.notSet}</Body>
+          <Caption>{on ? WAKE_REMINDER.repeats : WAKE_REMINDER.off}</Caption>
         </View>
-        <PrimaryButton label={wakeAlarm.enabled ? 'Change' : 'Set alarm'} variant="outline" onPress={() => setPickerOpen(true)} />
+        <PrimaryButton label={on ? WAKE_REMINDER.change : WAKE_REMINDER.set} variant="outline" onPress={() => setPickerOpen(true)} />
       </View>
-      {wakeAlarm.enabled && (
-        <Pressable onPress={() => setWakeAlarm(undefined, false)}>
-          <Caption style={styles.turnOffLink}>Turn off alarm</Caption>
-        </Pressable>
+      {on && (
+        <>
+          <Caption style={styles.soundLabel}>{WAKE_REMINDER.soundLabel}</Caption>
+          <ReminderSoundPicker value={wakeAlarm.sound} onChange={(id) => void setWakeSound(id)} testID="wake-reminder-sound" />
+          <Pressable onPress={() => setWakeAlarm(undefined, false)} accessibilityRole="button">
+            <Caption style={styles.turnOffLink}>{WAKE_REMINDER.turnOff}</Caption>
+          </Pressable>
+        </>
       )}
+      <Caption style={styles.clockNote}>{PHONE_CLOCK_NOTE}</Caption>
 
       <TimePickerModal
         visible={pickerOpen}
         value={wakeAlarm.time}
-        title="Wake alarm"
+        title={WAKE_REMINDER.title}
         onClose={() => setPickerOpen(false)}
         onPick={(time) => setWakeAlarm(time, !!time)}
       />
@@ -406,7 +417,7 @@ export function SleepScreen(_props: Props) {
   return (
     <Screen>
       <ScreenTitle>Sleep</ScreenTitle>
-      <Caption style={styles.subtitle}>Wind down, drift off, and wake up gently.</Caption>
+      <Caption style={styles.subtitle}>Wind down, drift off, and get a gentle reminder in the morning.</Caption>
 
       <SoundMixerCard />
       <WindDownCard />
@@ -551,6 +562,8 @@ const styles = themedStyles(() => ({
   reminderText: {
     gap: 2,
   },
+  soundLabel: { marginTop: spacing.md },
+  clockNote: { color: colors.inkSoft, marginTop: spacing.md },
   turnOffLink: {
     color: colors.inkSoft,
     textDecorationLine: 'underline',

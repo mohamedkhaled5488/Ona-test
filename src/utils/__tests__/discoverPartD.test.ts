@@ -38,7 +38,8 @@ const EVIDENCE: Record<string, [string, RegExp][]> = {
   feelingAnalysis: [['src/screens/MoodCheckScreen.tsx', /overviewInsight/], ['src/components/FeelingsGraph.tsx', /pinch/], ['src/screens/MoodCheckScreen.tsx', /compareMode/], ['src/screens/settings/HelpAboutPages.tsx', /Safety and support resources/]],
   sleepWindDown: [['src/screens/SleepScreen.tsx', /Wind-down checklist/], ['src/utils/reminders.ts', /bedtime/i]],
   sleepSounds: [['src/screens/SleepScreen.tsx', /Your mix/], ['src/screens/SleepScreen.tsx', /Sleep timer/], ['src/types/sections.ts', /'brown-noise'/], ['src/store/useSettingsStore.ts', /defaultFadeOutMinutes/]],
-  sleepLog: [['src/screens/SleepScreen.tsx', /How did you sleep/], ['src/screens/SleepScreen.tsx', /Gentle wake alarm/]],
+  // The wake-up reminder's wording lives in config/reminderWording.ts (2026-10-24).
+  sleepLog: [['src/screens/SleepScreen.tsx', /How did you sleep/], ['src/screens/SleepScreen.tsx', /WAKE_REMINDER\.title/], ['src/config/reminderWording.ts', /Wake-up reminder/]],
   habitMinimum: [['src/types/sections.ts', /minimumVersion\?: string/], ['src/screens/HabitBuilderScreen.tsx', /Did the minimum version/]],
   habitMilestones: [['src/utils/habitPattern.ts', /export function milestoneBar/], ['src/utils/habitFrequency.ts', /paused/]],
   habitPattern: [['src/screens/BuildHabitAnalysis.tsx', /DayStrip/], ['src/utils/habitTimeOfDay.ts', /Done when planned for each time/], ['src/screens/habits/HabitLogDetail.tsx', /Comment/], ['src/utils/itemFeelings.ts', /logItemFeeling/]],

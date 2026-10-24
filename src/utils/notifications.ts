@@ -67,11 +67,18 @@ function getNotifications(): typeof NotificationsType | null {
   return cached;
 }
 // On Android 8+, a notification's sound is fixed by its channel, not by the
-// per-notification content — so each alarm sound option gets its own channel,
-// created once up front, and scheduling just picks the matching channel id.
-function channelIdFor(soundId: AlarmSoundId | undefined): string {
-  return `reminders-${soundId ?? 'default'}`;
+// per-notification content, and a channel can't be changed once created. So
+// each reminder sound gets its own channel, and the ids carry a version: a
+// change to how channels sound means new ids (and a one-time move of every
+// scheduled reminder, migrateReminderChannels() in reminders.ts).
+// v2: plays on the alarm volume stream, so it's heard with the ringer on
+// silent (Do Not Disturb can still hold it back, as for any app).
+export const CHANNEL_VERSION = 2;
+export function channelIdFor(soundId: AlarmSoundId | undefined): string {
+  return `ona-reminder-v${CHANNEL_VERSION}-${soundId ?? 'default'}`;
 }
+// Channels made by earlier versions, removed once their reminders have moved.
+export const LEGACY_CHANNEL_IDS = alarmSoundOptions.map((o) => `reminders-${o.id}`);
 
 export async function initNotifications(): Promise<void> {
   if (!isSupported) return;
@@ -90,9 +97,12 @@ export async function initNotifications(): Promise<void> {
       await Promise.all(
         alarmSoundOptions.map((option) =>
           Notifications.setNotificationChannelAsync(channelIdFor(option.id), {
-            name: `Task reminders — ${option.label}`,
+            name: `Reminders — ${option.label}`,
             importance: Notifications.AndroidImportance.HIGH,
             sound: option.fileName ?? 'default',
+            audioAttributes: { usage: Notifications.AndroidAudioUsage.ALARM, contentType: Notifications.AndroidAudioContentType.SONIFICATION },
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+            enableVibrate: true,
           })
         )
       );
@@ -102,6 +112,14 @@ export async function initNotifications(): Promise<void> {
   }
 }
 
+
+// After every reminder has moved to the current channels.
+export async function deleteLegacyChannels(): Promise<void> {
+  if (!isSupported || Platform.OS !== 'android') return;
+  const Notifications = getNotifications();
+  if (!Notifications) return;
+  await Promise.all(LEGACY_CHANNEL_IDS.map((id) => Notifications.deleteNotificationChannelAsync(id).catch(() => {})));
+}
 
 export type PermissionState = 'granted' | 'denied' | 'undetermined' | 'unsupported';
 
