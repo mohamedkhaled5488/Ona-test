@@ -17,7 +17,7 @@ function phone(user: TestUser, initial: Record<string, unknown> = {}, clockOffse
     data,
     tasks: () => (data.get('dailyPlanning.tasks') ?? []) as { id: string; title: string; done: boolean }[],
     sync: async (as: TestUser = user) => {
-      const r = await syncOnce(as.id, supabaseSyncServer(as.id, as.db), state, local, () => Date.now() + clockOffsetMs);
+      const r = await syncOnce(as.id, supabaseSyncServer(as.id, as.db, undefined, () => true), state, local, () => Date.now() + clockOffsetMs);
       state = r.state;
       return r;
     },

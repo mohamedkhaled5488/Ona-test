@@ -47,7 +47,15 @@ export const localData: LocalData = {
 // `client` is the app's own client; the backend tests pass one for the local stack.
 // `generation`: the data a sync started with (dataGeneration()); if it
 // changes (a switch, a sign-in choice, sign-out), nothing more is sent.
-export function supabaseSyncServer(userId: string, client: SupabaseClient = supabase as unknown as SupabaseClient, generation?: number): SyncServer {
+// `stillAllowed`: this phone's own check before every batch (signed in as
+// `userId`, sync on, access). The server-only tests pass their own, so they
+// test what the server itself enforces.
+export function supabaseSyncServer(
+  userId: string,
+  client: SupabaseClient = supabase as unknown as SupabaseClient,
+  generation?: number,
+  stillAllowed: () => boolean = () => uploadStillAllowed(userId)
+): SyncServer {
   return {
     pull: async (since, limit) => {
       if (isDemo()) throw new DemoModeError('Sync');
@@ -67,7 +75,7 @@ export function supabaseSyncServer(userId: string, client: SupabaseClient = supa
       // ending, a switch to the demo, or a different account signing in)
       // stops sending at once, even in the middle of a sync.
       if (generation !== undefined && generation !== dataGeneration()) throw new Error(DATA_CHANGED);
-      if (!uploadStillAllowed(userId)) throw new Error(UPLOAD_STOPPED);
+      if (!stillAllowed()) throw new Error(UPLOAD_STOPPED);
       const { error } = await client
         .from('sync_records' as never)
         .upsert(rows.map((r) => ({ ...r, user_id: userId })) as never, { onConflict: 'user_id,collection,record_id' });
