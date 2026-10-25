@@ -22,12 +22,14 @@ mkdir -p maestro-reports maestro-screens maestro-debug
 # "service_role" and "sb_secret_" in warnings: those aren't keys.)
 # Hermes stores its strings back to back, so supabase-js's own 'sb_secret_'
 # prefix check can run straight into the next string, e.g. the helper
-# "__rewriteRelativeImportExtension": "_" and then letters only is a name,
-# not a key body (a random key body has digits). Only the kind of hit is
+# "__rewriteRelativeImportExtension" (and on into whatever strings follow,
+# which change from build to build). A body that starts with "_" and has no
+# digit is that, not a key: a random key body almost always has a digit and
+# rarely starts with "_" (both: about 1 in 10,000). Only the kind of hit is
 # printed, never its characters: the log is public.
 if unzip -p "$APK" assets/index.android.bundle > bundle.bin 2> /dev/null; then
   hits=$(grep -a -o -E 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*(InJvbGUiOiJzZXJ2aWNlX3JvbGUi|cm9sZSI6InNlcnZpY2Vfcm9sZS|yb2xlIjoic2VydmljZV9yb2xlI)[A-Za-z0-9_-]*|sb_secret_[A-Za-z0-9_-]{20,}|SUPABASE_SERVICE[A-Z_]*' bundle.bin \
-    | grep -v -E '^sb_secret__[A-Za-z_]+$' \
+    | grep -v -E '^sb_secret__[^0-9]*$' \
     | sed -E 's/^eyJ.*/a service_role JWT/; s/^sb_secret_.*/an sb_secret_ key/; s/^SUPABASE_SERVICE.*/a SUPABASE_SERVICE variable name/' | sort | uniq -c)
   rm -f bundle.bin
   if [ -n "$hits" ]; then
