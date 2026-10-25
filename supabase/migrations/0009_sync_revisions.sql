@@ -31,7 +31,13 @@ begin
   new.client_updated_at := least(new.client_updated_at, clock_timestamp() + interval '5 minutes');
   if tg_op = 'INSERT' then
     new.rev := 1;
-    new.base_rev := null;
+    -- An upsert runs this insert step first, and its ON CONFLICT update
+    -- then reads base_rev from the row as this step leaves it: so it's kept
+    -- when the row exists (the update below needs it, then clears it), and
+    -- cleared only for a row that's really new.
+    if not exists (select 1 from public.sync_records r where r.user_id = new.user_id and r.collection = new.collection and r.record_id = new.record_id) then
+      new.base_rev := null;
+    end if;
   else
     if new.base_rev is not null and new.base_rev <> old.rev then
       return old; -- written over a version this phone never saw: the phone resolves
