@@ -20,11 +20,18 @@ mkdir -p maestro-reports maestro-screens maestro-debug
 # its three base64 alignments), a new-style secret key (sb_secret_ plus a key
 # body), and service-key variable names. (supabase-js itself mentions
 # "service_role" and "sb_secret_" in warnings: those aren't keys.)
+# Hermes stores its strings back to back, so supabase-js's own 'sb_secret_'
+# prefix check can run straight into the next string, e.g. the helper
+# "__rewriteRelativeImportExtension": "_" and then letters only is a name,
+# not a key body (a random key body has digits). Only the kind of hit is
+# printed, never its characters: the log is public.
 if unzip -p "$APK" assets/index.android.bundle > bundle.bin 2> /dev/null; then
-  hits=$(grep -a -o -E 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*(InJvbGUiOiJzZXJ2aWNlX3JvbGUi|cm9sZSI6InNlcnZpY2Vfcm9sZS|yb2xlIjoic2VydmljZV9yb2xlI)[A-Za-z0-9_-]*|sb_secret_[A-Za-z0-9_-]{20,}|SUPABASE_SERVICE[A-Z_]*' bundle.bin | cut -c1-24 | sort -u)
+  hits=$(grep -a -o -E 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*(InJvbGUiOiJzZXJ2aWNlX3JvbGUi|cm9sZSI6InNlcnZpY2Vfcm9sZS|yb2xlIjoic2VydmljZV9yb2xlI)[A-Za-z0-9_-]*|sb_secret_[A-Za-z0-9_-]{20,}|SUPABASE_SERVICE[A-Z_]*' bundle.bin \
+    | grep -v -E '^sb_secret__[A-Za-z_]+$' \
+    | sed -E 's/^eyJ.*/a service_role JWT/; s/^sb_secret_.*/an sb_secret_ key/; s/^SUPABASE_SERVICE.*/a SUPABASE_SERVICE variable name/' | sort | uniq -c)
   rm -f bundle.bin
   if [ -n "$hits" ]; then
-    echo "::error title=Server key in the app bundle::$(echo "$hits" | tr '\n' ' ')"
+    echo "::error title=Server key in the app bundle::$(echo "$hits" | tr '\n' ';')"
     exit 1
   fi
   echo "Bundle scan: no server key in the APK's JavaScript"
