@@ -1,0 +1,26 @@
+# Used by scripts/e2e-sleep.sh (not run on its own): a fresh Ona, Sleep,
+# white noise with the shortest timer the build offers, playing. The new app
+# has a custom length (1 min, 10 s fade); an older build only 15 min.
+appId: app.ona
+---
+- runFlow: fresh-start.yaml
+- tapOn: "Reflect"
+- tapOn: "Sleep"
+- tapOn: "White noise"
+- runFlow:
+    when:
+      visible: "Custom"
+    commands:
+      - tapOn: "Custom"
+      - tapOn: "Minutes"
+      - inputText: "1"
+      - hideKeyboard
+      - tapOn: "Set"
+      - tapOn: "10 s"
+- runFlow:
+    when:
+      notVisible: "Custom"
+    commands:
+      - tapOn: "15m"
+- tapOn: "Play mix"
+- assertVisible: "Stop"

@@ -87,8 +87,10 @@ export interface SettingsData {
   // How Ona behaves when another app starts playing sound.
   interruption: 'pause' | 'lower';
   defaultStudySound: AmbientSound;
-  defaultSleepTimerMinutes: number | null; // null = no timer
-  defaultFadeOutMinutes: number;
+  // Sleep: the last timer chosen (first use: 30 min; null = all night) and
+  // the fade at its end, in seconds (never longer than the timer).
+  defaultSleepTimerMinutes: number | null;
+  sleepFadeSeconds: number;
 
   // Sections
   // Daily Planning: when to ask "How do you feel?" after finishing a task.
@@ -166,8 +168,8 @@ export const DEFAULT_SETTINGS: SettingsData = {
   backgroundAudio: true,
   interruption: 'lower',
   defaultStudySound: 'none',
-  defaultSleepTimerMinutes: null,
-  defaultFadeOutMinutes: 5,
+  defaultSleepTimerMinutes: 30,
+  sleepFadeSeconds: 30,
 
   taskFeelingMode: 'auto',
   taskFeelingBefore: false,
@@ -214,7 +216,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
 // Bump when a stored value changes meaning, and add a step below that turns
 // the previous version's data into the new one. New keys don't need a bump:
 // anything missing is filled from DEFAULT_SETTINGS on load.
-export const SETTINGS_VERSION = 3;
+export const SETTINGS_VERSION = 4;
 
 export type TaskFeelingMode = 'auto' | 'always' | 'tagged' | 'never';
 // 'sometimes' = only when nothing has been noted for that item in the last few days.
@@ -233,6 +235,16 @@ export const SETTINGS_MIGRATIONS: Record<number, Migration> = {
   3: (s) => {
     const { feelingPromptAfterTasks, ...rest } = s;
     if (feelingPromptAfterTasks === false) rest.taskFeelingMode = 'never';
+    return rest;
+  },
+  // v3 → v4: the sleep timer is remembered from the Sleep screen. The old
+  // default (no timer, never chosen) becomes the new first-use 30 min; the
+  // fade is now in seconds (default 30 s), since the old minutes-long fade
+  // never ran with the phone locked.
+  4: (s) => {
+    const { defaultFadeOutMinutes: _old, ...rest } = s;
+    if (rest.defaultSleepTimerMinutes === null || rest.defaultSleepTimerMinutes === undefined) rest.defaultSleepTimerMinutes = 30;
+    rest.sleepFadeSeconds = 30;
     return rest;
   },
 };

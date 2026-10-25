@@ -1,0 +1,4 @@
+# Used by scripts/e2e-sleep.sh: a second sound added while the timer runs.
+appId: app.ona
+---
+- tapOn: "Brown noise"

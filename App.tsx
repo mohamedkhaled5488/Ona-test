@@ -35,6 +35,7 @@ import { useDataSpace } from './src/hooks/useDataSpace';
 import { DemoFrame } from './src/demo/DemoBanner';
 import { useDailyPlanningStore } from './src/store/useDailyPlanningStore';
 import { startSync } from './src/sync/syncController';
+import { startSleepSessionWatch } from './src/audio/sleepSession';
 import { startAccountConsent } from './src/sync/accountConsent';
 import { migrateReminderChannels } from './src/utils/reminders';
 import { installDevLog } from './src/utils/devLog';
@@ -107,6 +108,8 @@ export default function App() {
         // so a new phone or a reinstall syncs your data back by itself.
         const stopConsent = startAccountConsent();
         const stopSync = startSync();
+        // The Sleep timer runs here, not in the Sleep screen (audio/sleepSession.ts).
+        const stopSleepWatch = startSleepSessionWatch();
         // Monthly tasks and series with an end get their next reminders scheduled.
         void useDailyPlanningStore.getState().refreshRollingReminders();
         // Once: move scheduled reminders to the current Android sound channels.
@@ -114,6 +117,7 @@ export default function App() {
         stop = () => {
           stopConsent();
           stopSync();
+          stopSleepWatch();
         };
         setDataReady(true);
       });

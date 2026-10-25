@@ -30,7 +30,8 @@ run_flow() {
 }
 
 failed=0
-for flow in .maestro/*.yaml; do
+# SLEEP_ONLY=1 (a dispatch building an older app): just the Sleep timer check.
+for flow in $([ "${SLEEP_ONLY:-0}" = "1" ] || ls .maestro/*.yaml); do
   name=$(basename "$flow" .yaml)
   [ "$name" = "config" ] && continue
   grep -qE '^\s+- needs-backend' "$flow" && continue # needs the local stack
@@ -50,6 +51,10 @@ for flow in .maestro/*.yaml; do
     python3 scripts/e2e-annotate.py --flow "$name" "maestro-reports/$name.xml" "maestro-reports/$name.log" "maestro-screens/$name.xml"
   fi
 done
+
+# The Sleep timer against Android's own view of what's playing.
+echo "=== sleep timer (dumpsys audio)"
+bash scripts/e2e-sleep.sh || failed=$((failed + 1))
 
 echo "$failed flow(s) failed"
 [ "$failed" -eq 0 ]

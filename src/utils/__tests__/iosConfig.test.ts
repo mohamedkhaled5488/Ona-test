@@ -48,7 +48,7 @@ test('IOS-CFG-003 every permission Ona asks for has its own plain explanation', 
 
 test('IOS-CFG-004 background audio only because Sleep sounds really play with the phone locked', () => {
   expect(pluginOptions('expo-audio')).toMatchObject({ enableBackgroundPlayback: true });
-  expect(srcText).toMatch(/shouldPlayInBackground: options\.backgroundAudio/);
+  expect(srcText).toMatch(/shouldPlayInBackground: (audioOptions|options)\.backgroundAudio/);
 });
 
 test('IOS-CFG-005 encryption: only what iOS provides (HTTPS, Keychain) and hashing, so exempt', () => {

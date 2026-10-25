@@ -6,7 +6,6 @@ import { genId } from '../utils/id';
 import { todayISO } from '../utils/date';
 import { cancelReminders, scheduleReminder } from '../utils/notifications';
 
-const DEFAULT_FADE_OUT_MINUTES = 5;
 const DEFAULT_WAKE_FADE_IN_MINUTES = 2;
 
 interface ReminderSlot {
@@ -18,8 +17,10 @@ interface ReminderSlot {
 interface SleepState {
   mix: SleepMixLayer[];
   isPlaying: boolean;
-  timerMinutes: number | null; // total sleep-timer duration, null = off
-  fadeOutMinutes: number;
+  // The sound session going on (audio/sleepSession.ts), on this phone only:
+  // when it stops (an absolute time, null = all night) and how long its fade is.
+  endsAt: number | null;
+  fadeMs: number;
 
   windDownItems: WindDownItem[];
   bedtime: ReminderSlot;
@@ -33,9 +34,6 @@ interface SleepState {
   addSoundToMix: (soundId: SleepSoundId) => void;
   removeSoundFromMix: (soundId: SleepSoundId) => void;
   setLayerVolume: (soundId: SleepSoundId, volume: number) => void;
-  togglePlaying: () => void;
-  setTimerMinutes: (minutes: number | null) => void;
-  setFadeOutMinutes: (minutes: number) => void;
 
   addWindDownItem: (label: string) => void;
   removeWindDownItem: (id: string) => void;
@@ -54,8 +52,8 @@ export const useSleepStore = create<SleepState>()(
   immer((set, get) => ({
     mix: [],
     isPlaying: false,
-    timerMinutes: null,
-    fadeOutMinutes: DEFAULT_FADE_OUT_MINUTES,
+    endsAt: null,
+    fadeMs: 0,
 
     windDownItems: defaultWindDownItems.map((item) => ({ id: genId('wind'), label: item.label, done: false })),
     bedtime: { time: undefined, enabled: false, notificationIds: [] },
@@ -78,21 +76,6 @@ export const useSleepStore = create<SleepState>()(
       set((state) => {
         const layer = state.mix.find((l) => l.soundId === soundId);
         if (layer) layer.volume = Math.max(0, Math.min(1, volume));
-      }),
-
-    togglePlaying: () =>
-      set((state) => {
-        state.isPlaying = !state.isPlaying;
-      }),
-
-    setTimerMinutes: (minutes) =>
-      set((state) => {
-        state.timerMinutes = minutes;
-      }),
-
-    setFadeOutMinutes: (minutes) =>
-      set((state) => {
-        state.fadeOutMinutes = Math.max(0, minutes);
       }),
 
     addWindDownItem: (label) =>

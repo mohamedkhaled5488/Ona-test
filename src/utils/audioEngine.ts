@@ -7,6 +7,16 @@
 // — including white/pink/brown noise — is a bundled asset (see
 // scripts/generate-noise-assets.js and data/soundAssets.ts), so nothing has
 // to be synthesized or written to disk at play time.
+//
+// Rules (owner's decisions, 2026-10-25):
+// - One sound session at a time: starting a sound in Sleep or Study replaces
+//   the other section's sounds (the caller shows a short notice). Ending a
+//   session stops only what that section started (FIX-09).
+// - Every player reports its status about once a second while it plays, also
+//   with the screen locked when JS timers are paused; the Sleep timer checks
+//   the time on each report (onAudioTick), so it stops on time.
+// - Volumes are a base (what the person chose) times a scale (the fade), so a
+//   fade is computed from the time left and can't get stuck halfway.
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import type { SleepSoundId } from '../types/sections';
 
@@ -25,6 +35,26 @@ export const soundSources: Record<SoundId, number> = {
 
 export const SOUND_LOAD_ERROR = "Couldn't load this sound";
 
+// The person's choices (Settings → Sound), kept so a Sleep session can ask for
+// exclusive audio while it plays and give the setting back afterwards.
+let audioOptions: { backgroundAudio: boolean; interruption?: 'pause' | 'lower' } = { backgroundAudio: true };
+let exclusive = false;
+
+async function applyAudioMode(): Promise<void> {
+  try {
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: audioOptions.backgroundAudio,
+      // Lock-screen controls (needed on Android to keep playing past ~3 min
+      // in the background) require exclusive audio, and a call or another
+      // app's sound then pauses Ona.
+      interruptionMode: exclusive || audioOptions.interruption === 'pause' ? 'doNotMix' : 'duckOthers',
+    });
+  } catch (e) {
+    if (__DEV__) console.warn('[audio] setAudioModeAsync failed', e);
+  }
+}
+
 // Called once at startup, and again whenever the background setting changes.
 // playsInSilentMode: plays with the iOS silent switch on. shouldPlayInBackground:
 // keeps going when the app is backgrounded (the build-time capability comes
@@ -32,55 +62,98 @@ export const SOUND_LOAD_ERROR = "Couldn't load this sound";
 // interruption (Settings → Sound): 'pause' lets another app or a call take
 // over and pause Ona; 'lower' keeps both going with the other one ducked.
 export async function configureAudio(options: { backgroundAudio: boolean; interruption?: 'pause' | 'lower' }): Promise<void> {
-  try {
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: options.backgroundAudio,
-      interruptionMode: options.interruption === 'pause' ? 'doNotMix' : 'duckOthers',
-    });
-  } catch (e) {
-    if (__DEV__) console.warn('[audio] setAudioModeAsync failed', e);
-  }
+  audioOptions = options;
+  await applyAudioMode();
 }
 
 // Keyed by section and sound ("sleep:rain"), so each section has its own players.
 const active = new Map<string, AudioPlayer>();
+const baseVolume = new Map<string, number>();
+const scale: Record<AudioOwner, number> = { sleep: 1, study: 1 };
+let lockScreenKey: string | null = null;
 
-export type PlayResult = { ok: true } | { ok: false; error: string };
+export type PlayResult = { ok: true; replaced?: AudioOwner } | { ok: false; error: string };
 
-// Which section a sound belongs to. Sleep and Study keep their own players,
-// so ending a study session can't stop Sleep's rain, and Sleep's timer can't
-// silence a study session.
+// Which section a sound belongs to.
 export type AudioOwner = 'sleep' | 'study';
 const keyOf = (owner: AudioOwner, soundId: SoundId) => `${owner}:${soundId}`;
 const ownerOf = (key: string) => key.split(':')[0] as AudioOwner;
+const otherOwner = (owner: AudioOwner): AudioOwner => (owner === 'sleep' ? 'study' : 'sleep');
+const clampVolume = (v: number) => Math.max(0.05, Math.min(1, v)); // never silently "playing" at zero
+
+// --- Listeners: a heartbeat while anything plays, and replacements ----------
+const tickListeners = new Set<() => void>();
+const replacedListeners = new Set<(owner: AudioOwner) => void>();
+export function onAudioTick(fn: () => void): () => void {
+  tickListeners.add(fn);
+  return () => tickListeners.delete(fn);
+}
+// A section's sounds were stopped because the other section started one.
+export function onSoundsReplaced(fn: (owner: AudioOwner) => void): () => void {
+  replacedListeners.add(fn);
+  return () => replacedListeners.delete(fn);
+}
+const tick = () => tickListeners.forEach((fn) => fn());
+
+export function hasActiveSounds(owner: AudioOwner): boolean {
+  return [...active.keys()].some((k) => ownerOf(k) === owner);
+}
+
+function applyVolume(key: string): void {
+  const player = active.get(key);
+  if (!player) return;
+  try {
+    player.volume = Math.max(0, (baseVolume.get(key) ?? 1) * scale[ownerOf(key)]);
+  } catch {
+    // Removed meanwhile; nothing to do.
+  }
+}
 
 // Starts a sound (looping) if it isn't already playing, or just updates its
-// volume if it is. Never throws — a failure comes back as a result the
-// caller shows to the user, instead of silently doing nothing.
+// volume if it is. If the other section is playing, its sounds stop first
+// (one sound session at a time) and `replaced` says so. Never throws.
 export async function playLayer(soundId: SoundId, volume: number, owner: AudioOwner = 'sleep'): Promise<PlayResult> {
-  const vol = Math.max(0.05, Math.min(1, volume)); // never silently "playing" at zero
   const key = keyOf(owner, soundId);
+  baseVolume.set(key, clampVolume(volume));
   const existing = active.get(key);
   if (existing) {
-    existing.volume = vol;
+    applyVolume(key);
     return { ok: true };
+  }
+  let replaced: AudioOwner | undefined;
+  if (hasActiveSounds(otherOwner(owner))) {
+    replaced = otherOwner(owner);
+    stopAllLayers(replaced);
+    replacedListeners.forEach((fn) => fn(replaced!));
   }
   try {
     const source = soundSources[soundId];
     if (source === undefined) throw new Error(`No asset for sound "${soundId}"`);
-    const player = createAudioPlayer(source);
+    const player = createAudioPlayer(source, { updateInterval: 1000 });
     // Another call may have started the same layer while this one was being created.
     if (active.has(key)) {
       player.remove();
-      return { ok: true };
+      return { ok: true, ...(replaced ? { replaced } : {}) };
     }
     player.loop = true;
     player.muted = false;
-    player.volume = vol;
     active.set(key, player);
+    applyVolume(key);
+    player.addListener?.('playbackStatusUpdate', tick);
     player.play();
-    return { ok: true };
+    if (owner === 'sleep' && audioOptions.backgroundAudio && !lockScreenKey) {
+      // Keeps Sleep playing with the phone locked (Android stops background
+      // audio after ~3 min without it), with a plain media notification.
+      exclusive = true;
+      void applyAudioMode();
+      try {
+        player.setActiveForLockScreen?.(true, { title: 'Sleep sounds', artist: 'Ona' }, { isLiveStream: true, showSeekForward: false, showSeekBackward: false });
+        lockScreenKey = key;
+      } catch (e) {
+        if (__DEV__) console.warn('[audio] lock screen controls', e);
+      }
+    }
+    return { ok: true, ...(replaced ? { replaced } : {}) };
   } catch (e) {
     if (__DEV__) console.warn(`[audio] failed to play "${soundId}"`, e);
     return { ok: false, error: SOUND_LOAD_ERROR };
@@ -88,8 +161,16 @@ export async function playLayer(soundId: SoundId, volume: number, owner: AudioOw
 }
 
 export function setLayerVolume(soundId: SoundId, volume: number, owner: AudioOwner = 'sleep'): void {
-  const player = active.get(keyOf(owner, soundId));
-  if (player) player.volume = Math.max(0.05, Math.min(1, volume));
+  const key = keyOf(owner, soundId);
+  if (!active.has(key)) return;
+  baseVolume.set(key, clampVolume(volume));
+  applyVolume(key);
+}
+
+// The fade: every layer of a section at `s` (0..1) of its chosen volume.
+export function setSectionVolumeScale(owner: AudioOwner, s: number): void {
+  scale[owner] = Math.max(0, Math.min(1, s));
+  for (const key of active.keys()) if (ownerOf(key) === owner) applyVolume(key);
 }
 
 export function isLayerActive(soundId: SoundId, owner: AudioOwner = 'sleep'): boolean {
@@ -100,11 +181,20 @@ function stopKey(key: string): void {
   const player = active.get(key);
   if (!player) return;
   active.delete(key);
+  baseVolume.delete(key);
   try {
+    if (lockScreenKey === key) {
+      player.clearLockScreenControls?.(); // the media notification goes too
+      lockScreenKey = null;
+    }
     player.pause();
     player.remove(); // release the native player
   } catch (e) {
     if (__DEV__) console.warn(`[audio] failed to stop "${key}"`, e);
+  }
+  if (!hasActiveSounds('sleep') && exclusive) {
+    exclusive = false;
+    void applyAudioMode();
   }
 }
 
@@ -112,34 +202,14 @@ export function stopLayer(soundId: SoundId, owner: AudioOwner = 'sleep'): void {
   stopKey(keyOf(owner, soundId));
 }
 
-// Stops every sound of one section (Sleep's mix, by default).
+// Stops every sound of one section (Sleep's mix, by default), and resets its
+// fade so the next session starts at full chosen volume.
 export function stopAllLayers(owner: AudioOwner = 'sleep'): void {
   for (const key of [...active.keys()]) if (ownerOf(key) === owner) stopKey(key);
+  scale[owner] = 1;
 }
 
-// Ramps every active layer of one section down to silence over `durationMs`,
-// relative to its own current volume, then stops them — the Sleep timer's
-// fade-out. Another section's sounds are left alone.
-export async function fadeOutAllLayers(durationMs: number, owner: AudioOwner = 'sleep'): Promise<void> {
-  const mine = () => [...active.entries()].filter(([key]) => ownerOf(key) === owner);
-  if (durationMs <= 0 || mine().length === 0) {
-    stopAllLayers(owner);
-    return;
-  }
-  const startVolumes = new Map<string, number>();
-  for (const [key, player] of mine()) startVolumes.set(key, player.volume ?? 1);
-  const steps = 24;
-  const stepMs = durationMs / steps;
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps;
-    for (const [key, player] of mine()) {
-      try {
-        player.volume = Math.max(0, (startVolumes.get(key) ?? 1) * (1 - t));
-      } catch {
-        // Removed mid-fade; nothing to do.
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, stepMs));
-  }
-  stopAllLayers(owner);
+// For tests: what each player is set to.
+export function __volumesForTests(): Record<string, number> {
+  return Object.fromEntries([...active.entries()].map(([k, p]) => [k, p.volume]));
 }

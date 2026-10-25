@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: '0 3 * * *' # nightly
   workflow_dispatch:
+    inputs:
+      app_ref:
+        description: "Build the app (src, App.tsx, app.json) from this commit instead, and run only the Sleep timer check (to show it fails on code from before a fix)"
+        required: false
+        default: ''
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -35,6 +40,14 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: npm ci
+
+      - name: Use an older app (Sleep timer check only)
+        if: github.event_name == 'workflow_dispatch' && inputs.app_ref != ''
+        run: |
+          git fetch --no-tags origin "${{ inputs.app_ref }}"
+          git checkout FETCH_HEAD -- src App.tsx app.json
+          echo "SLEEP_ONLY=1" >> "$GITHUB_ENV"
+          echo "OLD_APP=1" >> "$GITHUB_ENV"
 
       - name: Build the release APK (emulator architecture)
         run: |

@@ -19,7 +19,8 @@ import { withAlpha } from '../utils/color';
 import { useUi } from '../components/UiProvider';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { useSleepStore, averageSleepQuality } from '../store/useSleepStore';
-import { playLayer, stopLayer, stopAllLayers, fadeOutAllLayers } from '../utils/audioEngine';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { EXTEND_MINUTES, FADE_CHOICES, MAX_CUSTOM_MINUTES, TIMER_CHOICES, extendSleepTimer, formatStopsIn, setSleepFade, setSleepTimer, sleepTimeLeft, startSleepSession, stopSleepSession } from '../audio/sleepSession';
 import { BackgroundAudioToggle } from '../components/BackgroundAudioToggle';
 import { sleepSounds } from '../data/sleepSounds';
 import { todayISO, addDaysISO, formatDisplayDate, formatClockTime } from '../utils/date';
@@ -30,89 +31,62 @@ import { themedStyles } from '../theme/runtime';
 type Props = NativeStackScreenProps<RootStackParamList, 'sleep'>;
 
 const ACCENT = sectionAccents.sleep;
-const TIMER_OPTIONS = [15, 30, 45, 60, 90];
 const QUALITY_LABELS: Record<number, string> = { 1: 'Rough', 2: 'Poor', 3: 'Okay', 4: 'Good', 5: 'Great' };
+
+export const SLEEP_TIMER_COPY = {
+  allNight: 'All night',
+  custom: 'Custom',
+  stopsIn: (t: string) => `Stops in ${t}`,
+  fading: (t: string) => `Fading out · stops in ${t}`,
+  noTimer: 'Plays until you stop it',
+  extend: `+${EXTEND_MINUTES} min`,
+  cancel: 'No timer',
+  fadeLabel: 'Fade at the end',
+  fadeNote: 'With the phone locked, the volume steps down rather than gliding; the sound always stops on time.',
+  replacedStudy: "Study's sound stopped: one sound at a time.",
+};
+
+const fadeLabel = (sec: number) => (sec < 60 ? `${sec} s` : `${sec / 60} min`);
 
 function SoundMixerCard() {
   const mix = useSleepStore((s) => s.mix);
   const isPlaying = useSleepStore((s) => s.isPlaying);
-  const timerMinutes = useSleepStore((s) => s.timerMinutes);
-  const fadeOutMinutes = useSleepStore((s) => s.fadeOutMinutes);
+  const endsAt = useSleepStore((s) => s.endsAt);
+  const fadeMs = useSleepStore((s) => s.fadeMs);
+  const timerChoice = useSettingsStore((s) => s.defaultSleepTimerMinutes);
+  const fadeSeconds = useSettingsStore((s) => s.sleepFadeSeconds);
   const addSoundToMix = useSleepStore((s) => s.addSoundToMix);
   const removeSoundFromMix = useSleepStore((s) => s.removeSoundFromMix);
   const setLayerVolume = useSleepStore((s) => s.setLayerVolume);
-  const togglePlaying = useSleepStore((s) => s.togglePlaying);
-  const setTimerMinutes = useSleepStore((s) => s.setTimerMinutes);
-  const setFadeOutMinutes = useSleepStore((s) => s.setFadeOutMinutes);
+  const { showToast } = useUi();
 
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const [fading, setFading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const prevMixIdsRef = useRef<Set<SleepSoundId>>(new Set());
-
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customText, setCustomText] = useState('');
+  // Only for the "Stops in" line: the session itself runs in audio/sleepSession.ts.
+  const [, redraw] = useState(0);
   useEffect(() => {
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
-  }, []);
+    if (!isPlaying || endsAt === null) return;
+    const t = setInterval(() => redraw((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [isPlaying, endsAt]);
 
-  // Keeps real playback in sync with the mix: starts newly-added layers,
-  // updates volume on existing ones (playLayer is a no-op restart when a
-  // layer's already active), and stops layers removed from the mix.
-  useEffect(() => {
-    if (!isPlaying) {
-      void stopAllLayers();
-      prevMixIdsRef.current = new Set();
-      setLoadError(null);
-      return;
-    }
-    const currentIds = new Set(mix.map((l) => l.soundId));
-    for (const id of prevMixIdsRef.current) {
-      if (!currentIds.has(id)) void stopLayer(id);
-    }
-    for (const layer of mix) {
-      void playLayer(layer.soundId, layer.volume).then((result) => {
-        if (!result.ok) setLoadError(`${result.error} (${sleepSounds.find((s) => s.id === layer.soundId)?.label ?? layer.soundId}).`);
-      });
-    }
-    prevMixIdsRef.current = currentIds;
-  }, [isPlaying, mix]);
-
-  useEffect(() => {
-    if (!isPlaying || timerMinutes === null) {
-      if (tickRef.current) clearInterval(tickRef.current);
-      setSecondsLeft(null);
-      setFading(false);
-      return;
-    }
-    setSecondsLeft(timerMinutes * 60);
-    setFading(false);
-    const fadeThresholdSeconds = fadeOutMinutes * 60;
-    let fadeStarted = false;
-    tickRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev === null) return prev;
-        const next = prev - 1;
-        if (fadeThresholdSeconds > 0 && next <= fadeThresholdSeconds && next > 0 && !fadeStarted) {
-          fadeStarted = true;
-          setFading(true);
-          void fadeOutAllLayers(fadeThresholdSeconds * 1000);
-        }
-        if (next <= 0) {
-          if (tickRef.current) clearInterval(tickRef.current);
-          if (!fadeStarted) void stopAllLayers();
-          togglePlaying();
-          return null;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, timerMinutes]);
+  const play = () =>
+    void startSleepSession().then((r) => {
+      setLoadError(r.ok ? null : r.error);
+      if (r.ok && r.replacedStudy) showToast({ message: SLEEP_TIMER_COPY.replacedStudy });
+    });
+  const chooseTimer = (minutes: number | null) => setSleepTimer(minutes);
+  const saveCustom = () => {
+    const n = Math.round(Number(customText));
+    if (!Number.isFinite(n) || n < 1 || n > MAX_CUSTOM_MINUTES) return showToast({ message: `Between 1 and ${MAX_CUSTOM_MINUTES} minutes.` });
+    setCustomOpen(false);
+    setCustomText('');
+    chooseTimer(n);
+  };
+  const timerMs = timerChoice === null ? null : timerChoice * 60_000;
+  const left = sleepTimeLeft();
+  const isCustom = timerChoice !== null && !TIMER_CHOICES.includes(timerChoice);
 
   const plus = usePlus();
   const { showDialog } = useUi();
@@ -135,9 +109,6 @@ function SoundMixerCard() {
     }
     addSoundToMix(id);
   };
-
-  const mm = secondsLeft !== null ? Math.floor(secondsLeft / 60) : null;
-  const ss = secondsLeft !== null ? secondsLeft % 60 : null;
 
   return (
     <Card style={[styles.card, { borderLeftColor: ACCENT, borderLeftWidth: 3 }]}>
@@ -181,34 +152,64 @@ function SoundMixerCard() {
 
       <Eyebrow style={[{ color: ACCENT }, styles.timerLabel]}>Sleep timer</Eyebrow>
       <View style={styles.timerRow}>
-        {TIMER_OPTIONS.map((mins) => (
-          <Pressable key={mins} onPress={() => setTimerMinutes(timerMinutes === mins ? null : mins)} style={[styles.timerChip, timerMinutes === mins && { backgroundColor: ACCENT }]}>
-            <Body style={timerMinutes === mins ? styles.timerChipTextActive : undefined}>{mins}m</Body>
-          </Pressable>
-        ))}
+        {TIMER_CHOICES.map((mins) => {
+          const on = timerChoice === mins;
+          return (
+            <Pressable key={String(mins)} onPress={() => chooseTimer(mins)} style={[styles.timerChip, on && { backgroundColor: ACCENT }]} accessibilityRole="button" accessibilityState={{ selected: on }}>
+              <Body style={on ? styles.timerChipTextActive : undefined}>{mins === null ? SLEEP_TIMER_COPY.allNight : `${mins}m`}</Body>
+            </Pressable>
+          );
+        })}
+        <Pressable onPress={() => setCustomOpen((o) => !o)} style={[styles.timerChip, isCustom && { backgroundColor: ACCENT }]} accessibilityRole="button" accessibilityState={{ selected: isCustom }}>
+          <Body style={isCustom ? styles.timerChipTextActive : undefined}>{isCustom ? `${timerChoice}m` : SLEEP_TIMER_COPY.custom}</Body>
+        </Pressable>
       </View>
-      <View style={styles.fadeRow}>
-        <Caption>Fade out over</Caption>
-        {[0, 5, 10].map((mins) => (
-          <Pressable key={mins} onPress={() => setFadeOutMinutes(mins)} style={[styles.fadeChip, fadeOutMinutes === mins && { borderColor: ACCENT }]}>
-            <Caption style={fadeOutMinutes === mins ? { color: ACCENT } : undefined}>{mins === 0 ? 'Off' : `${mins}m`}</Caption>
-          </Pressable>
-        ))}
-      </View>
+      {customOpen && (
+        <View style={styles.fadeRow}>
+          <TextInput value={customText} onChangeText={setCustomText} placeholder="Minutes" keyboardType="number-pad" style={styles.customInput} accessibilityLabel="Timer length in minutes" onSubmitEditing={saveCustom} />
+          <PrimaryButton label="Set" onPress={saveCustom} variant="outline" />
+        </View>
+      )}
+      {timerMs !== null && (
+        <View style={styles.fadeRow}>
+          <Caption>{SLEEP_TIMER_COPY.fadeLabel}</Caption>
+          {FADE_CHOICES.map((sec) => {
+            const tooLong = sec * 1000 > timerMs;
+            const on = fadeSeconds === sec;
+            return (
+              <Pressable key={sec} disabled={tooLong} onPress={() => setSleepFade(sec)} style={[styles.fadeChip, on && { borderColor: ACCENT }, tooLong && styles.chipDisabled]} accessibilityRole="button" accessibilityState={{ selected: on, disabled: tooLong }}>
+                <Caption style={on ? { color: ACCENT } : undefined}>{fadeLabel(sec)}</Caption>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <PrimaryButton
         label={isPlaying ? 'Stop' : mix.length === 0 ? 'Pick a sound first' : 'Play mix'}
         disabled={!isPlaying && mix.length === 0}
         variant={isPlaying ? 'outline' : 'primary'}
-        onPress={togglePlaying}
+        onPress={isPlaying ? stopSleepSession : play}
         style={styles.playButton}
       />
-      {isPlaying && secondsLeft !== null && (
-        <Caption style={styles.countdown}>
-          {fading ? 'Fading out… ' : ''}
-          {String(mm).padStart(2, '0')}:{String(ss).padStart(2, '0')} left
-        </Caption>
+      {isPlaying && (
+        <View style={styles.sessionRow}>
+          <Caption style={styles.countdown} accessibilityLiveRegion="none">
+            {left === null ? SLEEP_TIMER_COPY.noTimer : left <= fadeMs ? SLEEP_TIMER_COPY.fading(formatStopsIn(left)) : SLEEP_TIMER_COPY.stopsIn(formatStopsIn(left))}
+          </Caption>
+          {left !== null && (
+            <>
+              <Pressable onPress={() => extendSleepTimer()} accessibilityRole="button" hitSlop={8}>
+                <Caption style={{ color: ACCENT }}>{SLEEP_TIMER_COPY.extend}</Caption>
+              </Pressable>
+              <Pressable onPress={() => chooseTimer(null)} accessibilityRole="button" hitSlop={8}>
+                <Caption style={{ color: ACCENT }}>{SLEEP_TIMER_COPY.cancel}</Caption>
+              </Pressable>
+            </>
+          )}
+        </View>
       )}
+      {isPlaying && fadeMs > 0 && <Caption style={styles.hint}>{SLEEP_TIMER_COPY.fadeNote}</Caption>}
       {loadError && <Caption style={styles.loadError}>{loadError}</Caption>}
       <BackgroundAudioToggle accent={ACCENT} />
     </Card>
@@ -498,6 +499,19 @@ const styles = themedStyles(() => ({
     height: 16,
     borderRadius: radii.full,
     backgroundColor: colors.line,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  customInput: {
+    flex: 1,
+    minWidth: 100,
+  },
+  chipDisabled: {
+    opacity: 0.4,
   },
   timerLabel: {
     marginTop: spacing.xs,

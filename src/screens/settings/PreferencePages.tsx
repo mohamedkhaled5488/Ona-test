@@ -1,5 +1,6 @@
 // Appearance & Language, Sound, and the per-section settings pages.
 import { REMINDER_SOUND } from '../../config/reminderWording';
+import { FADE_CHOICES } from '../../audio/sleepSession';
 import type { QuitPrimaryNumber } from '../../quit/journey';
 import { resyncAllReminders } from '../../utils/reminders';
 import React from 'react';
@@ -175,7 +176,7 @@ function StudySoundSettings() {
 }
 
 const TIMER_OPTIONS: { id: number | null; label: string }[] = [
-  { id: null, label: 'Off' },
+  { id: null, label: 'All night' },
   { id: 15, label: '15 min' },
   { id: 30, label: '30 min' },
   { id: 45, label: '45 min' },
@@ -185,17 +186,17 @@ const TIMER_OPTIONS: { id: number | null; label: string }[] = [
 
 function SleepSoundSettings() {
   const timer = useSettingsStore((s) => s.defaultSleepTimerMinutes);
-  const fade = useSettingsStore((s) => s.defaultFadeOutMinutes);
+  const fade = useSettingsStore((s) => s.sleepFadeSeconds);
   const set = useSettingsStore((s) => s.set);
   return (
     <Group title="Sleep">
-      <ChoiceRow label="Sleep timer" explain="How long sounds play before stopping" options={TIMER_OPTIONS} value={timer} onChange={(id) => set('defaultSleepTimerMinutes', id)} />
+      <ChoiceRow label="Sleep timer" explain="How long sounds play before stopping. The Sleep screen remembers your last choice here." options={TIMER_OPTIONS} value={timer} onChange={(id) => set('defaultSleepTimerMinutes', id)} />
       <ChoiceRow
         label="Fade-out"
-        explain="How gently sounds fade at the end of the timer"
-        options={[0, 2, 5, 10].map((m) => ({ id: m, label: m === 0 ? 'None' : `${m} min` }))}
+        explain="Over the last part of the timer, never longer than it. With the phone locked it steps down rather than gliding; the sound always stops on time."
+        options={FADE_CHOICES.map((sec) => ({ id: sec, label: sec < 60 ? `${sec} s` : `${sec / 60} min` }))}
         value={fade}
-        onChange={(id) => set('defaultFadeOutMinutes', id)}
+        onChange={(id) => set('sleepFadeSeconds', id)}
       />
     </Group>
   );

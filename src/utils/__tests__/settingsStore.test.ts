@@ -60,7 +60,7 @@ describe('settings store', () => {
     a.set('interruption', 'pause');
     a.set('defaultStudySound', 'rain');
     a.set('defaultSleepTimerMinutes', 45);
-    a.set('defaultFadeOutMinutes', 10);
+    a.set('sleepFadeSeconds', 60);
     a.toggleRecapSection('sleep');
     a.set('recapComparison', false);
     a.set('bookShowEstimate', false);
@@ -80,7 +80,7 @@ describe('settings store', () => {
     expect(b.interruption).toBe('pause');
     expect(b.defaultStudySound).toBe('rain');
     expect(b.defaultSleepTimerMinutes).toBe(45);
-    expect(b.defaultFadeOutMinutes).toBe(10);
+    expect(b.sleepFadeSeconds).toBe(60);
     expect(b.hiddenRecapSections).toEqual(['sleep']);
     expect(b.recapComparison).toBe(false);
     expect(b.bookShowEstimate).toBe(false);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useUi } from '../components/UiProvider';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { TextInput } from '../components/TextInput';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,9 @@ import { StudySessionDetail } from './StudySessionDetail';
 import { themedStyles } from '../theme/runtime';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { parseWholeNumberInput } from '../utils/numberInput';
+
+// One sound session at a time (audioEngine): shown when Study's sound replaces Sleep's.
+export const STUDY_REPLACED_SLEEP = 'Sleep sounds stopped: one sound at a time.';
 
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -186,11 +190,16 @@ function ActiveView() {
   const sound = active?.ambientSound ?? 'none';
   const shouldPlay = !!active && sound !== 'none' && !active.isPaused;
   const [soundError, setSoundError] = useState<string | null>(null);
+  const { showToast } = useUi();
+  const showSoundNotice = (message: string) => showToast({ message });
   useEffect(() => {
     if (!shouldPlay) return;
     let cancelled = false;
     void playLayer(sound, 0.6, 'study').then((result) => {
-      if (!cancelled) setSoundError(result.ok ? null : result.error);
+      if (cancelled) return;
+      setSoundError(result.ok ? null : result.error);
+      // One sound session at a time: Sleep's sounds stopped for this one.
+      if (result.ok && result.replaced === 'sleep') showSoundNotice(STUDY_REPLACED_SLEEP);
     });
     return () => {
       cancelled = true;

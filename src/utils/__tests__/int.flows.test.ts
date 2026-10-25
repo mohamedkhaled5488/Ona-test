@@ -216,14 +216,16 @@ describe('INT-SET: a setting changed once reaches everything', () => {
     stop();
   });
 
-  test('INT-SET-003 Sleep\'s default timer applies, but never changes a timer already running', () => {
-    const stop = startSettingsEffects();
+  // The timer is remembered as this setting (owner's decision 2026-10-25).
+  test("INT-SET-003 Sleep's timer setting is what the next session uses, and changing it in Settings never moves a running timer", async () => {
+    const { startSleepSession, stopSleepSession, sleepTimeLeft } = require('../../audio/sleepSession') as typeof import('../../audio/sleepSession');
+    useSleepStore.setState({ mix: [{ soundId: 'rain', volume: 0.5 }] } as never);
     useSettingsStore.getState().set('defaultSleepTimerMinutes', 45);
-    expect(useSleepStore.getState().timerMinutes).toBe(45);
-    useSleepStore.setState({ isPlaying: true });
+    await startSleepSession();
+    expect(sleepTimeLeft()).toBeGreaterThan(44 * 60_000);
     useSettingsStore.getState().set('defaultSleepTimerMinutes', 15);
-    expect(useSleepStore.getState().timerMinutes).toBe(45);
-    stop();
+    expect(sleepTimeLeft()).toBeGreaterThan(44 * 60_000);
+    stopSleepSession();
   });
 });
 

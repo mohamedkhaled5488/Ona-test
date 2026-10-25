@@ -38,6 +38,8 @@ const DYNAMIC: Record<string, string> = {
   'Ongoing — Day 1': 'Ongoing — Day {daysSinceTrackStart(track, today)}',
   'Riding it out: \\d+:\\d\\d': 'timer: (t: string) => `Riding it out: ${t}`',
   'Day 1 of your journey': 'const journey = `Day ${c.journeyDays} of your journey`',
+  '15m': '{mins === null ? SLEEP_TIMER_COPY.allNight : `${mins}m`}',
+  '10 s': '(sec < 60 ? `${sec} s` : `${sec / 60} min`)',
   '.*Day 1 of your journey carries on.*': 'Day ${journeyDays} of your journey carries on.',
   'Marked done today.*': "Marked {todayEntry.done ? 'done' : 'missed'}",
   '(Home|Check .* for a confirmation link, then come back and sign in.)':'for a confirmation link, then come back and sign in.',
@@ -108,7 +110,8 @@ describe('E2E-GUARD: the Maestro flows match the app', () => {
   test('E2E-GUARD-002 every subflow a flow runs exists', () => {
     for (const f of flowFiles) {
       for (const [, ref] of read(f).matchAll(/runFlow:\s*(\S+\.yaml)/g)) {
-        expect({ f, ref, exists: fs.existsSync(path.join(FLOWS, ref)) }).toEqual({ f, ref, exists: true });
+        // Maestro resolves a runFlow path from the flow file's own folder.
+        expect({ f, ref, exists: fs.existsSync(path.join(FLOWS, path.dirname(f), ref)) }).toEqual({ f, ref, exists: true });
       }
     }
   });
