@@ -13,6 +13,10 @@
 -- - base_rev null: an older app version. The old rule (the later change on
 --   the device's clock) applies, as before.
 --
+-- base_rev is only ever read, never kept: the trigger clears it on every
+-- write. Otherwise an older app (which doesn't send it) would inherit the
+-- last stored value on its next write to that row and be refused.
+--
 -- Safe to run more than once.
 
 alter table public.sync_records add column if not exists rev bigint not null default 1;
@@ -27,6 +31,7 @@ begin
   new.client_updated_at := least(new.client_updated_at, clock_timestamp() + interval '5 minutes');
   if tg_op = 'INSERT' then
     new.rev := 1;
+    new.base_rev := null;
   else
     if new.base_rev is not null and new.base_rev <> old.rev then
       return old; -- written over a version this phone never saw: the phone resolves
@@ -35,6 +40,7 @@ begin
       return old; -- an older app version's older change: keep what's there
     end if;
     new.rev := old.rev + 1;
+    new.base_rev := null;
   end if;
   new.server_updated_at := clock_timestamp();
   return new;

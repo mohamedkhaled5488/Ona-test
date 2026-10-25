@@ -70,7 +70,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest",
-    "test:backend": "npx supabase db reset --local && jest -c jest.backend.config.js"
+    "test:backend": "npx supabase db reset --local && jest -c jest.backend.config.js",
+    "eas-build-pre-install": "node scripts/require-green-ci.js",
+    "check:ci": "node scripts/require-green-ci.js"
   },
   "jest": {
     "preset": "jest-expo",

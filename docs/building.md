@@ -44,6 +44,17 @@ Copy `.env.example` to `.env` and fill in:
 
 `.env` is ignored by git. Never commit it.
 
+## Tester builds need a green CI
+
+A tester APK (EAS profile `preview`) is only built from a commit on which both GitHub workflows passed: **CI** (type check, Jest, and the backend tests against a local Supabase) and **E2E (Android)** (the Maestro flows). EAS runs `scripts/require-green-ci.js` on its servers before every build (`eas-build-pre-install` in package.json); for `preview` it stops the build if either workflow failed, was cancelled, is still running, never ran on that commit, or GitHub can't be reached. `eas.json` has `requireCommit: true`, so what's built is exactly the commit that was checked.
+
+Before starting one: push, wait for both runs, then `npm run check:ci` (the same check, on your machine).
+
+| ID | What | Test |
+|---|---|---|
+| GATE-001..003 | Green builds; red, cancelled, running or missing runs don't; the latest re-run decides | buildGate.test.ts |
+| GATE-004 | The hook, `requireCommit` and the workflow names stay in place | buildGate.test.ts |
+
 ## Release builds
 
 Covered in [billing-setup-checklist.md](billing-setup-checklist.md). Remember to add the **Play App Signing** SHA-1 as its own Android OAuth client before testing Google sign-in on a Play-installed build.

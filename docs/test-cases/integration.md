@@ -69,8 +69,8 @@ Every JRN-ACC case above is automated. What isn't, and why:
 | What | Why not automated | Where it's checked |
 |---|---|---|
 | The flows on real phones with a real account (merge screen, two people on one phone, sign-out with unsent changes) | Needs two real devices and a real account; the logic is covered by JRN-ACC and BE-ACC | Manual checklist MAN-017..019b, MAN-094 |
-| Ona killed by the system (not by a failing write) mid-step | A test can't kill the JS process; CRASH-001..005 fail every storage write from step k on, which is what a kill leaves behind | MAN-095 |
-| The choice sheet on a small screen and with large text | Layout and feel | MAN-094 |
+| Ona killed by the system (not by a failing write) mid-step | A test can't kill the JS process; CRASH-001..005 fail every storage write from step k on, which is what a kill leaves behind | MAN-095, MAN-099 |
+| The choice sheet, sign-out, status row, Other data on this phone and the craving screens on a small screen with the largest text | Layout and feel | MAN-094, MAN-098 |
 | Linking sign-in methods for the same person (G15), and asking after 30 days about a kept copy | Not built (G15 waits for Sign in with Apple; kept copies are never removed by Ona) | — |
 | 7 Sleep ↔ notifications | REM-001..003 | Wake-up reminder sound | Scheduled daily with the chosen sound and its channel; without one, the Settings default; changing sound or time replaces it; off leaves nothing scheduled | integration | P0 | sleepReminder.test.ts |
 | 7 | REM-010/011 | Android channels | One channel per sound on the alarm volume, high importance, on the lock screen, versioned ids; one-time move reschedules every reminder then removes the old channels, never twice | integration | P0 | sleepReminder.test.ts |

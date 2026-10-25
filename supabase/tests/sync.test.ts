@@ -3,7 +3,7 @@
 // Supabase adapter (supabaseSyncServer). IDs: docs/test-cases/backend.md
 jest.mock('../../src/utils/notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 
-import { EMPTY_SYNC_STATE, OtherAccountError, syncOnce, type LocalData, type SyncState } from '../../src/sync/engine';
+import { EMPTY_SYNC_STATE, OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type RemoteRow, type SyncServer, type SyncState } from '../../src/sync/engine';
 import { supabaseSyncServer } from '../../src/sync/syncController';
 import { admin, fromNow, newUser, setTrial, type TestUser } from './local';
 
@@ -174,4 +174,62 @@ test("BE-SYNC-011 a phone's clock doesn't decide: the change that reaches the se
   await ahead.sync();
   expect(ahead.tasks().map((t) => t.title)).toEqual(['Call (behind)']);
   expect(behind.tasks().map((t) => t.title)).toEqual(['Call (behind)']);
+});
+
+// The APK installed on the owner's phones (3f74086) predates 0009: it reads
+// only the columns it knows and never sends base_rev. These are its exact
+// queries (git show 3f74086:src/sync/syncController.ts).
+function apk3f74086(user: TestUser): SyncServer {
+  return {
+    pull: async (since, limit) => {
+      let q = user.db.from('sync_records').select('collection, record_id, data, deleted, client_updated_at, server_updated_at').order('server_updated_at', { ascending: true }).limit(limit);
+      if (since) q = q.gt('server_updated_at', since);
+      const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as RemoteRow[];
+    },
+    push: async (rows: OutgoingRow[]) => {
+      const { error } = await user.db.from('sync_records').upsert(rows.map(({ base_rev: _b, ...r }) => ({ ...r, user_id: user.id })), { onConflict: 'user_id,collection,record_id' });
+      if (error) throw new Error(error.message);
+    },
+  };
+}
+function oldPhone(user: TestUser, initial: Record<string, unknown> = {}) {
+  const data = new Map<string, unknown>(Object.entries(initial));
+  let state: SyncState = EMPTY_SYNC_STATE;
+  const local: LocalData = { read: (c) => data.get(c) ?? (c.endsWith('dayReflections') || c.endsWith('guidanceVotes') ? {} : []), write: (c, v) => void data.set(c, v) };
+  return {
+    data,
+    tasks: () => (data.get('dailyPlanning.tasks') ?? []) as { id: string; title: string }[],
+    sync: async () => {
+      state = (await syncOnce(user.id, apk3f74086(user), state, local)).state;
+    },
+  };
+}
+
+test('BE-SYNC-012 the installed APK (3f74086, before 0009) still syncs both ways after the migration, also on rows a newer phone wrote', async () => {
+  const u = await subscriber();
+  const now = phone(u, { 'dailyPlanning.tasks': [task('t1', 'From the new app')] });
+  await now.sync(); // written with base_rev
+  const apk = oldPhone(u);
+  await apk.sync();
+  expect(apk.tasks().map((t) => t.title)).toEqual(['From the new app']); // download works
+  apk.data.set('dailyPlanning.tasks', [{ ...apk.tasks()[0], title: 'Edited on the old APK' }, task('t2', 'New on the old APK')]);
+  await apk.sync(); // upload with no base_rev, over a row the new app wrote
+  const { data } = await admin().from('sync_records').select('record_id, rev, base_rev, data').eq('user_id', u.id).order('record_id');
+  expect(data).toEqual([
+    expect.objectContaining({ record_id: 't1', rev: 2, base_rev: null, data: expect.objectContaining({ title: 'Edited on the old APK' }) }),
+    expect.objectContaining({ record_id: 't2', rev: 1, base_rev: null }),
+  ]);
+  await now.sync();
+  expect(now.tasks().map((t) => t.title).sort()).toEqual(['Edited on the old APK', 'New on the old APK']);
+  // And back: the new app edits, the old APK receives it and edits again.
+  now.data.set('dailyPlanning.tasks', now.tasks().map((t) => (t.id === 't1' ? { ...t, title: 'New app again' } : t)));
+  await now.sync();
+  await apk.sync();
+  expect(apk.tasks().find((t) => t.id === 't1')!.title).toBe('New app again');
+  apk.data.set('dailyPlanning.tasks', apk.tasks().map((t) => (t.id === 't1' ? { ...t, title: 'Old APK again' } : t)));
+  await apk.sync();
+  await now.sync();
+  expect(now.tasks().find((t) => t.id === 't1')!.title).toBe('Old APK again');
 });
