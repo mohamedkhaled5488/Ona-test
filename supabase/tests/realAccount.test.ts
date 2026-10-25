@@ -295,17 +295,44 @@ test('BE-REAL-008 a restore that fails halfway (the network drops after the firs
   const all = phoneRecords();
   await freshPhone();
   await signIn(u);
-  const realFetch = global.fetch;
-  let pulls = 0;
-  global.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    if (url.includes('/rest/v1/sync_records') && (!init?.method || init.method === 'GET') && ++pulls === 2) return Promise.reject(new TypeError('Network request failed'));
-    return realFetch(input, init);
-  }) as typeof fetch;
+  // The network drops on the second page of the download. (Inside the
+  // user's client: supabase-js keeps its own fetch, so replacing the global
+  // one does nothing.)
+  let pages = 0;
+  const dropSecondPage = <T extends object>(query: T): T =>
+    new Proxy(query, {
+      get(target, key) {
+        const value = (target as Record<string | symbol, unknown>)[key];
+        if (key === 'then') {
+          return (ok: (v: unknown) => unknown, fail: (e: unknown) => unknown) =>
+            ++pages === 2 ? Promise.reject(new TypeError('Network request failed')).then(ok, fail) : (value as (a: unknown, b: unknown) => Promise<unknown>).call(target, ok, fail);
+        }
+        return typeof value === 'function' ? (...args: unknown[]) => dropSecondPage((value as (...a: unknown[]) => object).apply(target, args)) : value;
+      },
+    });
+  const realDb = u.db;
+  mockPhone.db = new Proxy(realDb, {
+    get(target, key) {
+      if (key !== 'from') return (target as unknown as Record<string | symbol, unknown>)[key];
+      return (table: string) => {
+        const builder = target.from(table);
+        if (table !== 'sync_records') return builder;
+        // Downloads only (select); uploads (upsert(...).select()) go through.
+        return new Proxy(builder, {
+          get(b, k) {
+            const v = (b as unknown as Record<string | symbol, unknown>)[k];
+            if (k === 'select') return (...args: unknown[]) => dropSecondPage((v as (...a: unknown[]) => object).apply(b, args));
+            return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(b) : v;
+          },
+        });
+      };
+    },
+  });
   try {
     expect((await sync()).ok).toBe(false);
+    expect(pages).toBeGreaterThanOrEqual(2);
   } finally {
-    global.fetch = realFetch;
+    mockPhone.db = realDb;
   }
   // Nothing half-written as if it were complete.
   const partial = Object.values(phoneRecords()).reduce((n, m) => n + m.size, 0);
