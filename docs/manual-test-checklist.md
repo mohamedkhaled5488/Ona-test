@@ -138,6 +138,9 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-102 | Sleep timer, a call | As MAN-100; call the phone mid-timer, hang up | The sound pauses for the call; after the end it never comes back | | | |
 | MAN-103 | Sleep timer, changes | Mid-timer: add a second sound; +15 min; No timer; leave Sleep and open Study and start its sound | "Stops in" moves by 15 min; No timer plays on; Study's sound replaces Sleep's with a short notice; both layers stop together at the end | | | |
 | MAN-104 | Sleep timer, all night | All night, lock the phone for 30 minutes | Still playing after 30 minutes (Android used to cut background audio after about 3); the media notification is there while it plays | | | |
+| MAN-105 | Listening: each new sound (step 3) | For each of white, pink, brown noise, rain, ocean, fan, forest: 3 minutes on headphones, then 3 on the phone speaker, at the volume you'd sleep with | No repetition you can hear; no click, gap or jump in volume where it loops (at 2:00 for noise and fan, 3:00 for the others); nothing sudden or sharp; about as loud as each other | | | |
+| MAN-106 | Listening: compared with today's | Play each new sound against today's (rain, ocean, fan, forest especially) | Say which you'd rather fall asleep to; a generated nature sound that's worse gets a licensed long recording instead | | | |
+| MAN-107 | Listening: in the app | With the chosen sounds in a build: each with a 2-minute timer and a 30 s fade, locked | The fade is gentle (in steps while locked is fine); silent at the end; mixing two layers sounds balanced | | | |
 
 ## Sign-off
 
