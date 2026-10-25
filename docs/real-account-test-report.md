@@ -12,6 +12,7 @@ Failures found by testing against real systems instead of mocks: the Android emu
 | RA-04 | Sync | High | Apply 0009; a newer phone writes a row; the installed APK (3f74086) edits it | An upsert keeps columns the request doesn't send: the old APK (no `base_rev`) inherited the stored `base_rev` and its write was refused without it knowing (`supabase/migrations/0009_sync_revisions.sql`) | The trigger reads `base_rev` and never keeps it | BE-SYNC-012 (the APK's exact queries, both ways) | Every test used the new client; none mixed app versions |
 | RA-05 | Sync | High (caught before release) | Two phones edit the same journal entry with 0009 | The first fix cleared `base_rev` in the insert step, and an upsert's ON CONFLICT update reads the row as that step left it: every stale write was accepted | Cleared on insert only for a row that doesn't exist yet | BE-SYNC-009..011 caught it in CI on e77b99b | — (caught) |
 | RA-06 | CI | Medium (process) | Push after 2026-10-20 | A per-batch upload check added with FIX-16 read app state the server-only tests don't have; the backend job was red for days and nobody looked | The check is a parameter in those tests; tester builds now require green CI, E2E and staging (`scripts/require-green-ci.js`) | GATE-001..005 | CI wasn't watched; nothing blocked a build on red |
+| RA-07 | Sync | High | Make a sync be refused once (offline, sync turned off, paused, signed out, or refused after the sign-in check), then fix the cause | `syncNow()` returned early from inside the promise it had stored as `running`, before the `try/finally` that clears it (`src/sync/syncController.ts`): every later sync got that same refusal until Ona restarted | The gate is checked before a sync is marked as running | JRN-ACC-070, 071 (offline, sync off); BE-REAL-006/008/009 (found it: every sync after the offline test answered "You're offline" with offline already off) | Callers usually check the gate before calling, so the journeys never called syncNow while refused; the real-account suite did, in order, against one app session |
 
 ## Real-backend results (local Supabase in CI; staging nightly)
 
@@ -21,7 +22,7 @@ Failures found by testing against real systems instead of mocks: the Android emu
 | BE-REAL-002 | Recap on the restored phone | Pass: every section, Quit included |
 | BE-REAL-003 | Plan states from the server's dates (day 1, mid, ended, Plus) | Pass |
 | BE-REAL-004 | Trial ended: downloads work, the server refuses uploads | Pass |
-| BE-REAL-005..009 | Two phones (edits and deletes everywhere), offline then online, consent off, a restore failing halfway, about a year of data (time and memory) | Added; results from the next CI run |
+| BE-REAL-005..009 | Two phones (edits and deletes everywhere), offline then online, consent off, a restore failing halfway, about a year of data (time and memory) | 006/008/009 failed: found RA-07; results after the fix below |
 | Bundle scan (E2E) | No server key in the APK's JavaScript bundle | Added |
 
 ## Harness mistakes (the tests were wrong, not Ona)

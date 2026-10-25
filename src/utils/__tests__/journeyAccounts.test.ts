@@ -548,6 +548,34 @@ describe('JRN-ACC: the session changing in the middle of a sync', () => {
   });
 });
 
+describe('JRN-ACC: a sync refused once never blocks the next', () => {
+  // Found by the real-account tests (BE-REAL-006/008/009, docs/real-account-test-report.md RA-07):
+  // a sync refused up front (offline, sync off, paused) left the "running"
+  // marker set, so every later sync got the same refusal until Ona restarted.
+  test('JRN-ACC-070 refused while offline, then online: the next sync really runs and sends', async () => {
+    await freshInstall();
+    await signIn('u1');
+    useSettingsStore.setState({ devSimulateOffline: true });
+    useJournalStore.setState((st) => ({ entries: [...st.entries, entry('j-offline')] }) as never);
+    const refused = await syncNow();
+    expect(refused).toMatchObject({ ok: false });
+    useSettingsStore.setState({ devSimulateOffline: false });
+    const r = await syncNow();
+    expect(r).toMatchObject({ ok: true });
+    expect(inAccount('u1')).toEqual(['j-offline']);
+  });
+
+  test('JRN-ACC-071 refused with sync turned off, then turned on: syncs again', async () => {
+    await freshInstall();
+    await signIn('u1');
+    useSettingsStore.getState().setConsent({ storeData: false });
+    expect(await syncNow()).toMatchObject({ ok: false });
+    useSettingsStore.getState().setConsent({ storeData: true }); // starts a sync by itself
+    await write('j-back'); // a change made then goes up right after
+    expect(inAccount('u1')).toEqual(['j-back']);
+  });
+});
+
 afterAll(async () => {
   await __flushForTests();
 });

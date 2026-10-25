@@ -175,9 +175,12 @@ export function syncNow(): Promise<SyncOutcome> {
       });
     return preparing;
   }
+  // Refused up front (offline, sync off, paused, signed out...): answered
+  // without marking a sync as running. (A refusal used to stay as `running`,
+  // so every later sync got the same answer until Ona restarted: RA-07.)
+  const gate = currentSyncGate();
+  if (!gate.allowed) return Promise.resolve({ ok: false, message: gate.message });
   running = (async (): Promise<SyncOutcome> => {
-    const gate = currentSyncGate();
-    if (!gate.allowed) return { ok: false, message: gate.message };
     const userId = useAuthStore.getState().session!.user.id;
     const store = useSyncStore.getState();
     store.setStatus('syncing');
