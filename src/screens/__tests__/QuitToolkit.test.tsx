@@ -158,3 +158,13 @@ test('QUIT-TK-UI-008 changing the type to alcohol or drugs in My toolkit: the no
   await r.user.press(screen.getByLabelText('Alcohol or drugs'));
   expect(screen.queryByText(TOOLKIT_COPY.substanceTitle)).toBeNull(); // not a second time
 });
+
+test('QUIT-TK-UI-009 the one-time offer sits below the journey actions, so "I\'m craving it" stays where it always is', async () => {
+  oneHabit({ toolkitOffered: false });
+  await renderScreen('quitHabit', QuitHabitScreen, { openHabitId: 'q1' });
+  expect(await screen.findByText(TOOLKIT_COPY.offerTitle)).toBeTruthy();
+  const text = JSON.stringify(screen.toJSON());
+  expect(text.indexOf("I'm craving it")).toBeGreaterThan(-1);
+  expect(text.indexOf("I'm craving it")).toBeLessThan(text.indexOf(TOOLKIT_COPY.offerTitle));
+  expect(text.indexOf('I had a hard day')).toBeLessThan(text.indexOf(TOOLKIT_COPY.offerTitle));
+});

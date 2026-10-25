@@ -762,8 +762,6 @@ function JourneyStage({
             </Pressable>
           )}
 
-          <ToolkitOffer habit={habit} onOpen={onOpenToolkit} />
-
           {milestone && (
             <Card style={styles.milestoneCard}>
               <Ionicons name="sparkles-outline" size={16} color={colors.amber} />
@@ -803,6 +801,10 @@ function JourneyStage({
               style={styles.secondaryActionButton}
             />
           </View>
+
+          {/* Below the actions: someone opening Ona mid-craving finds
+              "I'm craving it" where it always is. */}
+          <ToolkitOffer habit={habit} onOpen={onOpenToolkit} />
         </>
       ) : (
         <>
