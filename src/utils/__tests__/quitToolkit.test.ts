@@ -18,9 +18,11 @@ import {
 } from '../../quit/toolkit';
 import type { QuitCravingSession, QuitHabit } from '../../types/sections';
 
-// A catalog with a game in it (the games themselves come with the content step).
-const GAME: ToolDef = { id: 'memoryMatch', title: 'Match pairs', line: 'A calm matching puzzle.', label: 'Matching pairs', category: 'mind', screenGame: true };
-const CATALOG = [...BUILT_IN_TOOLS, GAME];
+// The rules are tested on a fixed catalog (the first four tools and one
+// game), so adding content never changes what these tests mean.
+const FOUR = BUILT_IN_TOOLS.filter((t) => ['rideItOut', 'doSomethingInstead', 'checkFacts', 'reachOut'].includes(t.id)).sort((a, b) => ['rideItOut', 'doSomethingInstead', 'checkFacts', 'reachOut'].indexOf(a.id) - ['rideItOut', 'doSomethingInstead', 'checkFacts', 'reachOut'].indexOf(b.id));
+const GAME = BUILT_IN_TOOLS.find((t) => t.id === 'memoryMatch')!;
+const CATALOG = [...FOUR, GAME];
 const at = (hhmm: string) => new Date(`2026-10-25T${hhmm}:00`);
 const ids = (tools: ToolDef[]) => tools.map((t) => t.id);
 const habit = (over: Partial<QuitHabit> = {}) => makeQuitHabit({ id: 'q1', name: 'Vaping', ...over });
@@ -64,7 +66,7 @@ describe('what is offered first', () => {
 
   test('QUIT-TK-005 a plan or pin for a hidden tool is skipped; with the default hidden, the first visible tool', () => {
     const h = habit({ toolkit: { pinned: ['checkFacts'], hidden: ['checkFacts', 'rideItOut'], custom: [] }, plans: [{ id: 'p', when: 'x', toolId: 'checkFacts' }] });
-    expect(suggestionFor(h, at('20:00'))).toMatchObject({ source: 'default', tool: { id: 'doSomethingInstead' } });
+    expect(suggestionFor(h, at('20:00'), FOUR)).toMatchObject({ source: 'default', tool: { id: 'doSomethingInstead' } });
   });
 
   test('QUIT-TK-006 time of day by the phone\'s clock, at the edges', () => {
@@ -84,7 +86,8 @@ describe('what each habit sees', () => {
   test.each(['gaming', 'gambling', 'scrolling'] as const)('QUIT-TK-011 quitting %s: games are hidden, everything else stays; "Show games anyway" brings them back', (habitType) => {
     const h = habit({ habitType });
     expect(gamesHidden(h)).toBe(true);
-    expect(ids(visibleTools(h, CATALOG))).toEqual(ids(BUILT_IN_TOOLS));
+    expect(ids(visibleTools(h, CATALOG))).toEqual(ids(FOUR));
+    expect(visibleTools(h).filter((t) => t.screenGame)).toEqual([]); // the real catalog too
     expect(ids(visibleTools(habit({ habitType, toolkit: { pinned: [], hidden: [], custom: [], showGames: true } }), CATALOG))).toContain('memoryMatch');
   });
 
@@ -110,23 +113,23 @@ describe('"Surprise me" (never random)', () => {
 
   test('QUIT-TK-020 a tool never used comes first, in menu order; then the one used longest ago', () => {
     const past = [session([['rideItOut', '2026-10-20T20:00:00.000Z'], ['checkFacts', '2026-10-21T20:00:00.000Z']])];
-    expect(surpriseFor(habit(), past, undefined)?.id).toBe('doSomethingInstead');
+    expect(surpriseFor(habit(), past, undefined, FOUR)?.id).toBe('doSomethingInstead');
     const all = [session([['doSomethingInstead', '2026-10-22T20:00:00.000Z'], ['reachOut', '2026-10-23T20:00:00.000Z']]), ...past];
-    expect(surpriseFor(habit(), all, undefined)?.id).toBe('rideItOut');
+    expect(surpriseFor(habit(), all, undefined, FOUR)?.id).toBe('rideItOut');
   });
 
   test('QUIT-TK-021 skips what was tried in this craving; with everything tried, any visible tool; the same answer every time', () => {
     const current = session([['rideItOut', '2026-10-25T20:00:00.000Z'], ['doSomethingInstead', '2026-10-25T20:01:00.000Z']]);
-    const a = surpriseFor(habit(), [current], current);
+    const a = surpriseFor(habit(), [current], current, FOUR);
     expect(a?.id).toBe('checkFacts');
-    expect(surpriseFor(habit(), [current], current)?.id).toBe(a?.id);
-    const everything = session(BUILT_IN_TOOLS.map((t, i) => [t.id, `2026-10-25T20:0${i}:00.000Z`]));
-    expect(surpriseFor(habit(), [everything], everything)?.id).toBe('rideItOut');
+    expect(surpriseFor(habit(), [current], current, FOUR)?.id).toBe(a?.id);
+    const everything = session(FOUR.map((t, i) => [t.id, `2026-10-25T20:0${i}:00.000Z`]));
+    expect(surpriseFor(habit(), [everything], everything, FOUR)?.id).toBe('rideItOut');
   });
 
   test('QUIT-TK-022 other habits\' history doesn\'t count', () => {
     const other = session([['doSomethingInstead', '2026-10-25T20:00:00.000Z']], { quitHabitId: 'q2' });
-    expect(surpriseFor(habit({ toolkit: { pinned: [], hidden: ['rideItOut'], custom: [] } }), [other], undefined)?.id).toBe('doSomethingInstead');
+    expect(surpriseFor(habit({ toolkit: { pinned: [], hidden: ['rideItOut'], custom: [] } }), [other], undefined, FOUR)?.id).toBe('doSomethingInstead');
   });
 });
 

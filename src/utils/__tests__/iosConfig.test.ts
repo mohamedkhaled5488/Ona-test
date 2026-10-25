@@ -111,6 +111,7 @@ test('IOS-CFG-012 the photo and camera strings name every place Ona asks for a p
     ['SkillsScreen', /skill/, ['camera', 'photos']],
     ['SkillParts', /skill/, ['photos']],
     ['TaskEditorScreen', /task/, ['photos']],
+    ['QuitTools', /reasons when quitting/, ['photos']],
   ];
   for (const [screen, words, kinds] of uses) {
     const src = fs.readFileSync(path.join(ROOT, 'src/screens', `${screen}.tsx`), 'utf8');

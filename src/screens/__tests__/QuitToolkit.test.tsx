@@ -14,7 +14,7 @@ import { resetAll, useClock, restoreClock, makeQuitHabit, makeTrack } from '../.
 import { renderScreen } from '../../test-utils/render';
 import { useQuitHabitsStore } from '../../store/useQuitHabitsStore';
 import { QuitHabitScreen, CRAVING_COPY } from '../QuitHabitScreen';
-import { TOOLKIT_COPY } from '../../quit/toolkit';
+import { BUILT_IN_TOOLS, TOOLKIT_COPY } from '../../quit/toolkit';
 import type { QuitHabit } from '../../types/sections';
 
 let clock: ReturnType<typeof useClock>;
@@ -109,7 +109,7 @@ test('QUIT-TK-UI-004 pinned tools come first in a craving, in your order; "See a
 });
 
 test('QUIT-TK-UI-005 a hidden tool is gone from the craving menu; the last one can\'t be hidden', async () => {
-  oneHabit({ toolkit: { pinned: [], hidden: ['rideItOut', 'doSomethingInstead', 'checkFacts'], custom: [] } });
+  oneHabit({ toolkit: { pinned: [], hidden: BUILT_IN_TOOLS.map((t) => t.id).filter((id) => id !== 'reachOut'), custom: [] } });
   const r = await renderScreen('quitHabit', QuitHabitScreen, { openHabitId: 'q1' });
   await r.user.press(await screen.findByLabelText(TOOLKIT_COPY.title));
   await r.user.press(screen.getByLabelText(TOOLKIT_COPY.hide('Reach out')));
@@ -133,7 +133,7 @@ test('QUIT-TK-UI-006 "Surprise me" picks a tool you haven\'t used in a while, an
   clock.advance(30_000);
   await r.user.press(screen.getByText(CRAVING_COPY.tryElse));
   await r.user.press(screen.getByText(TOOLKIT_COPY.surprise));
-  expect(st().cravingSessions[0].tools.map((t) => t.toolId)).toEqual(['rideItOut', 'doSomethingInstead']);
+  expect(st().cravingSessions[0].tools.map((t) => t.toolId)).toEqual(['rideItOut', 'grounding']); // never used, first in the menu
   expect(screen.getByText(/Riding it out: 0:3\d/)).toBeTruthy();
 });
 

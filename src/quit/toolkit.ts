@@ -20,6 +20,9 @@ export interface ToolDef {
   line: string; // one plain line under it
   label: string; // in Analysis ("Riding it out")
   category: ToolCategory;
+  // "Why this can help": modest, never a promise. Drafts for a clinician's
+  // review before release (docs/craving-toolkit-copy-review.md).
+  why?: string;
   screenGame?: boolean; // an on-screen game (hidden for screen-related habits)
   minutes?: number; // the user's own tools: an optional gentle timer
 }
@@ -33,11 +36,36 @@ export const TOOL_CATEGORIES: { id: ToolCategory; title: string; icon: string }[
   { id: 'own', title: 'Your own', icon: 'star-outline' },
 ];
 
+// In menu order, by category. The first four were the whole menu before
+// the toolkit; their ids and labels stay as they were.
 export const BUILT_IN_TOOLS: ToolDef[] = [
-  { id: 'rideItOut', title: 'Breathe and ride it out', line: 'Guided breathing while the craving rises and fades.', label: 'Riding it out', category: 'body' },
-  { id: 'doSomethingInstead', title: 'Do something instead', line: 'A few quick, concrete things to do right now.', label: 'Doing something instead', category: 'move' },
-  { id: 'checkFacts', title: 'Check the facts', line: "A short guided look at what's actually true right now.", label: 'Checking the facts', category: 'think' },
-  { id: 'reachOut', title: 'Reach out', line: "Message or call someone. You don't have to be alone with this.", label: 'Reaching out', category: 'connect' },
+  // Calm the body
+  { id: 'rideItOut', title: 'Breathe and ride it out', line: 'Paced breathing while the craving rises and fades.', label: 'Riding it out', category: 'body', why: 'Breathing slowly, with a longer breath out, helps many people feel calmer.' },
+  { id: 'grounding', title: 'Grounding: 5-4-3-2-1', line: "Notice what's around you, one sense at a time.", label: 'Grounding', category: 'body', why: 'Naming what you can see, hear and feel can bring your attention back to right now.' },
+  { id: 'bodyScan', title: 'Body scan', line: 'Move your attention slowly from head to toe.', label: 'Body scan', category: 'body', why: 'Noticing the body without trying to change it helps some people let tension ease.' },
+  { id: 'muscleRelax', title: 'Tense and release', line: 'Short muscle relaxation, one area at a time.', label: 'Muscle relaxation', category: 'body', why: 'Tensing muscles and then letting go can make it easier to feel what relaxing is like.' },
+  // Absorb the mind
+  { id: 'countBreaths', title: 'Count ten breaths', line: 'Tap with each breath out, up to ten, then start again.', label: 'Counting breaths', category: 'mind', why: 'A small, steady task gives the mind somewhere to rest.' },
+  { id: 'noticeFive', title: 'Notice five things', line: "Find five things you haven't really looked at before.", label: 'Noticing five things', category: 'mind', why: 'Looking closely at ordinary things can absorb attention for a while.' },
+  { id: 'oneObject', title: 'Focus on one object', line: 'Pick something near you and really look at it.', label: 'Focusing on one object', category: 'mind', why: 'Bringing attention back to one thing, again and again, can quiet a busy mind.' },
+  { id: 'mindfulMinute', title: 'A mindful minute', line: 'One quiet minute, just noticing.', label: 'A mindful minute', category: 'mind', why: 'Pausing to notice, without judging, helps some people let a moment pass.' },
+  { id: 'sounds', title: 'Calm sounds', line: 'Rain, waves or soft noise. Off until you choose one.', label: 'Calm sounds', category: 'mind', why: 'Steady, gentle sound can make it easier to settle.' },
+  { id: 'memoryMatch', title: 'Match pairs', line: 'A calm matching puzzle. No score, no clock.', label: 'Matching pairs', category: 'mind', screenGame: true, why: 'Many people find absorbing tasks help cravings pass.' },
+  { id: 'gentleMath', title: 'Gentle sums', line: 'One easy sum at a time. No score, no clock.', label: 'Gentle sums', category: 'mind', screenGame: true, why: 'Many people find absorbing tasks help cravings pass.' },
+  // Move
+  { id: 'doSomethingInstead', title: 'Do something instead', line: 'A few quick, concrete things to do right now.', label: 'Doing something instead', category: 'move', why: 'Having something concrete to do can make it easier to wait the craving out.' },
+  { id: 'walk', title: 'A short walk', line: 'Step out for a few minutes, at your own pace.', label: 'A short walk', category: 'move', why: 'Moving, even a little, helps many people feel an urge ease.' },
+  { id: 'stretches', title: 'Gentle stretches', line: 'A few slow stretches, standing or sitting.', label: 'Stretching', category: 'move', why: 'Slow movement can help the body let go of some tension.' },
+  // Think and choose
+  { id: 'myReasons', title: 'My reasons', line: 'Your own reasons, and a note to your future self.', label: 'My reasons', category: 'think', why: 'Remembering why you started can help you choose what to do next.' },
+  { id: 'delayIt', title: 'Delay it', line: 'Decide later: a 10-minute pause first.', label: 'Delaying it', category: 'think', why: 'Giving a craving some time often changes how strong it feels.' },
+  { id: 'nameCraving', title: 'Name the craving', line: 'What are you feeling, and what set it off?', label: 'Naming the craving', category: 'think', why: 'Putting a craving into words can make it feel a little less in charge.' },
+  { id: 'checkFacts', title: 'Check the facts', line: "A short guided look at what's actually true right now.", label: 'Checking the facts', category: 'think', why: 'Looking at the facts can show the craving is telling only part of the story.' },
+  { id: 'urgeSurfing', title: 'Urge surfing', line: 'A short guide to riding the wave of a craving.', label: 'Urge surfing', category: 'think', why: 'Cravings usually rise, peak and fade. Watching that happen can make it easier to wait.' },
+  // Connect
+  { id: 'reachOut', title: 'Reach out', line: "Message or call someone. You don't have to be alone with this.", label: 'Reaching out', category: 'connect', why: 'Not being alone with a hard moment can make it easier to get through.' },
+  { id: 'textFriend', title: 'Text a friend', line: 'About something unrelated: a song, a photo, a hello.', label: 'Texting a friend', category: 'connect', why: 'A small, ordinary exchange can shift attention away from the craving.' },
+  { id: 'sayHi', title: 'Say hi to someone', line: 'Step outside and greet someone nearby.', label: 'Saying hi', category: 'connect', why: 'A moment of contact with someone can help a craving feel smaller.' },
 ];
 
 export const DEFAULT_TOOL = 'rideItOut';

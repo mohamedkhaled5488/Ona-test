@@ -721,6 +721,12 @@ export interface QuitHabit {
   // it exists, so older habits aren't asked), and the substances note.
   toolkitOffered?: boolean;
   substanceNoteShown?: boolean;
+  // "My reasons" in the craving toolkit: the user's own list, a note to
+  // their future self, and an optional photo (named photoUri so export and
+  // backup find it like every other photo).
+  reasons?: string[];
+  futureNote?: string;
+  photoUri?: string;
 }
 
 // What's being quit: decides which craving tools fit (quit/toolkit.ts).

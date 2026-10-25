@@ -1,5 +1,6 @@
-// The one sound engine for the whole app: Study (one sound at a time) and
-// Sleep (a mix of layers with a timer and fade-out) both play through here.
+// The one sound engine for the whole app: Study (one sound at a time),
+// Sleep (a mix of layers with a timer and fade-out) and Quit's craving
+// toolkit (a calm sound while riding out a craving) all play through here.
 // Audio players are ephemeral runtime resources, so they live at module
 // level, never in a Zustand store.
 //
@@ -9,8 +10,8 @@
 // to be synthesized or written to disk at play time.
 //
 // Rules (owner's decisions, 2026-10-25):
-// - One sound session at a time: starting a sound in Sleep or Study replaces
-//   the other section's sounds (the caller shows a short notice). Ending a
+// - One sound session at a time: starting a sound in one section replaces
+//   another section's sounds (the caller shows a short notice). Ending a
 //   session stops only what that section started (FIX-09).
 // - Every player reports its status about once a second while it plays, also
 //   with the screen locked when JS timers are paused; the Sleep timer checks
@@ -69,16 +70,17 @@ export async function configureAudio(options: { backgroundAudio: boolean; interr
 // Keyed by section and sound ("sleep:rain"), so each section has its own players.
 const active = new Map<string, AudioPlayer>();
 const baseVolume = new Map<string, number>();
-const scale: Record<AudioOwner, number> = { sleep: 1, study: 1 };
+const scale: Record<AudioOwner, number> = { sleep: 1, study: 1, quit: 1 };
 let lockScreenKey: string | null = null;
 
 export type PlayResult = { ok: true; replaced?: AudioOwner } | { ok: false; error: string };
 
 // Which section a sound belongs to.
-export type AudioOwner = 'sleep' | 'study';
+export type AudioOwner = 'sleep' | 'study' | 'quit';
 const keyOf = (owner: AudioOwner, soundId: SoundId) => `${owner}:${soundId}`;
 const ownerOf = (key: string) => key.split(':')[0] as AudioOwner;
-const otherOwner = (owner: AudioOwner): AudioOwner => (owner === 'sleep' ? 'study' : 'sleep');
+// The section playing now other than `owner`, if any (only one ever is).
+const otherPlaying = (owner: AudioOwner): AudioOwner | undefined => [...active.keys()].map(ownerOf).find((o) => o !== owner);
 const clampVolume = (v: number) => Math.max(0.05, Math.min(1, v)); // never silently "playing" at zero
 
 // --- Listeners: a heartbeat while anything plays, and replacements ----------
@@ -120,11 +122,10 @@ export async function playLayer(soundId: SoundId, volume: number, owner: AudioOw
     applyVolume(key);
     return { ok: true };
   }
-  let replaced: AudioOwner | undefined;
-  if (hasActiveSounds(otherOwner(owner))) {
-    replaced = otherOwner(owner);
+  const replaced = otherPlaying(owner);
+  if (replaced) {
     stopAllLayers(replaced);
-    replacedListeners.forEach((fn) => fn(replaced!));
+    replacedListeners.forEach((fn) => fn(replaced));
   }
   try {
     const source = soundSources[soundId];

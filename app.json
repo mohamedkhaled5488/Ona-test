@@ -78,7 +78,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Ona uses your photo library when you choose a photo to add: a receipt for a budget entry, a book cover or page for a quote, a habit's proof photo, a skill's progress, or a task attachment. Photos stay on your phone.",
+          "photosPermission": "Ona uses your photo library when you choose a photo to add: a receipt for a budget entry, a book cover or page for a quote, a habit's proof photo, a skill's progress, a task attachment, or a photo for your reasons when quitting a habit. Photos stay on your phone.",
           "cameraPermission": "Ona uses your camera when you choose to take a photo: a receipt for a budget entry, a book cover or page for a quote, a habit's proof photo, or a skill's progress. Photos stay on your phone.",
           "microphonePermission": false
         }

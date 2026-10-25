@@ -8,7 +8,6 @@ import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { SheetModal } from '../components/SheetModal';
 import { FeelingPicker, isPersonalFeeling, type FeelingPickerStep, type PickedFeeling } from '../components/FeelingPicker';
-import { BreathingExercise } from '../components/BreathingExercise';
 import { ScreenTitle, SectionHeading, Eyebrow, Body, Caption } from '../components/Typography';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { colors, radii, spacing, fonts } from '../theme';
@@ -41,6 +40,7 @@ import { ItemFeelingPrompt } from '../components/ItemFeelingSheet';
 import { shouldAskItemFeeling } from '../utils/itemFeelings';
 import { logFeeling } from '../feelings/logFeeling';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
+import { LongStayCheck, PacedBreathing, TOOL_VIEWS, ToolView, WhyLine } from './QuitTools';
 import { CravingMenu, HabitTypeChips, OwnToolView, ToolkitEntry, ToolkitOffer, ToolkitStage } from './QuitToolkit';
 import { DEFAULT_TOOL, TOOLKIT_COPY, findTool, needsSubstanceNote } from '../quit/toolkit';
 
@@ -487,11 +487,16 @@ function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; t
   const resisted = resistedUrgeEntriesForHabit(feelingEntries, tracks, habit.id).length;
   const picked = tool ? findTool(habit, tool) : undefined;
   const ownTool = picked?.category === 'own' ? picked : undefined;
+  const toolStartedAt = session.tools[session.tools.length - 1]?.startedAt ?? session.startedAt;
   const footer = (
-    <View style={styles.cravingFooter}>
-      <PrimaryButton label={CRAVING_COPY.tryElse} variant="outline" onPress={() => setPhase('tools')} style={styles.secondaryActionButton} />
-      <PrimaryButton label={CRAVING_COPY.okay} variant="outline" onPress={() => setPhase('after')} style={styles.secondaryActionButton} />
-    </View>
+    <>
+      <WhyLine tool={picked} />
+      <LongStayCheck since={toolStartedAt} onOkay={() => setPhase('after')} />
+      <View style={styles.cravingFooter}>
+        <PrimaryButton label={CRAVING_COPY.tryElse} variant="outline" onPress={() => setPhase('tools')} style={styles.secondaryActionButton} />
+        <PrimaryButton label={CRAVING_COPY.okay} variant="outline" onPress={() => setPhase('after')} style={styles.secondaryActionButton} />
+      </View>
+    </>
   );
 
   return (
@@ -533,7 +538,7 @@ function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; t
         <>
           <SectionHeading>{findTool(habit, 'rideItOut')?.title}</SectionHeading>
           <Caption style={styles.subtitle}>{CRAVING_COPY.rideLine}</Caption>
-          <BreathingExercise accent={accent} />
+          <PacedBreathing />
           {footer}
         </>
       )}
@@ -564,6 +569,13 @@ function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; t
       {phase === 'tool' && tool === 'reachOut' && (
         <>
           <ReachOut onDone={() => setPhase('after')} />
+          {footer}
+        </>
+      )}
+
+      {phase === 'tool' && picked && TOOL_VIEWS.has(picked.id) && (
+        <>
+          <ToolView tool={picked} habit={habit} session={session} startedAt={toolStartedAt} onDone={() => setPhase('after')} />
           {footer}
         </>
       )}

@@ -22,9 +22,10 @@ import {
 } from '../data/gameMeta';
 import { dayOfYear, todayISO } from '../utils/date';
 import type { Difficulty, GameId } from '../types/sections';
+import { generateProblem, type MathProblem } from '../games/quickMath';
+import { memoryDeck, type MemoryCard } from '../games/memoryMatch';
 import { themedStyles } from '../theme/runtime';
 
-const memoryIcons = ['leaf', 'star', 'heart', 'moon', 'sunny', 'flower', 'paw', 'rocket', 'musical-notes', 'diamond'];
 
 function DifficultyPicker({ value, onChange }: { value: Difficulty; onChange: (d: Difficulty) => void }) {
   return (
@@ -64,12 +65,6 @@ function ResultCard({ gameId, difficulty, score, onPlayAgain, onBack }: { gameId
 }
 
 // --- Memory Match ---
-interface MemoryCard {
-  key: string;
-  icon: string;
-  matched: boolean;
-}
-
 function MemoryMatchGame({ onExit }: { onExit: () => void }) {
   const addResult = useMindGamesStore((s) => s.addResult);
   const [phase, setPhase] = useState<'setup' | 'playing' | 'result'>('setup');
@@ -79,12 +74,7 @@ function MemoryMatchGame({ onExit }: { onExit: () => void }) {
   const [moves, setMoves] = useState(0);
 
   const setup = () => {
-    const pairCount = memoryPairsByDifficulty[difficulty];
-    const icons = memoryIcons.slice(0, pairCount);
-    const deck = [...icons, ...icons]
-      .map((icon, i) => ({ key: `${icon}-${i}`, icon, matched: false }))
-      .sort(() => Math.random() - 0.5);
-    setCards(deck);
+    setCards(memoryDeck(memoryPairsByDifficulty[difficulty]));
     setFlipped([]);
     setMoves(0);
     setPhase('playing');
@@ -233,40 +223,6 @@ function ReactionGame({ onExit }: { onExit: () => void }) {
 }
 
 // --- Quick Math ---
-interface MathProblem {
-  question: string;
-  answer: number;
-  choices: number[];
-}
-
-function generateProblem(difficulty: Difficulty): MathProblem {
-  const rand = (max: number) => Math.floor(Math.random() * max) + 1;
-  let a: number, b: number, op: string, answer: number;
-
-  if (difficulty === 'easy') {
-    a = rand(20); b = rand(20); op = Math.random() < 0.5 ? '+' : '-';
-    answer = op === '+' ? a + b : a - b;
-  } else if (difficulty === 'medium') {
-    const ops = ['+', '-', '×'];
-    op = ops[Math.floor(Math.random() * ops.length)];
-    if (op === '×') { a = rand(12); b = rand(12); answer = a * b; }
-    else { a = rand(40); b = rand(40); answer = op === '+' ? a + b : a - b; }
-  } else {
-    const ops = ['+', '-', '×', '÷'];
-    op = ops[Math.floor(Math.random() * ops.length)];
-    if (op === '×') { a = rand(12); b = rand(12); answer = a * b; }
-    else if (op === '÷') { b = rand(12); answer = rand(12); a = b * answer; }
-    else { a = rand(60); b = rand(60); answer = op === '+' ? a + b : a - b; }
-  }
-
-  const choices = new Set([answer]);
-  while (choices.size < 4) {
-    const offset = Math.floor(Math.random() * 10) - 5;
-    if (offset !== 0) choices.add(answer + offset);
-  }
-  return { question: `${a} ${op} ${b}`, answer, choices: Array.from(choices).sort(() => Math.random() - 0.5) };
-}
-
 function MathGame({ onExit }: { onExit: () => void }) {
   const addResult = useMindGamesStore((s) => s.addResult);
   const [phase, setPhase] = useState<'setup' | 'playing' | 'result'>('setup');

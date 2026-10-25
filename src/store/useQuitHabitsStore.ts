@@ -56,7 +56,7 @@ interface QuitHabitsState {
 
   // The craving toolkit (quit/toolkit.ts): the habit's type, "My toolkit"
   // (pin, order, hide, the user's own tools) and if-then plans.
-  updateQuitHabit: (id: string, patch: Partial<Pick<QuitHabit, 'habitType' | 'toolkitOffered' | 'substanceNoteShown'>>) => void;
+  updateQuitHabit: (id: string, patch: Partial<Pick<QuitHabit, 'habitType' | 'toolkitOffered' | 'substanceNoteShown' | 'reasons' | 'futureNote' | 'photoUri'>>) => void;
   pinTool: (habitId: string, toolId: string, pinned: boolean) => void;
   moveTool: (habitId: string, toolId: string, by: -1 | 1) => void;
   // Hiding a tool unpins it.
