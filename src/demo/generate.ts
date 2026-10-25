@@ -438,7 +438,18 @@ export function generateDemoData(opts: GenerateOptions): DemoSections {
   const journalEntries: JournalEntry[] = JOURNAL.map((j) => ({ id: id('journal'), date: ago(j.n), zone: j.zone, preciseFeelingId: j.feeling, text: j.text, tags: j.tags, ...(j.font ? { font: j.font } : {}) }));
 
   // ===== Quit a habit ===========================================================
-  const quitHabits: QuitHabit[] = [{ id: 'quit-demo-scroll', name: 'Late-night scrolling', why: 'I want to fall asleep with a calmer head.', createdAt: ago(45), replacementHabitId: 'habit-demo-read' }];
+  const quitHabits: QuitHabit[] = [
+    {
+      id: 'quit-demo-scroll',
+      name: 'Late-night scrolling',
+      why: 'I want to fall asleep with a calmer head.',
+      createdAt: ago(45),
+      replacementHabitId: 'habit-demo-read',
+      habitType: 'scrolling',
+      toolkit: { pinned: ['tool-demo-tea', 'rideItOut'], hidden: [], custom: [{ id: 'tool-demo-tea', name: 'Make a cup of tea', minutes: 5 }] },
+      plans: [{ id: 'plan-demo-night', when: "it's late and I'm still on my phone", timeOfDay: 'night', toolId: 'tool-demo-tea' }],
+    },
+  ];
   const tracks: QuitTrack[] = [
     {
       id: 'track-demo-1',

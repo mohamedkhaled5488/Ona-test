@@ -32,7 +32,7 @@ import { rotatingJourneyStat } from '../utils/habitStats';
 import { QuitHabitAnalysisStage } from './QuitHabitAnalysis';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { useHabitsStore } from '../store/useHabitsStore';
-import type { Feeling, FeelingSource, FeelingZone, QuitCravingSession, QuitHabit, QuitTrack } from '../types/sections';
+import type { Feeling, FeelingSource, FeelingZone, QuitCravingSession, QuitHabit, QuitHabitType, QuitTrack } from '../types/sections';
 import { formatRideTimer, journeyCounts, journeyHeadline, sessionSeconds } from '../quit/journey';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
@@ -41,6 +41,8 @@ import { ItemFeelingPrompt } from '../components/ItemFeelingSheet';
 import { shouldAskItemFeeling } from '../utils/itemFeelings';
 import { logFeeling } from '../feelings/logFeeling';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
+import { CravingMenu, HabitTypeChips, OwnToolView, ToolkitEntry, ToolkitOffer, ToolkitStage } from './QuitToolkit';
+import { DEFAULT_TOOL, TOOLKIT_COPY, findTool, needsSubstanceNote } from '../quit/toolkit';
 
 // "1 day", "5 days".
 const dayCount = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -53,7 +55,8 @@ type ScreenState =
   | { kind: 'overview' }
   | { kind: 'journey'; habitId: string }
   | { kind: 'trackDetail'; habitId: string; trackId: string }
-  | { kind: 'analysis'; habitId: string };
+  | { kind: 'analysis'; habitId: string }
+  | { kind: 'toolkit'; habitId: string };
 
 function findFeeling(id: string): Feeling | undefined {
   return feelings.find((f) => f.id === id);
@@ -64,7 +67,10 @@ function AddQuitHabitSheet({ visible, onClose, onCreated }: { visible: boolean; 
   const addQuitHabit = useQuitHabitsStore((s) => s.addQuitHabit);
   const setReplacementHabit = useQuitHabitsStore((s) => s.setReplacementHabit);
   const addHabit = useHabitsStore((s) => s.addHabit);
+  const updateQuitHabit = useQuitHabitsStore((s) => s.updateQuitHabit);
+  const { showDialog } = useUi();
   const [name, setName] = useState('');
+  const [habitType, setHabitType] = useState<QuitHabitType | undefined>();
   const [why, setWhy] = useState('');
   const [instead, setInstead] = useState('');
 
@@ -72,6 +78,7 @@ function AddQuitHabitSheet({ visible, onClose, onCreated }: { visible: boolean; 
     setName('');
     setWhy('');
     setInstead('');
+    setHabitType(undefined);
   };
 
   return (
@@ -79,6 +86,9 @@ function AddQuitHabitSheet({ visible, onClose, onCreated }: { visible: boolean; 
       <SectionHeading>What do you want to quit?</SectionHeading>
       <Eyebrow style={styles.fieldLabel}>Name it</Eyebrow>
       <TextInput value={name} onChangeText={setName} placeholder="e.g. Smoking, nail biting, late-night scrolling" style={styles.sheetInput} />
+
+      <Eyebrow style={styles.fieldLabel}>{TOOLKIT_COPY.typeHeading}</Eyebrow>
+      <HabitTypeChips value={habitType} onChange={setHabitType} />
 
       <Eyebrow style={styles.fieldLabel}>Your why (optional, resurfaced later)</Eyebrow>
       <TextInput value={why} onChangeText={setWhy} placeholder="Your own reason for wanting this..." style={styles.notesInput} multiline />
@@ -91,7 +101,7 @@ function AddQuitHabitSheet({ visible, onClose, onCreated }: { visible: boolean; 
         label="Start"
         disabled={!name.trim()}
         onPress={() => {
-          const { habitId } = addQuitHabit(name, why);
+          const { habitId } = addQuitHabit(name, why, habitType);
           if (instead.trim()) {
             const buildId = addHabit({
               name: instead,
@@ -104,6 +114,13 @@ function AddQuitHabitSheet({ visible, onClose, onCreated }: { visible: boolean; 
           reset();
           onClose();
           onCreated(habitId);
+          // Once, when the habit is made: stopping some substances suddenly
+          // can be risky.
+          const made = useQuitHabitsStore.getState().habits.find((h) => h.id === habitId);
+          if (made && needsSubstanceNote(made)) {
+            updateQuitHabit(habitId, { substanceNoteShown: true });
+            showDialog({ title: TOOLKIT_COPY.substanceTitle, message: TOOLKIT_COPY.substanceNote, actions: [{ label: 'OK', style: 'cancel' }] });
+          }
         }}
         style={styles.sheetSubmit}
       />
@@ -385,22 +402,6 @@ function ReachOut({ onDone }: { onDone: () => void }) {
   );
 }
 
-// The tools in this first version of the craving flow (the full toolkit
-// comes next). Labels are what Analysis groups by, so they stay as they were.
-type CravingTool = 'rideItOut' | 'doSomethingInstead' | 'checkFacts' | 'reachOut';
-const TOOL_LABELS: Record<CravingTool, string> = {
-  rideItOut: 'Riding it out',
-  doSomethingInstead: 'Doing something instead',
-  checkFacts: 'Checking the facts',
-  reachOut: 'Reaching out',
-};
-const TOOL_LINES: Record<CravingTool, { title: string; line: string }> = {
-  rideItOut: { title: 'Breathe and ride it out', line: 'Guided breathing while the craving rises and fades.' },
-  doSomethingInstead: { title: 'Do something instead', line: 'A few quick, concrete things to do right now.' },
-  checkFacts: { title: 'Check the facts', line: "A short guided look at what's actually true right now." },
-  reachOut: { title: 'Reach out', line: "Message or call someone. You don't have to be alone with this." },
-};
-
 export const CRAVING_COPY = {
   title: "You're doing something hard. Let's ride this out.",
   rate: 'How strong is it? (optional)',
@@ -466,24 +467,26 @@ function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; t
   const [sessionId] = useState(() => openCravingFor(useQuitHabitsStore.getState().cravingSessions, habit.id)?.id ?? '');
   const session = sessions.find((s) => s.id === sessionId);
   const [phase, setPhase] = useState<'rate' | 'tools' | 'tool' | 'after' | 'passed'>(() => (session && session.tools.length ? 'tools' : 'rate'));
-  const [tool, setTool] = useState<CravingTool | null>(null);
+  const [tool, setTool] = useState<string | null>(null);
   const [doneEntryId, setDoneEntryId] = useState<string | null>(null);
   const [stillHere, setStillHere] = useState(false);
   if (!session) return null;
 
-  const pick = (t: CravingTool) => {
+  const pick = (t: string) => {
     store.tryCravingTool(sessionId, t);
     setTool(t);
     setPhase('tool');
   };
   const passed = () => {
-    const last = (session.tools[session.tools.length - 1]?.toolId ?? tool ?? 'rideItOut') as CravingTool;
-    const entryId = store.addFeelingEntry(track.id, undefined, undefined, undefined, false, true, TOOL_LABELS[last] ?? last, true);
+    const last = session.tools[session.tools.length - 1]?.toolId ?? tool ?? DEFAULT_TOOL;
+    const entryId = store.addFeelingEntry(track.id, undefined, undefined, undefined, false, true, findTool(habit, last)?.label ?? last, true);
     store.endCraving(sessionId, 'passed', { resistedEntryId: entryId });
     setDoneEntryId(entryId);
     setPhase('passed');
   };
   const resisted = resistedUrgeEntriesForHabit(feelingEntries, tracks, habit.id).length;
+  const picked = tool ? findTool(habit, tool) : undefined;
+  const ownTool = picked?.category === 'own' ? picked : undefined;
   const footer = (
     <View style={styles.cravingFooter}>
       <PrimaryButton label={CRAVING_COPY.tryElse} variant="outline" onPress={() => setPhase('tools')} style={styles.secondaryActionButton} />
@@ -518,14 +521,7 @@ function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; t
         <>
           <SectionHeading>{CRAVING_COPY.pick}</SectionHeading>
           {stillHere && <Caption style={styles.subtitle}>{CRAVING_COPY.stillHereLine}</Caption>}
-          {(Object.keys(TOOL_LINES) as CravingTool[]).map((t) => (
-            <Pressable key={t} onPress={() => pick(t)} accessibilityRole="button" accessibilityLabel={TOOL_LINES[t].title}>
-              <Card style={styles.approachCard}>
-                <Body>{TOOL_LINES[t].title}</Body>
-                <Caption>{TOOL_LINES[t].line}</Caption>
-              </Card>
-            </Pressable>
-          ))}
+          <CravingMenu habit={habit} session={session} onPick={pick} />
           <Pressable onPress={() => setPhase('after')} accessibilityRole="button" hitSlop={8}>
             <Caption style={styles.changeFeelingLink}>{CRAVING_COPY.okay}</Caption>
           </Pressable>
@@ -535,7 +531,7 @@ function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; t
 
       {phase === 'tool' && tool === 'rideItOut' && (
         <>
-          <SectionHeading>{TOOL_LINES.rideItOut.title}</SectionHeading>
+          <SectionHeading>{findTool(habit, 'rideItOut')?.title}</SectionHeading>
           <Caption style={styles.subtitle}>{CRAVING_COPY.rideLine}</Caption>
           <BreathingExercise accent={accent} />
           {footer}
@@ -568,6 +564,13 @@ function CravingStage({ habit, track, onDone, onSlipped }: { habit: QuitHabit; t
       {phase === 'tool' && tool === 'reachOut' && (
         <>
           <ReachOut onDone={() => setPhase('after')} />
+          {footer}
+        </>
+      )}
+
+      {phase === 'tool' && ownTool && (
+        <>
+          <OwnToolView tool={ownTool} startedAt={session.tools[session.tools.length - 1]?.startedAt ?? session.startedAt} onDone={() => setPhase('after')} />
           {footer}
         </>
       )}
@@ -643,11 +646,13 @@ function JourneyStage({
   onBack,
   onOpenTrack,
   onOpenAnalysis,
+  onOpenToolkit,
 }: {
   habitId: string;
   onBack: () => void;
   onOpenTrack: (trackId: string) => void;
   onOpenAnalysis: () => void;
+  onOpenToolkit: () => void;
 }) {
   const { requestDelete } = useUi();
   const habits = useQuitHabitsStore((s) => s.habits);
@@ -757,6 +762,8 @@ function JourneyStage({
             </Pressable>
           )}
 
+          <ToolkitOffer habit={habit} onOpen={onOpenToolkit} />
+
           {milestone && (
             <Card style={styles.milestoneCard}>
               <Ionicons name="sparkles-outline" size={16} color={colors.amber} />
@@ -816,6 +823,8 @@ function JourneyStage({
           </Card>
         </Pressable>
       )}
+
+      <ToolkitEntry onOpen={onOpenToolkit} />
 
       <Pressable onPress={onOpenAnalysis}>
         <Card style={[styles.section, styles.analysisEntry]}>
@@ -1003,8 +1012,10 @@ export function QuitHabitScreen({ route, header }: Props & { header?: React.Reac
           onBack={stepBack}
           onOpenTrack={(trackId) => push({ kind: 'trackDetail', habitId: current.habitId, trackId })}
           onOpenAnalysis={() => push({ kind: 'analysis', habitId: current.habitId })}
+          onOpenToolkit={() => push({ kind: 'toolkit', habitId: current.habitId })}
         />
       )}
+      {current.kind === 'toolkit' && <ToolkitStage habitId={current.habitId} onBack={stepBack} />}
       {current.kind === 'analysis' && <QuitHabitAnalysisStage habitId={current.habitId} onBack={stepBack} />}
       {current.kind === 'trackDetail' && <TrackDetailStage habitId={current.habitId} trackId={current.trackId} onBack={stepBack} />}
     </Screen>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { FeelingZone, QuitCravingSession, QuitFeelingEntry, QuitHabit, QuitSlip, QuitTrack } from '../types/sections';
+import type { FeelingZone, QuitCravingSession, QuitFeelingEntry, QuitHabit, QuitHabitType, QuitIfThenPlan, QuitSlip, QuitToolkit, QuitTrack } from '../types/sections';
 import { genId } from '../utils/id';
 import { daysBetweenISODates, todayISO } from '../utils/date';
 
@@ -12,7 +12,7 @@ interface QuitHabitsState {
   cravingSessions: QuitCravingSession[];
 
   // Creates the habit and its first track together — returns both ids.
-  addQuitHabit: (name: string, why: string | undefined) => { habitId: string; trackId: string };
+  addQuitHabit: (name: string, why: string | undefined, habitType?: QuitHabitType) => { habitId: string; trackId: string };
   deleteQuitHabit: (id: string) => void;
   // Links the Build habit created as "something to do instead".
   setReplacementHabit: (quitHabitId: string, habitId: string) => void;
@@ -53,6 +53,29 @@ interface QuitHabitsState {
   updateCraving: (id: string, patch: Partial<Pick<QuitCravingSession, 'ratingBefore' | 'ratingAfter' | 'triggerTag' | 'note'>>) => void;
   tryCravingTool: (id: string, toolId: string) => void;
   endCraving: (id: string, outcome: NonNullable<QuitCravingSession['outcome']>, links?: { resistedEntryId?: string; slipId?: string }) => void;
+
+  // The craving toolkit (quit/toolkit.ts): the habit's type, "My toolkit"
+  // (pin, order, hide, the user's own tools) and if-then plans.
+  updateQuitHabit: (id: string, patch: Partial<Pick<QuitHabit, 'habitType' | 'toolkitOffered' | 'substanceNoteShown'>>) => void;
+  pinTool: (habitId: string, toolId: string, pinned: boolean) => void;
+  moveTool: (habitId: string, toolId: string, by: -1 | 1) => void;
+  // Hiding a tool unpins it.
+  hideTool: (habitId: string, toolId: string, hidden: boolean) => void;
+  setShowGames: (habitId: string, show: boolean) => void;
+  // The user's own tool, pinned straight away. Returns its id.
+  addCustomTool: (habitId: string, name: string, minutes?: number) => string;
+  // Removes it, and any plan that used it.
+  removeCustomTool: (habitId: string, toolId: string) => void;
+  addPlan: (habitId: string, plan: Omit<QuitIfThenPlan, 'id'>) => string;
+  removePlan: (habitId: string, planId: string) => void;
+}
+
+// The habit's toolkit, created on first change (older habits have none).
+function editToolkit(state: { habits: QuitHabit[] }, habitId: string, edit: (tk: QuitToolkit, habit: QuitHabit) => void) {
+  const h = state.habits.find((x) => x.id === habitId);
+  if (!h) return;
+  if (!h.toolkit) h.toolkit = { pinned: [], hidden: [], custom: [] };
+  edit(h.toolkit, h);
 }
 
 export const useQuitHabitsStore = create<QuitHabitsState>()(
@@ -63,11 +86,11 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
     slips: [],
     cravingSessions: [],
 
-    addQuitHabit: (name, why) => {
+    addQuitHabit: (name, why, habitType) => {
       const habitId = genId('quithabit');
       const trackId = genId('track');
       set((state) => {
-        state.habits.unshift({ id: habitId, name: name.trim() || 'Untitled', why: why?.trim() || undefined, createdAt: todayISO() });
+        state.habits.unshift({ id: habitId, name: name.trim() || 'Untitled', why: why?.trim() || undefined, createdAt: todayISO(), habitType, toolkitOffered: false });
         state.tracks.unshift({ id: trackId, quitHabitId: habitId, startDate: todayISO(), createdAt: new Date().toISOString(), status: 'active' });
       });
       return { habitId, trackId };
@@ -213,6 +236,88 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
         if (outcome !== 'stillHere') c.endedAt = at;
         if (links.resistedEntryId) c.resistedEntryId = links.resistedEntryId;
         if (links.slipId) c.slipId = links.slipId;
+      }),
+
+    updateQuitHabit: (id, patch) =>
+      set((state) => {
+        const h = state.habits.find((x) => x.id === id);
+        if (h) Object.assign(h, patch);
+      }),
+
+    pinTool: (habitId, toolId, pinned) =>
+      set((state) =>
+        editToolkit(state, habitId, (tk) => {
+          tk.pinned = tk.pinned.filter((x) => x !== toolId);
+          if (pinned) {
+            tk.pinned.push(toolId);
+            tk.hidden = tk.hidden.filter((x) => x !== toolId);
+          }
+        })
+      ),
+
+    moveTool: (habitId, toolId, by) =>
+      set((state) =>
+        editToolkit(state, habitId, (tk) => {
+          const i = tk.pinned.indexOf(toolId);
+          const j = i + by;
+          if (i < 0 || j < 0 || j >= tk.pinned.length) return;
+          [tk.pinned[i], tk.pinned[j]] = [tk.pinned[j], tk.pinned[i]];
+        })
+      ),
+
+    hideTool: (habitId, toolId, hidden) =>
+      set((state) =>
+        editToolkit(state, habitId, (tk) => {
+          tk.hidden = tk.hidden.filter((x) => x !== toolId);
+          if (hidden) {
+            tk.hidden.push(toolId);
+            tk.pinned = tk.pinned.filter((x) => x !== toolId);
+          }
+        })
+      ),
+
+    setShowGames: (habitId, show) =>
+      set((state) =>
+        editToolkit(state, habitId, (tk) => {
+          tk.showGames = show || undefined;
+        })
+      ),
+
+    addCustomTool: (habitId, name, minutes) => {
+      const id = genId('tool');
+      set((state) =>
+        editToolkit(state, habitId, (tk) => {
+          tk.custom.push({ id, name: name.trim() || 'My tool', minutes: minutes && minutes > 0 ? Math.round(minutes) : undefined });
+          tk.pinned.push(id);
+        })
+      );
+      return id;
+    },
+
+    removeCustomTool: (habitId, toolId) =>
+      set((state) =>
+        editToolkit(state, habitId, (tk, h) => {
+          tk.custom = tk.custom.filter((c) => c.id !== toolId);
+          tk.pinned = tk.pinned.filter((x) => x !== toolId);
+          tk.hidden = tk.hidden.filter((x) => x !== toolId);
+          if (h.plans) h.plans = h.plans.filter((p) => p.toolId !== toolId);
+        })
+      ),
+
+    addPlan: (habitId, plan) => {
+      const id = genId('plan');
+      set((state) => {
+        const h = state.habits.find((x) => x.id === habitId);
+        if (!h) return;
+        h.plans = [...(h.plans ?? []), { id, when: plan.when.trim(), timeOfDay: plan.timeOfDay, toolId: plan.toolId }];
+      });
+      return id;
+    },
+
+    removePlan: (habitId, planId) =>
+      set((state) => {
+        const h = state.habits.find((x) => x.id === habitId);
+        if (h?.plans) h.plans = h.plans.filter((p) => p.id !== planId);
       }),
   }))
 );

@@ -714,6 +714,39 @@ export interface QuitHabit {
   why?: string; // captured once at the start, resurfaced later
   createdAt: string; // ISO date
   replacementHabitId?: string; // the Build habit created to do instead ("replace, don't just remove")
+  habitType?: QuitHabitType; // unset: "other"
+  toolkit?: QuitToolkit; // unset: nothing pinned, hidden or added
+  plans?: QuitIfThenPlan[];
+  // Shown once: the offer to build the toolkit (false on habits created since
+  // it exists, so older habits aren't asked), and the substances note.
+  toolkitOffered?: boolean;
+  substanceNoteShown?: boolean;
+}
+
+// What's being quit: decides which craving tools fit (quit/toolkit.ts).
+export type QuitHabitType = 'smoking' | 'alcoholDrugs' | 'food' | 'caffeine' | 'gaming' | 'gambling' | 'scrolling' | 'other';
+
+// "My toolkit" for one quit habit: favorites in the user's order, tools they
+// don't want offered, and their own.
+export interface QuitToolkit {
+  pinned: string[]; // tool ids, in order
+  hidden: string[];
+  custom: QuitCustomTool[];
+  showGames?: boolean; // games back on for a gaming, gambling or scrolling habit
+}
+
+export interface QuitCustomTool {
+  id: string;
+  name: string; // "Play guitar", "Make tea"
+  minutes?: number; // an optional gentle timer
+}
+
+// "When it's evening and I'm bored, I will walk": offered first in a craving.
+export interface QuitIfThenPlan {
+  id: string;
+  when: string; // the user's own words
+  timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night'; // unset: any time
+  toolId: string;
 }
 
 // One attempt/run at quitting. Never deleted on relapse — archived instead,

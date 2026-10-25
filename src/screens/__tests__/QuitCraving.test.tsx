@@ -59,6 +59,7 @@ test('QUIT-UI-010 a craving with a rating: the timer shows in every tool and kee
   clock.advance(65_000);
   await r.user.press(screen.getByText(CRAVING_COPY.tryElse));
   expect(await screen.findByText(/Riding it out: 1:0\d/)).toBeTruthy();
+  await r.user.press(screen.getByText('See all options'));
   await r.user.press(screen.getByText('Check the facts'));
   expect(screen.getByText(/Riding it out: 1:0\d/)).toBeTruthy();
   await r.user.press(screen.getAllByText(CRAVING_COPY.okay)[0]);

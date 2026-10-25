@@ -43,7 +43,7 @@ const EVIDENCE: Record<string, [string, RegExp][]> = {
   habitMinimum: [['src/types/sections.ts', /minimumVersion\?: string/], ['src/screens/HabitBuilderScreen.tsx', /Did the minimum version/]],
   habitMilestones: [['src/utils/habitPattern.ts', /export function milestoneBar/], ['src/utils/habitFrequency.ts', /paused/]],
   habitPattern: [['src/screens/BuildHabitAnalysis.tsx', /DayStrip/], ['src/utils/habitTimeOfDay.ts', /Done when planned for each time/], ['src/screens/habits/HabitLogDetail.tsx', /Comment/], ['src/utils/itemFeelings.ts', /logItemFeeling/]],
-  quitUrge: [['src/screens/QuitHabitScreen.tsx', /RideTimer/], ['src/screens/QuitHabitScreen.tsx', /Do something instead/], ['src/screens/QuitHabitScreen.tsx', /Reach out/], ['src/screens/QuitHabitScreen.tsx', /Check the facts/]],
+  quitUrge: [['src/screens/QuitHabitScreen.tsx', /RideTimer/], ['src/quit/toolkit.ts', /Do something instead/], ['src/quit/toolkit.ts', /Reach out/], ['src/quit/toolkit.ts', /Check the facts/]],
   quitResisted: [['src/screens/QuitHabitScreen.tsx', /urges'\} ridden out/]],
   quitJourney: [['src/screens/QuitHabitAnalysis.tsx', /part of the story, not a reset/]],
   skillSessions: [['src/utils/skillProgress.ts', /LEVEL_LABELS/], ['src/utils/skillProgress.ts', /activeSubSkills/], ['src/types/sections.ts', /minutes: number; \/\/ 0 if the optional timer wasn't used/]],
