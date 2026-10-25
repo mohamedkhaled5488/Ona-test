@@ -75,7 +75,7 @@ async function sync() {
   const r = await syncNow();
   await syncInFlight();
   // A failed sync says why (diagnosis in the CI log).
-  if (!r.ok) console.log(`sync failed: ${r.message}`);
+  if (!r.ok) console.log(`sync failed: ${r.message} (devSimulateOffline=${useSettingsStore.getState().devSimulateOffline})`);
   return r;
 }
 // What's still unsent, by collection (diagnosis in the CI log).
@@ -105,6 +105,14 @@ function phoneRecords(): Record<string, Map<string, unknown>> {
 afterEach(() => {
   stops.forEach((s) => s());
   stops = [];
+});
+
+// Diagnosis (CI log): where does "simulate offline" get turned on?
+useSettingsStore.subscribe((s, p) => {
+  if (s.devSimulateOffline !== p.devSimulateOffline) console.log(`devSimulateOffline ${p.devSimulateOffline} -> ${s.devSimulateOffline}
+${new Error().stack?.split('
+').slice(2, 9).join('
+')}`);
 });
 
 test('BE-REAL-001 an account with eight weeks of every section: it all goes up through the app, and a fresh phone gets every item back, the same', async () => {
