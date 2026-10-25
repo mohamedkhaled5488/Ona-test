@@ -22,7 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setDataSpace } from '../../src/utils/dataSpace';
 import { __resetForTests, startAppData } from '../../src/utils/dataSpaceController';
 import { LOCAL_DATA } from '../../src/utils/localData';
-import { syncedCollections, toRecords } from '../../src/sync/records';
+import { stableStringify, syncedCollections, toRecords } from '../../src/sync/records';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { useSettingsStore, DEFAULT_SETTINGS } from '../../src/store/useSettingsStore';
 import { useEntitlementStore } from '../../src/store/useEntitlementStore';
@@ -114,9 +114,11 @@ test('BE-REAL-001 an account with eight weeks of every section: it all goes up t
   expect(r.ok).toBe(true);
   const after = phoneRecords();
   for (const c of Object.keys(before)) {
+    // Key order isn't meaningful (Postgres stores JSON with its own key
+    // order); compared as sync does, with sorted keys.
     const a = [...before[c].entries()].sort(([x], [y]) => x.localeCompare(y));
     const b = [...after[c].entries()].sort(([x], [y]) => x.localeCompare(y));
-    expect({ c, items: JSON.stringify(b) }).toEqual({ c, items: JSON.stringify(a) });
+    expect({ c, items: stableStringify(b) }).toEqual({ c, items: stableStringify(a) });
   }
   console.log(`BE-REAL-001: ${total} items in ${Object.keys(before).length} collections, up and back in ${restoreMs} ms`);
 });
