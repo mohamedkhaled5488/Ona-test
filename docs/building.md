@@ -74,7 +74,7 @@ The real-account tests (`supabase/tests/realAccount.test.ts`, BE-REAL-001..004) 
 
 4. Actions → Real account (staging) → Run workflow, once; then it runs nightly.
 
-**`.env.test`** (on your computer, ignored by git; only needed to point a local build of the app at staging) holds the public values only:
+**`.env.test`** (optional, on your computer, ignored by git; only needed to point a local build of the app at staging) is a **file**, not commands: create `.env.test` in the project folder (next to `package.json`, e.g. `notepad .env.test`), paste these lines with your real values in place of the `<...>` (no angle brackets), and save. It holds the public values only:
 
 ```
 STAGING_PROJECT_REF=<staging ref>

@@ -96,6 +96,7 @@ test('BE-REAL-001 an account with eight weeks of every section: it all goes up t
   const u = await newUser('real');
   await freshPhone();
   await signIn(u); // empty account, empty phone: nothing to ask
+  await sync(); // the phone is now this account's
   loadIntoPhone(seededSections());
   const before = phoneRecords();
   const total = Object.values(before).reduce((n, m) => n + m.size, 0);
@@ -124,6 +125,7 @@ test('BE-REAL-002 on the restored phone, Recap has every section that has data, 
   const u = await newUser('real');
   await freshPhone();
   await signIn(u);
+  await sync(); // the phone is now this account's (no Continue question)
   const seeded = seededSections();
   loadIntoPhone(seeded);
   await sync();
@@ -173,6 +175,7 @@ test('BE-REAL-004 trial ended: the account\'s data still comes down; this phone\
   const u = await newUser('real');
   await freshPhone();
   await signIn(u);
+  await sync(); // the phone is now this account's
   loadIntoPhone(seededSections());
   await sync();
   await setTrial(u.id, fromNow(-1 * DAY));

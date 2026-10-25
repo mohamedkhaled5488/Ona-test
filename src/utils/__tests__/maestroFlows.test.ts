@@ -39,6 +39,7 @@ const DYNAMIC: Record<string, string> = {
   'Riding it out: \\d+:\\d\\d': 'timer: (t: string) => `Riding it out: ${t}`',
   'Day 1 of your journey': 'const journey = `Day ${c.journeyDays} of your journey`',
   '15m': '{mins === null ? SLEEP_TIMER_COPY.allNight : `${mins}m`}',
+  '1m': '{isCustom ? `${timerChoice}m` : SLEEP_TIMER_COPY.custom}',
   '10 s': '(sec < 60 ? `${sec} s` : `${sec / 60} min`)',
   '.*Day 1 of your journey carries on.*': 'Day ${journeyDays} of your journey carries on.',
   'Marked done today.*': "Marked {todayEntry.done ? 'done' : 'missed'}",

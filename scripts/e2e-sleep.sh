@@ -8,7 +8,7 @@
 #
 # A case passes only if its own step worked, the sound really played
 # mid-timer, and nothing plays or shows after the end. If Android reports no
-# playback even mid-timer, the case is "inconclusive", never a pass.
+# playback even mid-timer, the case is "inconclusive", and the run fails.
 # expo-audio leaves an idle media session registered after a player is
 # removed (state NONE, no notification, nothing playing): noted, not failed.
 # Results: maestro-reports/sleep-dumpsys.txt, Android's raw output per case
@@ -25,8 +25,10 @@ TIMER_S=60
 CASES="lock background swipe call addlayer leave"
 if [ "${OLD_APP:-0}" = "1" ]; then TIMER_S=900; CASES="leave"; fi
 
-uid() { adb shell dumpsys package "$PKG" | tr -d '\r' | grep -o 'userId=[0-9]*' | head -1 | cut -d= -f2; }
-playing() { local u; u=$(uid); [ -n "$u" ] && adb shell dumpsys audio | tr -d '\r' | grep "u/pid:$u/" | grep -q "state:started"; }
+# Ona's playback lines read "u/pid:<uid>/<pid> state:started": matched by
+# Ona's process id (dumpsys package names the uid differently across
+# Android versions: userId= or appId=).
+playing() { local p; p=$(adb shell pidof "$PKG" | tr -d '\r' | awk '{print $1}'); [ -n "$p" ] && adb shell dumpsys audio | tr -d '\r' | grep -E "u/pid:[0-9]+/$p " | grep -q "state:started"; }
 session_playing() { adb shell dumpsys media_session | tr -d '\r' | grep -A12 "package=$PKG" | grep -q "state=PlaybackState {state=PLAYING"; }
 session_registered() { adb shell dumpsys media_session | tr -d '\r' | grep -q "package=$PKG"; }
 media_notification() { adb shell dumpsys notification --noredact | tr -d '\r' | grep -A12 "pkg=$PKG" | grep -qi "MediaStyle\|mediaSession\|category=transport"; }
@@ -81,6 +83,8 @@ for c in $CASES; do
   fi
   adb shell am force-stop "$PKG" > /dev/null 2>&1
 done
-grep -q "^INCONCLUSIVE" "$OUT" && echo "::warning title=Sleep timer::Some cases saw no playback at all on this emulator; see sleep-dumpsys.txt"
-echo "sleep timer: $failed case(s) failed"
-[ "$failed" -eq 0 ]
+# Inconclusive isn't a pass: a green run means every case was verified.
+inconclusive=$(grep -c "^INCONCLUSIVE" "$OUT")
+[ "$inconclusive" -gt 0 ] && echo "::error title=Sleep timer::$inconclusive case(s) saw no playback at all; see sleep-dumpsys.txt"
+echo "sleep timer: $failed case(s) failed, $inconclusive inconclusive"
+[ "$failed" -eq 0 ] && [ "$inconclusive" -eq 0 ]

@@ -11,9 +11,11 @@ appId: app.ona
 - tapOn: "White noise"
 - scrollUntilVisible:
     element: "Sleep timer"
+# Which build: only the new screen has "All night", and it stays on screen
+# (the "Custom" chip turns into "1m" once set, so it can't tell them apart).
 - runFlow:
     when:
-      visible: "Custom"
+      visible: "All night"
     commands:
       - tapOn: "Custom"
       - tapOn: "Minutes"
@@ -21,9 +23,10 @@ appId: app.ona
       - hideKeyboard
       - tapOn: "Set"
       - tapOn: "10 s"
+      - assertVisible: "1m"
 - runFlow:
     when:
-      notVisible: "Custom"
+      notVisible: "All night"
     commands:
       - tapOn: "15m"
 # The button sits below the timer choices: off screen on a phone-sized emulator.
