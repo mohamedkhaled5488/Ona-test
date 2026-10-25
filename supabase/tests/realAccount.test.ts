@@ -22,7 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setDataSpace } from '../../src/utils/dataSpace';
 import { __resetForTests, startAppData } from '../../src/utils/dataSpaceController';
 import { LOCAL_DATA } from '../../src/utils/localData';
-import { stableStringify, syncedCollections, toRecords } from '../../src/sync/records';
+import { fingerprint, stableStringify, syncedCollections, toRecords } from '../../src/sync/records';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { useSettingsStore, DEFAULT_SETTINGS } from '../../src/store/useSettingsStore';
 import { useEntitlementStore } from '../../src/store/useEntitlementStore';
@@ -74,7 +74,22 @@ async function signIn(u: TestUser) {
 async function sync() {
   const r = await syncNow();
   await syncInFlight();
+  // A failed sync says why (diagnosis in the CI log).
+  if (!r.ok) console.log(`sync failed: ${r.message}`);
   return r;
+}
+// What's still unsent, by collection (diagnosis in the CI log).
+function unsentByCollection(): Record<string, number> {
+  const { fingerprints } = useSyncStore.getState();
+  const out: Record<string, number> = {};
+  for (const [c, m] of Object.entries(phoneRecords())) {
+    const known = fingerprints[c] ?? {};
+    let n = 0;
+    for (const [id, data] of m) if (known[id] !== fingerprint(data)) n++;
+    for (const id of Object.keys(known)) if (!m.has(id)) n++;
+    if (n) out[c] = n;
+  }
+  return out;
 }
 function loadIntoPhone(sections: Record<string, Record<string, unknown>>) {
   for (const [section, state] of Object.entries(sections)) {
@@ -248,7 +263,8 @@ test('BE-REAL-006 offline edits wait, and go up when the phone is back online', 
   expect(unsentChanges()).toBeGreaterThan(20);
   const offline = phoneRecords();
   useSettingsStore.setState({ devSimulateOffline: false });
-  await sync();
+  const back = await sync();
+  if (unsentChanges()) console.log(`BE-REAL-006 still unsent after reconnecting: ${JSON.stringify(unsentByCollection())}; result ${JSON.stringify(back)}`);
   expect(unsentChanges()).toBe(0);
   await freshPhone();
   await signIn(u);
@@ -293,7 +309,8 @@ test('BE-REAL-008 a restore that fails halfway (the network drops after the firs
   // Nothing half-written as if it were complete.
   const partial = Object.values(phoneRecords()).reduce((n, m) => n + m.size, 0);
   expect(partial === 0 || partial === Object.values(all).reduce((n, m) => n + m.size, 0)).toBe(true);
-  await sync();
+  const retry = await sync();
+  console.log(`BE-REAL-008 retry: ${JSON.stringify(retry)}`);
   expect(same(all, phoneRecords())).toEqual([]);
 });
 
@@ -318,7 +335,8 @@ test('BE-REAL-009 about a year of data: restore time and memory, on a fresh phon
   loadIntoPhone(merged);
   const total = Object.values(phoneRecords()).reduce((n, m) => n + m.size, 0);
   expect(total).toBeGreaterThan(2500);
-  await sync();
+  const up = await sync();
+  console.log(`BE-REAL-009 upload: ${JSON.stringify(up)}; unsent ${unsentChanges()}`);
   await freshPhone();
   await signIn(u);
   const heap0 = process.memoryUsage().heapUsed;
