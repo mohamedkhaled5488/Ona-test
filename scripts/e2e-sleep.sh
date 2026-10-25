@@ -66,7 +66,10 @@ for c in $CASES; do
   after="silent"; playing && after="PLAYING"
   sess="not playing"; session_playing && sess="STILL PLAYING"
   notif="gone"; media_notification && notif="STILL SHOWN"
-  idle=""; [ "$sess" = "not playing" ] && session_registered && idle="(note: an idle media session is still registered)"
+  idle=""; [ "$sess" = "not playing" ] && session_registered && idle="(note: an idle media session is still registered: known limitation, accepted 2026-10-25)"
+  # After a swipe-away even the idle session must be gone (Ona's service
+  # stops with its task).
+  if [ "$c" = "swipe" ] && session_registered; then sess="STILL REGISTERED after the swipe"; idle=""; fi
   adb shell input keyevent KEYCODE_WAKEUP > /dev/null 2>&1; adb shell wm dismiss-keyguard > /dev/null 2>&1
   if [ "$acted" = "no" ]; then
     note "FAIL $c: the step itself failed (see maestro-reports/sleep-$c.log)"

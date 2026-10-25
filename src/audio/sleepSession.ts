@@ -62,6 +62,12 @@ export async function startSleepSession(minutes: number | null = useSettingsStor
     if (!r.ok) error = r.error;
     else if (r.replaced === 'study') replacedStudy = true;
   }
+  // Nothing started (every layer failed): not left "playing" with nothing
+  // to stop, so Play works again.
+  if (error && !hasActiveSounds('sleep')) {
+    stopSleepSession();
+    return { ok: false, error };
+  }
   checkSleepSession();
   return error ? { ok: false, error } : { ok: true, replacedStudy };
 }

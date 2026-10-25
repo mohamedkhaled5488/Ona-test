@@ -47,9 +47,14 @@ export function PrivacyPage({
   const exportData = () => {
     const run = async (includePhotos: boolean) => {
       setBusy(true);
-      const result = await exportAllData(includePhotos);
-      setBusy(false);
-      showToast({ message: result.message });
+      try {
+        const result = await exportAllData(includePhotos);
+        showToast({ message: result.message });
+      } catch (e) {
+        showToast({ message: `Couldn't export: ${e instanceof Error ? e.message : String(e)}` });
+      } finally {
+        setBusy(false); // never left disabled, whatever happened
+      }
     };
     showDialog({
       title: 'Export my data',
@@ -88,9 +93,15 @@ export function PrivacyPage({
   const confirmDeleteAccount = () => {
     const run = async (keepLocal: boolean) => {
       setBusy(true);
-      const result = await deleteAccount(keepLocal);
-      setBusy(false);
-      showToast({ message: result.ok ? (keepLocal ? 'Your account was deleted. This device kept its copy.' : 'Your account and the data on this device were deleted.') : result.message });
+      let result: { ok: boolean; message?: string };
+      try {
+        result = await deleteAccount(keepLocal);
+      } catch (e) {
+        result = { ok: false, message: e instanceof Error ? e.message : String(e) };
+      } finally {
+        setBusy(false); // never left disabled, whatever happened
+      }
+      showToast({ message: result.ok ? (keepLocal ? 'Your account was deleted. This device kept its copy.' : 'Your account and the data on this device were deleted.') : (result.message ?? "Couldn't delete your account. Nothing was changed. Try again.") });
     };
     const subscriptionWarning = deleteAccountSubscriptionWarning(entitlement);
     const ask = () =>

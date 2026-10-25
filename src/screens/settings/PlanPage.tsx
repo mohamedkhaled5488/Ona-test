@@ -117,8 +117,16 @@ export function Plans({ onPurchased, inSheet = false }: { onPurchased?: () => vo
   const subscribe = async () => {
     if (!selected) return;
     setBusy(true);
-    const { outcome, message: text } = await actions.purchase(selected.pkg);
-    setBusy(false);
+    let outcome: string;
+    let text: string | null;
+    try {
+      ({ outcome, message: text } = await actions.purchase(selected.pkg));
+    } catch (e) {
+      outcome = 'failed';
+      text = e instanceof Error ? e.message : String(e);
+    } finally {
+      setBusy(false); // never left disabled, whatever happened
+    }
     setMessage(text);
     if (text) showToast({ message: text });
     if (outcome === 'purchased') onPurchased?.();

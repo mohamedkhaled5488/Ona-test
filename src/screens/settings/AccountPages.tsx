@@ -224,10 +224,16 @@ function RealChangeCredentialPage({ kind, onDone }: { kind: 'email' | 'password'
 
   const save = async () => {
     setBusy(true);
-    const result = kind === 'email' ? await updateEmail(value.trim()) : await updatePassword(value);
-    setBusy(false);
+    let result: { ok: boolean; message?: string };
+    try {
+      result = kind === 'email' ? await updateEmail(value.trim()) : await updatePassword(value);
+    } catch (e) {
+      result = { ok: false, message: e instanceof Error ? e.message : String(e) };
+    } finally {
+      setBusy(false); // never left disabled, whatever happened
+    }
     if (!result.ok) {
-      setError(result.message);
+      setError(result.message ?? "Couldn't save. Try again.");
       return false;
     }
     setValue('');

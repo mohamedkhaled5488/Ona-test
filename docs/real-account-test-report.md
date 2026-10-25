@@ -38,7 +38,24 @@ Failures found by testing against real systems instead of mocks: the Android emu
 - An idle media session that expo-audio leaves registered after a player is removed was counted as "still active"; only a PLAYING session fails now.
 - The real-account tests loaded data before the phone's first sync, so the one-tap Continue question waited; and they compared JSON with key order (Postgres keeps its own).
 
-## For your decision
+## Known limitations (accepted)
 
-- expo-audio leaves an idle media session registered (state NONE, no notification, nothing playing) after a player is removed. Nothing a person sees; a headset button might still be routed to Ona until it closes. Accept, or patch expo-audio?
-- The notification keeps Play/Pause (decided 2026-10-25; no Stop without patching expo-audio).
+- **An idle media session stays registered after the sound stops** (accepted 2026-10-25, no expo-audio patch). expo-audio keeps a basic media session for a removed player: state NONE, no notification, nothing playing, nothing a person sees; a headset button might still be routed to Ona until Ona closes. The E2E check records it as a note; after a **swipe-away** it must be gone entirely (the playback service stops with Ona's task), or the case fails.
+- **The notification has Play/Pause, no Stop** (decided 2026-10-25; a Stop button needs an expo-audio patch). The timer ends everything even while paused.
+
+## In-progress markers: fail or refuse twice, then the third try works (RA-07 audit)
+
+Every place that marks something as "in progress" was checked for the RA-07 shape (a marker left set on an early return or an error). Each has a test that fails or is refused twice in a row and then succeeds on the third try, in one session.
+
+| Marker | Where | State before | Test |
+|---|---|---|---|
+| A sync running (`running`) | sync/syncController.ts | **Was the bug (RA-07)**; fixed | ATTEMPT-040 (offline, then paused, then works), ATTEMPT-041 (network fails twice), JRN-ACC-070/071 |
+| The sign-in check (`checking`, `preparing`) | sync/signInFlow.ts, syncController.ts | Cleared in finally | ATTEMPT-042 (the server can't be reached twice) |
+| A choice being applied (`busy`) / put aside, bring back, remove (space lock: `switching`, the save hold, `queue`) | signInFlow.ts, utils/dataSpaceController.ts | Cleared in finally | ATTEMPT-011, 012, 013 (storage fails twice); crash tests CRASH-001..005 for kills |
+| A demo switch (space lock) | utils/dataSpaceController.ts | Cleared in finally | ATTEMPT-010 |
+| A plan refresh (`inFlight`, `loading`) | utils/entitlementSync.ts | Cleared in finally | ATTEMPT-001 |
+| Subscribe / restore purchases | billing/purchaseFlow.ts | Errors caught | ATTEMPT-002, 003 |
+| Busy buttons (subscribe, change email/password, export, delete account) | screens/settings/PlanPage.tsx, AccountPages.tsx, PrivacyPages.tsx | **Could stay disabled if the action threw**; now try/finally | ATTEMPT-030 (fails before the fix) |
+| Consent read retry (`retryFor`, `applying`) | sync/accountConsent.ts | Retried on coming back; applying in finally | ATTEMPT-043 |
+| The sleep timer's session | audio/sleepSession.ts | **Could stay "playing" with nothing playing if every sound failed to load**; now stopped | ATTEMPT-020 (fails before the fix) |
+| A craving session's timer | store/useQuitHabitsStore.ts | Stored, not a lock (an open session is resumed) | QUIT-J-030, QUIT-UI-012 |

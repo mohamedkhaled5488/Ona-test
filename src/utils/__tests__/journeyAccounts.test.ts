@@ -7,7 +7,7 @@
 jest.setTimeout(30_000);
 
 type Row = { user_id: string; collection: string; record_id: string; data: unknown; deleted: boolean; client_updated_at: string; server_updated_at: string; rev?: number };
-const mockServer = { rows: [] as Row[], user: null as string | null, tick: 0, onUpsert: null as null | ((n: number) => void), upserts: 0, onPull: null as null | (() => void), trialOver: false };
+const mockServer = { rows: [] as Row[], user: null as string | null, tick: 0, onUpsert: null as null | ((n: number) => void), upserts: 0, onPull: null as null | (() => void), trialOver: false, failUpserts: 0, failCounts: 0, failConsent: 0 };
 
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 jest.mock('../reminders', () => ({ resyncFeature: jest.fn(async () => {}) }));
@@ -24,12 +24,13 @@ jest.mock('../../lib/supabase', () => {
       gt: (_c: string, v: string) => ((f.since = v), q),
       eq: (c: string, v: string) => (c === 'id' && (f.id = v), q),
       // The account's consent: yes for everyone here (sign-in says so).
-      maybeSingle: async () => ({ data: { store_data_consent: true, store_data_consent_version: '2026-10-21', store_data_consent_source: 'sign-in' }, error: null }),
+      maybeSingle: async () => (mockServer.failConsent-- > 0 ? { data: null, error: { message: 'Network request failed' } } : { data: { store_data_consent: true, store_data_consent_version: '2026-10-21', store_data_consent_source: 'sign-in' }, error: null }),
       update: () => ({ eq: async () => ({ error: null }) }),
       // As migration 0009: a write over a revision the phone never saw is
       // refused and the server's row comes back.
       upsert: (rows: (Row & { base_rev?: number | null })[]) => {
         const done = (async () => {
+          if (mockServer.failUpserts-- > 0) return { data: null, error: { message: 'Network request failed' } };
           mockServer.upserts++;
           mockServer.onUpsert?.(mockServer.upserts);
           const back: Row[] = [];
@@ -51,7 +52,7 @@ jest.mock('../../lib/supabase', () => {
       },
       then: (resolve: (v: unknown) => void) => {
         if (table !== 'sync_records') return resolve({ data: [], error: null });
-        if (f.head) return resolve({ data: null, count: mine().filter((r) => !r.deleted).length, error: null });
+        if (f.head) return resolve(mockServer.failCounts-- > 0 ? { data: null, count: null, error: { message: 'Network request failed' } } : { data: null, count: mine().filter((r) => !r.deleted).length, error: null });
         mockServer.onPull?.();
         resolve({ data: mine().filter((r) => !f.since || r.server_updated_at > f.since).sort((a, b) => a.server_updated_at.localeCompare(b.server_updated_at)), error: null });
       },
@@ -83,6 +84,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useSettingsStore, DEFAULT_SETTINGS } from '../../store/useSettingsStore';
 import { useEntitlementStore } from '../../store/useEntitlementStore';
 import { useSyncStore } from '../../store/useSyncStore';
+import { useAccountStore } from '../../store/useAccountStore';
 import { useJournalStore } from '../../store/useJournalStore';
 import { DATA_CHANGED, startSync, syncInFlight, syncNow, unsentChanges } from '../../sync/syncController';
 import { startAccountConsent, noteConsentSource, useConsentStatusStore } from '../../sync/accountConsent';
@@ -140,6 +142,9 @@ beforeEach(() => {
   mockServer.upserts = 0;
   mockServer.onPull = null;
   mockServer.trialOver = false;
+  mockServer.failUpserts = 0;
+  mockServer.failCounts = 0;
+  mockServer.failConsent = 0;
   useConsentStatusStore.setState({ problem: null, notice: null });
   useClock('2026-10-24T09:00');
 });
@@ -573,6 +578,81 @@ describe('JRN-ACC: a sync refused once never blocks the next', () => {
     useSettingsStore.getState().setConsent({ storeData: true }); // starts a sync by itself
     await write('j-back'); // a change made then goes up right after
     expect(inAccount('u1')).toEqual(['j-back']);
+  });
+});
+
+describe('ATTEMPT: refused or failing twice, then the third try works', () => {
+  test('ATTEMPT-040 sync refused twice (offline, then sync off), the third sends', async () => {
+    await freshInstall();
+    await signIn('u1');
+    useJournalStore.setState((st) => ({ entries: [...st.entries, entry('j1')] }) as never);
+    useSettingsStore.setState({ devSimulateOffline: true });
+    expect(await syncNow()).toMatchObject({ ok: false });
+    useSettingsStore.setState({ devSimulateOffline: false });
+    useAccountStore.getState().setSyncPaused(true);
+    expect(await syncNow()).toMatchObject({ ok: false });
+    useAccountStore.getState().setSyncPaused(false);
+    await settle();
+    expect(await syncNow()).toMatchObject({ ok: true });
+    await settle();
+    expect(inAccount('u1')).toEqual(['j1']);
+  });
+
+  test('ATTEMPT-041 the upload fails twice (network), the third sync sends everything', async () => {
+    await freshInstall();
+    await signIn('u1');
+    mockServer.failUpserts = 2;
+    useJournalStore.setState((st) => ({ entries: [...st.entries, entry('j1'), entry('j2')] }) as never);
+    expect(await syncNow()).toMatchObject({ ok: false });
+    expect(await syncNow()).toMatchObject({ ok: false });
+    await settle();
+    expect(await syncNow()).toMatchObject({ ok: true });
+    await settle();
+    expect(inAccount('u1')).toEqual(['j1', 'j2']);
+  });
+
+  test("ATTEMPT-042 the sign-in check can't reach the server twice, the third asks properly (not left checking)", async () => {
+    mockServer.rows.push(accountRow('u1', 'a1'));
+    await freshInstall();
+    await write('g1');
+    mockServer.failCounts = 2;
+    mockServer.user = 'u1';
+    useAuthStore.setState({ session: { user: { id: 'u1' } } as never, initializing: false });
+    await settle();
+    expect(pending()).toBeNull();
+    expect((await syncNow()).ok).toBe(false);
+    expect(pending()).toBeNull();
+    await syncNow();
+    expect(pending()).toMatchObject({ kind: 'merge', here: 1, inAccount: 1 });
+    expect(inAccount('u1')).toEqual(['a1']); // nothing sent while it couldn't check
+  });
+
+  test("ATTEMPT-043 the account's consent can't be read twice; coming back to Ona tries again, and the third applies it", async () => {
+    const { AppState } = require('react-native') as typeof import('react-native');
+    const listeners: ((s: string) => void)[] = [];
+    const spy = jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, cb: (s: string) => void) => {
+      listeners.push(cb);
+      return { remove: () => {} };
+    }) as never);
+    try {
+      await freshInstall();
+      mockServer.failConsent = 2;
+      noteConsentSource('sign-in');
+      mockServer.user = 'u1';
+      useAuthStore.setState({ session: { user: { id: 'u1' } } as never, initializing: false });
+      await settle();
+      expect(useSettingsStore.getState().consent.storeData).toBe(false); // first read failed
+      const comeBack = async () => {
+        listeners.forEach((l) => l('active'));
+        await settle();
+      };
+      await comeBack(); // second read fails
+      expect(useSettingsStore.getState().consent.storeData).toBe(false);
+      await comeBack(); // third works
+      expect(useSettingsStore.getState().consent.storeData).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
