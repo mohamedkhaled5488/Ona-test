@@ -46,3 +46,4 @@ yarn-error.*
 
 # Test coverage reports
 coverage/
+sound-samples/
