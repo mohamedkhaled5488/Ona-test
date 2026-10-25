@@ -22,7 +22,11 @@ Failures found by testing against real systems instead of mocks: the Android emu
 | BE-REAL-002 | Recap on the restored phone | Pass: every section, Quit included |
 | BE-REAL-003 | Plan states from the server's dates (day 1, mid, ended, Plus) | Pass |
 | BE-REAL-004 | Trial ended: downloads work, the server refuses uploads | Pass |
-| BE-REAL-005..009 | Two phones (edits and deletes everywhere), offline then online, consent off, a restore failing halfway, about a year of data (time and memory) | 006/008/009 failed: found RA-07; results after the fix below |
+| BE-REAL-005 | Two phones: an edit and a delete in every list reach a third phone | Pass |
+| BE-REAL-006 | Offline edits wait, then go up | Failed before RA-07's fix (every sync after the offline step answered "offline"); pass after |
+| BE-REAL-007 | Sync off: nothing uploads | Pass |
+| BE-REAL-008 | A restore failing on the second page | Pass: nothing written as complete; the retry restores all 588, nothing twice |
+| BE-REAL-009 | About a year of data (3,425 items) | Pass: uploaded, then restored on a fresh phone in ~0.3-0.6 s, heap +3 to +19 MB |
 | Bundle scan (E2E) | No server key in the APK's JavaScript bundle | Added |
 
 ## Harness mistakes (the tests were wrong, not Ona)
