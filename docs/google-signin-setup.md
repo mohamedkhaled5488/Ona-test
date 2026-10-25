@@ -70,6 +70,11 @@ Supabase dashboard → **Authentication → Sign In / Providers → Google**:
 - [ ] Leave **automatic identity linking** at its default (on). That's what makes one email one account (see below).
 - [ ] Save.
 
+Supabase dashboard → **Authentication → Sign In / Providers** (the general section at the top), on **both** production and **ona-staging**:
+
+- [ ] **Allow manual linking: ON.** Settings → Account → Sign-in methods uses it to link a Google account with a *different* address (or, later, an Apple "hide my email" address) to the account you're signed in to. Without it, "Link Google" says "Linking isn't switched on for this server yet." The local stack has it on (`supabase/config.toml`).
+- [ ] **Secure password change:** leave it as it is today (off). If you switch it on, "Set a password" will need the confirmation code step, which Ona doesn't have yet.
+
 ## 5. Build and test
 
 - [ ] Make a development build (see [building.md](building.md)) and install it on an Android phone with Google Play services.

@@ -62,6 +62,9 @@ Every test creates its own new accounts, so no test depends on another one.
 | BE-REAL-008 | Real account | Restore interrupted | Seeded account, fresh phone | The network drops on the second page | Nothing written as if complete; the next sync gets it all, nothing twice | backend | P0 | realAccount.test.ts |
 | BE-REAL-009 | Real account | About a year of data | Six eight-week seeds (2,500+ items) | Upload; restore on a fresh phone | All back; restore time and heap logged; under 60 s | backend | P1 | realAccount.test.ts |
 | BE-STAGING-001 | Staging | Migrations | Staging project | Read the 0007/0008/0009 columns | Present | backend (staging) | P0 | staging.schema.test.ts |
+| BE-LINK-001 | Sign-in methods | An email account's methods | Email account (manual linking on) | List | One: email, with its address | backend | P1 | linking.test.ts |
+| BE-LINK-002 | Sign-in methods | The last way in | As 001 | Unlink it (Ona, then directly) | Ona refuses with the plain message; the server refuses too | backend | P0 | linking.test.ts |
+| BE-LINK-003 | Sign-in methods | A new password | As 001 | Set a password; sign in with it | Works | backend | P1 | linking.test.ts |
 | BE-ACC-001 | Accounts | Phone data, empty account | New account; 2 entries on the phone | Sign in (real consent, real trial), sync | Asked with the real count (2); nothing sent; Continue sends both | backend | P0 | accounts.test.ts |
 | BE-ACC-002 | Accounts | Merge with real counts | Account has 2 rows; phone 1 | Sign in, sync | Asked with 1 here, 2 in the account; Merge: both have all 3 | backend | P0 | accounts.test.ts |
 | BE-ACC-003 | Accounts | Keep separate | Account 1 row; phone 1 | Choose Keep separate | Account unchanged; the phone's copy kept aside | backend | P0 | accounts.test.ts |

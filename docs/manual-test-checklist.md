@@ -141,6 +141,9 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-105 | Listening: each new sound (step 3) | For each of white, pink, brown noise, rain, ocean, fan, forest: 3 minutes on headphones, then 3 on the phone speaker, at the volume you'd sleep with | No repetition you can hear; no click, gap or jump in volume where it loops (at 2:00 for noise and fan, 3:00 for the others); nothing sudden or sharp; about as loud as each other | | | |
 | MAN-106 | Listening: compared with today's | Play each new sound against today's (rain, ocean, fan, forest especially) | Say which you'd rather fall asleep to; a generated nature sound that's worse gets a licensed long recording instead | | | |
 | MAN-107 | Listening: in the app | With the chosen sounds in a build: each with a 2-minute timer and a 30 s fade, locked | The fade is gentle (in steps while locked is fine); silent at the end; mixing two layers sounds balanced | | | |
+| MAN-108 | Link Google (Android) | Signed in with email and password: Settings → Account → Sign-in methods → Link Google → pick a Google account with another address; sign out; sign in with Google | "Google is linked"; Google now opens the same account and data (one trial); unlinking Google keeps email working; email can't be unlinked while it's the only way in| | | |
+| MAN-109 | Google account already used | Link a Google account that already has its own Ona account | Told plainly it's used by another Ona account; nothing changes| | | |
+| MAN-110 | Set a password | Signed in with Google only: Sign-in methods → Set a password; sign out; sign in with the Google email and that password | The same account and data | | | |
 
 ## Sign-off
 

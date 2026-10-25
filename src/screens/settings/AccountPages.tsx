@@ -13,6 +13,7 @@ import { syncNow, unsentChanges } from '../../sync/syncController';
 import { SIGN_OUT_COPY, signOutAndChoose, signOutCopy, signOutFacts, useAccountChoiceStore } from '../../sync/signInFlow';
 import { canUpload } from '../../utils/sync';
 import { useBackupStatus } from '../../sync/backupStatus';
+import { SignInMethodsGroup } from './SignInMethodsGroup';
 import { useConsentStatusStore } from '../../sync/accountConsent';
 import { useSyncStore } from '../../store/useSyncStore';
 import { useBackHandler } from '../../hooks/useBackHandler';
@@ -171,6 +172,8 @@ function RealAccountPage({ go, openSignIn }: { go: Go; openSignIn: () => void })
         <NavRow icon="key-outline" label="Change password" onPress={() => go('changePassword')} />
         <NavRow icon="log-out-outline" label="Sign out" explain="You choose whether this phone keeps your data" onPress={confirmSignOut} />
       </Group>
+
+      <SignInMethodsGroup onSetPassword={() => go('changePassword')} />
 
       <Group title="Plan">
         <NavRow icon="ribbon-outline" label="Plan & usage" explain="What's included in each mode, and what you use" value={planLabel(entitlement)} onPress={() => go('plan')} />
