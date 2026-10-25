@@ -17,7 +17,8 @@ on:
         default: ''
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  # A run building an older app (app_ref) doesn't cancel, or get cancelled by, the normal one.
+  group: e2e-${{ github.ref }}-${{ inputs.app_ref || 'current' }}
   cancel-in-progress: true
 
 jobs:
