@@ -6,7 +6,11 @@ appId: app.ona
 - runFlow: fresh-start.yaml
 - tapOn: "Reflect"
 - tapOn: "Sleep"
+- scrollUntilVisible:
+    element: "White noise"
 - tapOn: "White noise"
+- scrollUntilVisible:
+    element: "Sleep timer"
 - runFlow:
     when:
       visible: "Custom"
@@ -22,5 +26,8 @@ appId: app.ona
       notVisible: "Custom"
     commands:
       - tapOn: "15m"
+# The button sits below the timer choices: off screen on a phone-sized emulator.
+- scrollUntilVisible:
+    element: "Play mix"
 - tapOn: "Play mix"
 - assertVisible: "Stop"
