@@ -2,31 +2,36 @@
 # The Sleep timer on a real Android system (CI emulator): start white noise
 # with a 1-minute timer, then lock / background / swipe Ona away / take a
 # call / add a sound / leave the Sleep screen, wait past the end, and ask
-# Android itself: is anything of Ona's still playing (dumpsys audio), is its
-# media session or notification still there (dumpsys media_session)?
+# Android itself: is anything of Ona's still playing (dumpsys audio), is a
+# media session of Ona's still PLAYING, is its media notification still
+# shown (dumpsys media_session, notification)?
 #
-# Each case first checks that the sound really plays mid-timer: if the
-# emulator reports no playback at all, the case is "inconclusive", never a
-# pass. Results: maestro-reports/sleep-dumpsys.txt, and annotations.
+# A case passes only if its own step worked, the sound really played
+# mid-timer, and nothing plays or shows after the end. If Android reports no
+# playback even mid-timer, the case is "inconclusive", never a pass.
+# expo-audio leaves an idle media session registered after a player is
+# removed (state NONE, no notification, nothing playing): noted, not failed.
+# Results: maestro-reports/sleep-dumpsys.txt, Android's raw output per case
+# in maestro-reports/sleep-dumpsys/, and annotations.
 # OLD_APP=1 (a build from before the fix, which only offers 15 min): only
 # the "leave the Sleep screen" case, waiting 16 minutes.
 set -uo pipefail
 
 PKG=app.ona
 OUT=maestro-reports/sleep-dumpsys.txt
-mkdir -p maestro-reports
+mkdir -p maestro-reports/sleep-dumpsys
 : > "$OUT"
 TIMER_S=60
 CASES="lock background swipe call addlayer leave"
 if [ "${OLD_APP:-0}" = "1" ]; then TIMER_S=900; CASES="leave"; fi
 
-uid() { adb shell pm list packages -U "$PKG" | sed -n 's/.*uid:\([0-9]*\).*/\1/p' | tr -d '\r' | head -1; }
-playing() { adb shell dumpsys audio | tr -d '\r' | grep "u/pid:$(uid)/" | grep -q "state:started"; }
-media_session() { adb shell dumpsys media_session | tr -d '\r' | grep -A6 "package=$PKG" | grep -q "active=true"; }
+uid() { adb shell dumpsys package "$PKG" | tr -d '\r' | grep -o 'userId=[0-9]*' | head -1 | cut -d= -f2; }
+playing() { local u; u=$(uid); [ -n "$u" ] && adb shell dumpsys audio | tr -d '\r' | grep "u/pid:$u/" | grep -q "state:started"; }
+session_playing() { adb shell dumpsys media_session | tr -d '\r' | grep -A12 "package=$PKG" | grep -q "state=PlaybackState {state=PLAYING"; }
+session_registered() { adb shell dumpsys media_session | tr -d '\r' | grep -q "package=$PKG"; }
 media_notification() { adb shell dumpsys notification --noredact | tr -d '\r' | grep -A12 "pkg=$PKG" | grep -qi "MediaStyle\|mediaSession\|category=transport"; }
 note() { echo "$1" | tee -a "$OUT"; }
-# Android's own view, saved for each case and moment (in the run's artifact).
-snap() { mkdir -p maestro-reports/sleep-dumpsys; for s in audio media_session; do adb shell dumpsys "$s" > "maestro-reports/sleep-dumpsys/$1-$2-$s.txt" 2>&1; done; adb shell dumpsys notification --noredact > "maestro-reports/sleep-dumpsys/$1-$2-notification.txt" 2>&1; }
+snap() { for s in audio media_session; do adb shell dumpsys "$s" > "maestro-reports/sleep-dumpsys/$1-$2-$s.txt" 2>&1; done; adb shell dumpsys notification --noredact > "maestro-reports/sleep-dumpsys/$1-$2-notification.txt" 2>&1; }
 
 adb shell svc power stayon true > /dev/null 2>&1
 failed=0
@@ -36,6 +41,7 @@ for c in $CASES; do
     note "FAIL $c: couldn't start the sound (see maestro-reports/sleep-$c.log)"; failed=$((failed + 1)); continue
   fi
   start=$(date +%s)
+  acted="yes"
   case "$c" in
     lock) adb shell input keyevent KEYCODE_HOME; adb shell input keyevent KEYCODE_SLEEP ;;
     background) adb shell input keyevent KEYCODE_HOME ;;
@@ -44,24 +50,30 @@ for c in $CASES; do
       adb shell input swipe 540 1500 540 200 200; sleep 2
       adb shell input keyevent KEYCODE_HOME ;;
     call) adb emu gsm call 5551234 > /dev/null 2>&1; sleep 8; adb emu gsm cancel 5551234 > /dev/null 2>&1 ;;
-    addlayer) maestro test .maestro/subflows/sleep-add-layer.yaml >> "maestro-reports/sleep-$c.log" 2>&1 ;;
-    leave) maestro test .maestro/subflows/sleep-leave.yaml >> "maestro-reports/sleep-$c.log" 2>&1 ;; # another tab: Ona open, Sleep gone
+    addlayer) maestro test .maestro/subflows/sleep-add-layer.yaml >> "maestro-reports/sleep-$c.log" 2>&1 || acted="no" ;;
+    leave) maestro test .maestro/subflows/sleep-leave.yaml >> "maestro-reports/sleep-$c.log" 2>&1 || acted="no" ;; # Back to Reflect: Ona open, Sleep gone
   esac
   sleep 15
   snap "$c" mid
   mid="playing"; playing || mid="silent"
-  if [ "$c" = "swipe" ] && adb shell dumpsys activity recents | tr -d '\r' | grep -q "A=.*$PKG\|$PKG/"; then swiped="(task still in recents)"; else swiped=""; fi
+  swiped=""
+  if [ "$c" = "swipe" ] && adb shell dumpsys activity recents | tr -d '\r' | grep -q "$PKG"; then swiped="(the task was still in recents: the swipe may not have worked)"; fi
   # Past the end (plus the fade and a margin).
   left=$(( start + TIMER_S + 40 - $(date +%s) )); [ "$left" -gt 0 ] && sleep "$left"
   snap "$c" after
   after="silent"; playing && after="PLAYING"
-  sess="gone"; media_session && sess="STILL ACTIVE"
+  sess="not playing"; session_playing && sess="STILL PLAYING"
   notif="gone"; media_notification && notif="STILL SHOWN"
+  idle=""; [ "$sess" = "not playing" ] && session_registered && idle="(note: an idle media session is still registered)"
   adb shell input keyevent KEYCODE_WAKEUP > /dev/null 2>&1; adb shell wm dismiss-keyguard > /dev/null 2>&1
-  if [ "$mid" = "silent" ] && [ "$after" = "silent" ]; then
+  if [ "$acted" = "no" ]; then
+    note "FAIL $c: the step itself failed (see maestro-reports/sleep-$c.log)"
+    echo "::error title=Sleep timer ($c)::The step itself failed"
+    failed=$((failed + 1))
+  elif [ "$mid" = "silent" ] && [ "$after" = "silent" ]; then
     note "INCONCLUSIVE $c: no playback reported even mid-timer $swiped"
-  elif [ "$after" = "silent" ] && [ "$sess" = "gone" ] && [ "$notif" = "gone" ]; then
-    note "PASS $c: playing mid-timer ($mid), after the end: audio $after, media session $sess, notification $notif $swiped"
+  elif [ "$after" = "silent" ] && [ "$sess" = "not playing" ] && [ "$notif" = "gone" ]; then
+    note "PASS $c: playing mid-timer ($mid); after the end: audio $after, media session $sess, notification $notif $swiped $idle"
   else
     note "FAIL $c: mid-timer $mid; after the end: audio $after, media session $sess, notification $notif $swiped"
     echo "::error title=Sleep timer ($c)::After the timer: audio $after, media session $sess, notification $notif"

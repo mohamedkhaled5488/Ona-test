@@ -1,7 +1,8 @@
 // No tester APK from a commit whose CI isn't green (scripts/require-green-ci.js,
 // run by EAS before every build). IDs: docs/building.md (GATE-*)
-const { verdict, REQUIRED, GUARDED_PROFILES } = require('../../../scripts/require-green-ci.js') as {
+const { verdict, stagingVerdict, REQUIRED, GUARDED_PROFILES } = require('../../../scripts/require-green-ci.js') as {
   verdict: (runs: object[]) => { ok: boolean; problems: string[] };
+  stagingVerdict: (latest: object | undefined, now?: number) => string[];
   REQUIRED: string[];
   GUARDED_PROFILES: string[];
 };
@@ -36,4 +37,14 @@ test('GATE-004 EAS runs the check before every build, guards the tester profile,
   expect(REQUIRED).toEqual(['CI', 'E2E (Android)']);
   const workflows = ['ci.yml', 'e2e-android.yml'].map((f) => fs.readFileSync(`${process.cwd()}/.github/workflows/${f}`, 'utf8').match(/^name:\s*(.+)$/m)?.[1].trim());
   expect(workflows).toEqual(REQUIRED); // the names the check looks for are the workflows' names
+});
+
+test('GATE-005 the real-account tests on staging: the latest nightly run passed within 30 hours, or no tester build', () => {
+  const now = Date.parse('2026-10-25T12:00:00Z');
+  const latest = (conclusion: string, hoursAgo: number) => ({ conclusion, status: 'completed', html_url: 'https://example/staging', updated_at: new Date(now - hoursAgo * 3_600_000).toISOString() });
+  expect(stagingVerdict(latest('success', 5), now)).toEqual([]);
+  expect(stagingVerdict(undefined, now).join(' ')).toMatch(/hasn't run yet/);
+  expect(stagingVerdict(latest('failure', 2), now).join(' ')).toMatch(/last run failure/);
+  expect(stagingVerdict(latest('skipped', 2), now).join(' ')).toMatch(/last run skipped/);
+  expect(stagingVerdict(latest('success', 40), now).join(' ')).toMatch(/40 h ago/);
 });

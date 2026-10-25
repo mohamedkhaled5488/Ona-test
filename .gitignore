@@ -33,6 +33,8 @@ yarn-error.*
 # local env files
 .env*.local
 .env
+# Staging values for the real-account tests (docs/building.md); never committed.
+.env.test
 
 # typescript
 *.tsbuildinfo

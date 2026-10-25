@@ -55,6 +55,38 @@ Before starting one: push, wait for both runs, then `npm run check:ci` (the same
 | GATE-001..003 | Green builds; red, cancelled, running or missing runs don't; the latest re-run decides | buildGate.test.ts |
 | GATE-004 | The hook, `requireCommit` and the workflow names stay in place | buildGate.test.ts |
 
+## Real-account tests on staging
+
+The real-account tests (`supabase/tests/realAccount.test.ts`, BE-REAL-001..004) run on the local Supabase in every CI run, and nightly against a separate staging project, **ona-staging** (same region as production, same migrations including 0009). The staging harness refuses to run unless every value points at staging and none at production (`supabase/tests/globalSetup.staging.js`, tested in STAGING-GUARD-001..002): the project ref must not be production's, the URL must be exactly the staging project's, any JWT-style key must name the staging ref, and the service key must be accepted by the staging URL. Before each run it deletes earlier test accounts (emails ending `@ona.test`, nothing else).
+
+**Setting it up (once):**
+1. Create the project **ona-staging** in the Supabase dashboard, in the same region as production.
+2. Apply the migrations to it, as for production: run each file in `supabase/migrations/` in order (0001 … 0009) in its SQL editor, or `npx supabase link --project-ref <staging ref>` then `npx supabase db push`. BE-STAGING-001 fails if 0007, 0008 or 0009 is missing.
+3. Add these in GitHub → the repository → Settings → Secrets and variables → Actions:
+
+| Kind | Name | Value |
+|---|---|---|
+| Variable | `STAGING_PROJECT_REF` | the staging project's ref (Settings → General → Project ID, 20 letters) |
+| Variable | `STAGING_SUPABASE_URL` | `https://<staging ref>.supabase.co` |
+| Variable | `STAGING_SUPABASE_ANON_KEY` | the staging project's anon (public) key |
+| Variable | `PRODUCTION_PROJECT_REF` | the production project's ref (so the guard can refuse it) |
+| **Secret** | `STAGING_SUPABASE_SERVICE_ROLE_KEY` | the staging project's service_role key: **only here**, never in a file |
+
+4. Actions → Real account (staging) → Run workflow, once; then it runs nightly.
+
+**`.env.test`** (on your computer, ignored by git; only needed to point a local build of the app at staging) holds the public values only:
+
+```
+STAGING_PROJECT_REF=<staging ref>
+STAGING_SUPABASE_URL=https://<staging ref>.supabase.co
+STAGING_SUPABASE_ANON_KEY=<staging anon key>
+PRODUCTION_PROJECT_REF=<production ref>
+```
+
+No service key goes in `.env.test`, and the staging tests aren't run from a computer with the app's `.env` loaded (the guard refuses if the production URL is in the environment).
+
+**Tester builds need it:** the build check also requires the latest **Real account (staging)** run to have passed within 30 hours (GATE-005), so the first tester build after this needs staging set up and run once.
+
 ## Release builds
 
 Covered in [billing-setup-checklist.md](billing-setup-checklist.md). Remember to add the **Play App Signing** SHA-1 as its own Android OAuth client before testing Google sign-in on a Play-installed build.

@@ -38,13 +38,24 @@ export interface TestUser {
 }
 
 // A brand-new account (as if just signed up), unique to the calling test.
+// Every test account's email ends in @ona.test (staging's clean-up deletes
+// exactly those, before each run).
 export async function newUser(label = 'user'): Promise<TestUser> {
   const email = `${label}-${randomUUID()}@ona.test`;
-  const { data, error } = await admin().auth.admin.createUser({ email, password: randomUUID(), email_confirm: true });
+  const password = randomUUID();
+  const { data, error } = await admin().auth.admin.createUser({ email, password, email_confirm: true });
   if (error || !data.user) throw new Error(`createUser: ${error?.message}`);
-  const token = tokenFor(data.user.id, email);
+  // Locally a token is minted with the stack's JWT secret (no Auth rate
+  // limit); on staging the user signs in for real.
+  const token = process.env.ONA_SB_SIGN_IN === 'password' ? await signInWithPassword(email, password) : tokenFor(data.user.id, email);
   const db = createClient(url(), process.env.ONA_SB_ANON!, { ...noSession, global: { headers: { Authorization: `Bearer ${token}` } } });
   return { id: data.user.id, email, token, db };
+}
+
+async function signInWithPassword(email: string, password: string): Promise<string> {
+  const { data, error } = await anon().auth.signInWithPassword({ email, password });
+  if (error || !data.session) throw new Error(`signIn: ${error?.message}`);
+  return data.session.access_token;
 }
 
 // The REST API called directly, with a user's token (or none).

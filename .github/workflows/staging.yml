@@ -1,0 +1,37 @@
+# Real-account tests against the staging Supabase project ("ona-staging"),
+# nightly and on demand. The harness refuses to run unless every value points
+# at staging and none at production (supabase/tests/globalSetup.staging.js).
+# Needs: repository variables STAGING_PROJECT_REF, STAGING_SUPABASE_URL,
+# STAGING_SUPABASE_ANON_KEY, PRODUCTION_PROJECT_REF, and the secret
+# STAGING_SUPABASE_SERVICE_ROLE_KEY (docs/building.md). Until they're set, the
+# job is skipped.
+name: Real account (staging)
+
+on:
+  schedule:
+    - cron: '30 2 * * *' # nightly
+  workflow_dispatch:
+
+concurrency:
+  group: staging
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    if: vars.STAGING_PROJECT_REF != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      STAGING_PROJECT_REF: ${{ vars.STAGING_PROJECT_REF }}
+      STAGING_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+      STAGING_SUPABASE_ANON_KEY: ${{ vars.STAGING_SUPABASE_ANON_KEY }}
+      PRODUCTION_PROJECT_REF: ${{ vars.PRODUCTION_PROJECT_REF }}
+      STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx jest -c jest.staging.config.js --ci

@@ -1,5 +1,6 @@
-# Used by scripts/e2e-sleep.sh: leave Sleep for another part of Ona (Ona
-# stays open and in front).
+# Used by scripts/e2e-sleep.sh: leave Sleep for the Reflect page (Back in
+# Ona), with Ona still open and in front.
 appId: app.ona
 ---
-- tapOn: "Plan"
+- back
+- assertVisible: "Journaling"
