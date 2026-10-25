@@ -109,10 +109,7 @@ afterEach(() => {
 
 // Diagnosis (CI log): where does "simulate offline" get turned on?
 useSettingsStore.subscribe((s, p) => {
-  if (s.devSimulateOffline !== p.devSimulateOffline) console.log(`devSimulateOffline ${p.devSimulateOffline} -> ${s.devSimulateOffline}
-${new Error().stack?.split('
-').slice(2, 9).join('
-')}`);
+  if (s.devSimulateOffline !== p.devSimulateOffline) console.log(`devSimulateOffline ${p.devSimulateOffline} -> ${s.devSimulateOffline} | ${(new Error().stack ?? '').split(/\n/).slice(2, 9).join(' | ')}`);
 });
 
 test('BE-REAL-001 an account with eight weeks of every section: it all goes up through the app, and a fresh phone gets every item back, the same', async () => {
