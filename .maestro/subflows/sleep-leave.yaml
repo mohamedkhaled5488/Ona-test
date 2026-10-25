@@ -1,0 +1,5 @@
+# Used by scripts/e2e-sleep.sh: leave Sleep for another part of Ona (Ona
+# stays open and in front).
+appId: app.ona
+---
+- tapOn: "Plan"

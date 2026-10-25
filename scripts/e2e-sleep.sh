@@ -25,6 +25,8 @@ playing() { adb shell dumpsys audio | tr -d '\r' | grep "u/pid:$(uid)/" | grep -
 media_session() { adb shell dumpsys media_session | tr -d '\r' | grep -A6 "package=$PKG" | grep -q "active=true"; }
 media_notification() { adb shell dumpsys notification --noredact | tr -d '\r' | grep -A12 "pkg=$PKG" | grep -qi "MediaStyle\|mediaSession\|category=transport"; }
 note() { echo "$1" | tee -a "$OUT"; }
+# Android's own view, saved for each case and moment (in the run's artifact).
+snap() { mkdir -p maestro-reports/sleep-dumpsys; for s in audio media_session; do adb shell dumpsys "$s" > "maestro-reports/sleep-dumpsys/$1-$2-$s.txt" 2>&1; done; adb shell dumpsys notification --noredact > "maestro-reports/sleep-dumpsys/$1-$2-notification.txt" 2>&1; }
 
 adb shell svc power stayon true > /dev/null 2>&1
 failed=0
@@ -43,13 +45,15 @@ for c in $CASES; do
       adb shell input keyevent KEYCODE_HOME ;;
     call) adb emu gsm call 5551234 > /dev/null 2>&1; sleep 8; adb emu gsm cancel 5551234 > /dev/null 2>&1 ;;
     addlayer) maestro test .maestro/subflows/sleep-add-layer.yaml >> "maestro-reports/sleep-$c.log" 2>&1 ;;
-    leave) adb shell input keyevent KEYCODE_BACK ;; # out of Sleep, Ona still open
+    leave) maestro test .maestro/subflows/sleep-leave.yaml >> "maestro-reports/sleep-$c.log" 2>&1 ;; # another tab: Ona open, Sleep gone
   esac
   sleep 15
+  snap "$c" mid
   mid="playing"; playing || mid="silent"
   if [ "$c" = "swipe" ] && adb shell dumpsys activity recents | tr -d '\r' | grep -q "A=.*$PKG\|$PKG/"; then swiped="(task still in recents)"; else swiped=""; fi
   # Past the end (plus the fade and a margin).
   left=$(( start + TIMER_S + 40 - $(date +%s) )); [ "$left" -gt 0 ] && sleep "$left"
+  snap "$c" after
   after="silent"; playing && after="PLAYING"
   sess="gone"; media_session && sess="STILL ACTIVE"
   notif="gone"; media_notification && notif="STILL SHOWN"
