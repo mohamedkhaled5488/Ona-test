@@ -14,6 +14,25 @@ fi
 
 mkdir -p maestro-reports maestro-screens maestro-debug
 
+# The built app must carry no server key: search the JavaScript bundle that
+# ships in the APK (Hermes bytecode keeps its strings readable) for actual
+# keys, not words: a JWT whose payload has "role":"service_role" (in any of
+# its three base64 alignments), a new-style secret key (sb_secret_ plus a key
+# body), and service-key variable names. (supabase-js itself mentions
+# "service_role" and "sb_secret_" in warnings: those aren't keys.)
+if unzip -p "$APK" assets/index.android.bundle > bundle.bin 2> /dev/null; then
+  hits=$(grep -a -o -E 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*(InJvbGUiOiJzZXJ2aWNlX3JvbGUi|cm9sZSI6InNlcnZpY2Vfcm9sZS|yb2xlIjoic2VydmljZV9yb2xlI)[A-Za-z0-9_-]*|sb_secret_[A-Za-z0-9_-]{20,}|SUPABASE_SERVICE[A-Z_]*' bundle.bin | cut -c1-24 | sort -u)
+  rm -f bundle.bin
+  if [ -n "$hits" ]; then
+    echo "::error title=Server key in the app bundle::$(echo "$hits" | tr '\n' ' ')"
+    exit 1
+  fi
+  echo "Bundle scan: no server key in the APK's JavaScript"
+else
+  echo "::error title=Bundle scan::Couldn't read assets/index.android.bundle from the APK"
+  exit 1
+fi
+
 # A freshly booted emulator is busy for a while (the launcher has stopped
 # responding on CI right after boot, covering the first flow's screen):
 # wait for boot, unlock, close any system dialog, and give it a moment.

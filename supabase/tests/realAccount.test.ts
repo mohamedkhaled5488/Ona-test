@@ -190,3 +190,143 @@ test('BE-REAL-004 trial ended: the account\'s data still comes down; this phone\
   expect(direct.error).not.toBeNull();
   await chooseForAccount('merge'); // nothing pending: a no-op
 });
+
+// --- B2: more of what a person does, on a real server ------------------------
+
+// One small edit in every item list, and one item removed from each: what a
+// second phone must get.
+function editAndDeleteEverywhere(): { edited: number; deleted: number } {
+  let edited = 0;
+  let deleted = 0;
+  for (const c of syncedCollections()) {
+    const store = LOCAL_DATA[c.section].store;
+    const list = (store.getState() as Record<string, unknown>)[c.field];
+    if (!Array.isArray(list) || list.length < 2 || typeof list[0] !== 'object' || list[0] === null || !('id' in list[0])) continue;
+    const [first, ...rest] = list as Record<string, unknown>[];
+    const key = ['title', 'name', 'text', 'note', 'label'].find((k) => typeof first[k] === 'string');
+    const changed = key ? { ...first, [key]: `${first[key] as string} (edited on phone B)` } : first;
+    if (key) edited++;
+    store.setState({ [c.field]: [changed, ...rest.slice(0, -1)] } as never);
+    deleted++;
+  }
+  return { edited, deleted };
+}
+const same = (a: Record<string, Map<string, unknown>>, b: Record<string, Map<string, unknown>>) =>
+  Object.keys(a).map((c) => ({ c, same: stableStringify([...a[c].entries()].sort(([x], [y]) => x.localeCompare(y))) === stableStringify([...(b[c] ?? new Map()).entries()].sort(([x], [y]) => x.localeCompare(y))) })).filter((r) => !r.same);
+
+test('BE-REAL-005 two phones: edits and deletes in every section on one reach the other', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  loadIntoPhone(seededSections());
+  await sync(); // phone A
+  await freshPhone();
+  await signIn(u);
+  await sync(); // phone B has everything
+  const { edited, deleted } = editAndDeleteEverywhere();
+  expect(edited).toBeGreaterThan(15);
+  expect(deleted).toBeGreaterThan(20);
+  await sync();
+  const onB = phoneRecords();
+  await freshPhone(); // phone A again, fresh, or a third phone
+  await signIn(u);
+  await sync();
+  expect(same(onB, phoneRecords())).toEqual([]);
+});
+
+test('BE-REAL-006 offline edits wait, and go up when the phone is back online', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  loadIntoPhone(seededSections());
+  await sync();
+  useSettingsStore.setState({ devSimulateOffline: true });
+  editAndDeleteEverywhere();
+  expect((await sync()).ok).toBe(false);
+  expect(unsentChanges()).toBeGreaterThan(20);
+  const offline = phoneRecords();
+  useSettingsStore.setState({ devSimulateOffline: false });
+  await sync();
+  expect(unsentChanges()).toBe(0);
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  expect(same(offline, phoneRecords())).toEqual([]);
+});
+
+test('BE-REAL-007 consent off: nothing goes up', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  useSettingsStore.getState().setConsent({ storeData: false });
+  loadIntoPhone(seededSections());
+  await sync();
+  const { count } = await admin().from('sync_records').select('record_id', { count: 'exact', head: true }).eq('user_id', u.id);
+  expect(count).toBe(0);
+});
+
+test('BE-REAL-008 a restore that fails halfway (the network drops after the first page) finishes on the next try, whole, nothing twice', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  loadIntoPhone(seededSections());
+  await sync();
+  const all = phoneRecords();
+  await freshPhone();
+  await signIn(u);
+  const realFetch = global.fetch;
+  let pulls = 0;
+  global.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('/rest/v1/sync_records') && (!init?.method || init.method === 'GET') && ++pulls === 2) return Promise.reject(new TypeError('Network request failed'));
+    return realFetch(input, init);
+  }) as typeof fetch;
+  try {
+    expect((await sync()).ok).toBe(false);
+  } finally {
+    global.fetch = realFetch;
+  }
+  // Nothing half-written as if it were complete.
+  const partial = Object.values(phoneRecords()).reduce((n, m) => n + m.size, 0);
+  expect(partial === 0 || partial === Object.values(all).reduce((n, m) => n + m.size, 0)).toBe(true);
+  await sync();
+  expect(same(all, phoneRecords())).toEqual([]);
+});
+
+test('BE-REAL-009 about a year of data: restore time and memory, on a fresh phone', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  // Six eight-week stretches, each its own items.
+  const merged: Record<string, Record<string, unknown>> = {};
+  for (let k = 0; k < 6; k++) {
+    const day = new Date(Date.now() - k * 56 * DAY).toISOString().slice(0, 10);
+    const chunk = JSON.parse(JSON.stringify(seedFor(day, `ona-real-year-${k}`)).split('-seed-').join(`-y${k}-`)) as Record<string, Record<string, unknown>>;
+    for (const [section, state] of Object.entries(chunk)) {
+      merged[section] ??= {};
+      for (const [field, value] of Object.entries(state)) {
+        const prev = merged[section][field];
+        merged[section][field] = Array.isArray(prev) && Array.isArray(value) ? [...prev, ...value] : prev ?? value;
+      }
+    }
+  }
+  loadIntoPhone(merged);
+  const total = Object.values(phoneRecords()).reduce((n, m) => n + m.size, 0);
+  expect(total).toBeGreaterThan(2500);
+  await sync();
+  await freshPhone();
+  await signIn(u);
+  const heap0 = process.memoryUsage().heapUsed;
+  const t0 = Date.now();
+  await sync();
+  const ms = Date.now() - t0;
+  const mb = (process.memoryUsage().heapUsed - heap0) / 1e6;
+  expect(Object.values(phoneRecords()).reduce((n, m) => n + m.size, 0)).toBe(total);
+  console.log(`BE-REAL-009: ${total} items restored in ${ms} ms, heap +${mb.toFixed(1)} MB`);
+  expect(ms).toBeLessThan(60_000);
+});
