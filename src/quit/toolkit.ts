@@ -53,6 +53,7 @@ export const BUILT_IN_TOOLS: ToolDef[] = [
   { id: 'memoryMatch', title: 'Match pairs', line: 'A calm matching puzzle. No score, no clock.', label: 'Matching pairs', category: 'mind', screenGame: true, why: 'Many people find absorbing tasks help cravings pass.' },
   { id: 'slidePuzzle', title: 'Slide puzzle', line: 'Slide the tiles back into order. No moves counted, no clock.', label: 'Slide puzzle', category: 'mind', screenGame: true, why: 'A puzzle with no rush can hold your attention for a while.' },
   { id: 'gentleMath', title: 'Gentle sums', line: 'One easy sum at a time. No score, no clock.', label: 'Gentle sums', category: 'mind', screenGame: true, why: 'Many people find absorbing tasks help cravings pass.' },
+  { id: 'doodle', title: 'Draw what you feel', line: 'A doodle pad. Draw a feeling, or just let your hand move.', label: 'Drawing', category: 'mind', why: 'Making marks without a goal can be a quiet way to let a feeling out.' },
   // Move
   { id: 'doSomethingInstead', title: 'Do something instead', line: 'A few quick, concrete things to do right now.', label: 'Doing something instead', category: 'move', why: 'Having something concrete to do can make it easier to wait the craving out.' },
   { id: 'walk', title: 'A short walk', line: 'Step out for a few minutes, at your own pace.', label: 'A short walk', category: 'move', why: 'Moving, even a little, helps many people feel an urge ease.' },

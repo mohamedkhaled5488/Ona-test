@@ -34,7 +34,9 @@ A test in the app blocks words such as "guarantee", "cure", "treatment", "withdr
 | A mindful minute | Pausing to notice, without judging, helps some people let a moment pass. | |
 | Calm sounds | Steady, gentle sound can make it easier to settle. | |
 | Match pairs | Many people find absorbing tasks help cravings pass. | |
+| Slide puzzle | A puzzle with no rush can hold your attention for a while. | |
 | Gentle sums | Many people find absorbing tasks help cravings pass. | |
+| Draw what you feel | Making marks without a goal can be a quiet way to let a feeling out. | |
 
 ### Move
 

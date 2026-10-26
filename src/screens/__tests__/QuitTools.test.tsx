@@ -207,6 +207,45 @@ test('QUIT-TOOL-044 the slide puzzle: no moves or clock; tiles say which can sli
   expect(useMindGamesStore.getState().results).toEqual([]);
 });
 
+test('QUIT-TOOL-045 draw what you feel: a finger draws, colours and widths change, undo and clear; offered for screen habits too; nothing saved', async () => {
+  const r = await openTool('Draw what you feel', { habitType: 'scrolling' });
+  const canvas = screen.getByTestId('doodle-canvas');
+  expect(canvas.props.accessibilityLabel).toBe(TOOL_VIEW_COPY.doodleCanvas);
+  const at = (x: number, y: number) => ({ nativeEvent: { locationX: x, locationY: y, touches: [], changedTouches: [] }, touchHistory: { touchBank: [] } });
+  const draw = async (points: [number, number][]) =>
+    act(async () => {
+      fireEvent(canvas, 'responderGrant', at(...points[0]));
+      for (const p of points.slice(1)) fireEvent(canvas, 'responderMove', at(...p));
+      fireEvent(canvas, 'responderRelease', at(...points[points.length - 1]));
+    });
+  // The drawn paths, from the rendered tree.
+  type Node = { props?: Record<string, unknown>; children?: unknown[] | null };
+  const paths = () => {
+    const out: Node[] = [];
+    const walk = (n: unknown) => {
+      if (!n || typeof n !== 'object') return;
+      if (Array.isArray(n)) return n.forEach(walk);
+      const node = n as Node;
+      if (typeof node.props?.d === 'string' && node.props?.strokeWidth !== undefined) out.push(node);
+      node.children?.forEach(walk);
+    };
+    walk(screen.toJSON());
+    return out as { props: Record<string, unknown> }[];
+  };
+  expect(screen.getByRole('button', { name: TOOL_VIEW_COPY.doodleUndo }).props.accessibilityState).toEqual({ disabled: true });
+  await draw([[10, 10], [40, 40], [80, 60]]);
+  await r.user.press(screen.getByLabelText(TOOL_VIEW_COPY.doodleThick));
+  await r.user.press(screen.getByLabelText(TOOL_VIEW_COPY.doodleColour('Amber')));
+  await draw([[100, 100], [140, 120]]);
+  const drawn = [...new Map(paths().map((p: { props: Record<string, unknown> }) => [p.props.d, Number(p.props.strokeWidth)])).values()];
+  expect(drawn).toEqual([4, 10]);
+  await r.user.press(screen.getByText(TOOL_VIEW_COPY.doodleUndo));
+  expect(new Set(paths().map((p: { props: Record<string, unknown> }) => p.props.d)).size).toBe(1);
+  await r.user.press(screen.getByText(TOOL_VIEW_COPY.doodleClear));
+  expect(paths()).toHaveLength(0);
+  expect(JSON.stringify(useQuitHabitsStore.getState())).not.toMatch(/M 10 10/);
+});
+
 test('QUIT-TOOL-041 gentle sums: no clock, no count; a wrong answer shows the right one and moves on; nothing saved', async () => {
   const r = await openTool('Gentle sums');
   expect(screen.queryByText(/s left|correct|score/i)).toBeNull();

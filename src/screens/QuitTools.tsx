@@ -3,7 +3,8 @@
 // punish, nothing based on chance; sound off until chosen; vibration optional
 // and off; reduce motion respected; few words and big targets; leave any time.
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, Pressable, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, PanResponder, Pressable, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ import { BREATHING_PATTERNS, BREATH_LABELS, GUIDED_STEPS, TOOL_VIEW_COPY as COPY
 import { generateProblem, type MathProblem } from '../games/quickMath';
 import { memoryDeck, type MemoryCard } from '../games/memoryMatch';
 import { canSlide, isSolved, shuffledBoard, slide, type Board } from '../games/slidePuzzle';
+import { extendStroke, pathOf, startStroke, type Stroke } from '../games/doodle';
 import { onSoundsReplaced, playLayer, stopAllLayers, type SoundId } from '../utils/audioEngine';
 import type { QuitCravingSession, QuitHabit } from '../types/sections';
 
@@ -281,6 +283,61 @@ function GentleMemory() {
   );
 }
 
+// The doodle pad: draw with a finger in a few soft colours; undo, clear.
+// Nothing is saved; the oldest strokes give way in a very long session.
+// Read when drawn (the theme's colours follow light and dark).
+const doodleColours = () => [
+  { name: 'Section colour', hex: accent },
+  { name: 'Teal', hex: colors.teal },
+  { name: 'Amber', hex: colors.amber },
+  { name: 'Grey', hex: colors.inkSoft },
+];
+function DoodlePad() {
+  const DOODLE_COLOURS = doodleColours();
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [colour, setColour] = useState(DOODLE_COLOURS[0].hex);
+  const [width, setWidth] = useState(4);
+  const pen = useRef({ colour, width });
+  pen.current = { colour, width };
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        setStrokes((s) => startStroke(s, [locationX, locationY], pen.current.colour, pen.current.width));
+      },
+      onPanResponderMove: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        setStrokes((s) => extendStroke(s, [locationX, locationY]));
+      },
+    })
+  ).current;
+  return (
+    <>
+      <Caption style={styles.note}>{COPY.doodleLine}</Caption>
+      <View style={styles.canvas} accessible accessibilityLabel={COPY.doodleCanvas} accessibilityHint={COPY.doodleCanvasHint} testID="doodle-canvas" {...responder.panHandlers}>
+        <Svg width="100%" height="100%">
+          {strokes.map((s, i) => (
+            <Path key={i} d={pathOf(s)} stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          ))}
+        </Svg>
+      </View>
+      <View style={styles.chipRow}>
+        {DOODLE_COLOURS.map((c) => (
+          <Pressable key={c.name} onPress={() => setColour(c.hex)} style={[styles.swatch, { backgroundColor: c.hex }, colour === c.hex && styles.swatchOn]} accessibilityRole="radio" accessibilityLabel={COPY.doodleColour(c.name)} accessibilityState={{ selected: colour === c.hex }} />
+        ))}
+        <Chip label={COPY.doodleThin} selected={width === 4} onPress={() => setWidth(4)} />
+        <Chip label={COPY.doodleThick} selected={width === 10} onPress={() => setWidth(10)} />
+      </View>
+      <View style={styles.row}>
+        <PrimaryButton label={COPY.doodleUndo} variant="outline" style={styles.flex} disabled={!strokes.length} onPress={() => setStrokes((s) => s.slice(0, -1))} />
+        <PrimaryButton label={COPY.doodleClear} variant="outline" style={styles.flex} disabled={!strokes.length} onPress={() => setStrokes([])} />
+      </View>
+    </>
+  );
+}
+
 // The slide puzzle: tap a tile next to the gap to slide it. No move count,
 // no clock; solved: a quiet "nice" and another one.
 const SLIDE_SIZE = 3;
@@ -440,7 +497,7 @@ function NameCraving({ session }: { session: QuitCravingSession }) {
 
 // The tools that have their own view here (the first four keep theirs in
 // QuitHabitScreen).
-export const TOOL_VIEWS = new Set(['grounding', 'bodyScan', 'muscleRelax', 'countBreaths', 'noticeFive', 'oneObject', 'mindfulMinute', 'sounds', 'memoryMatch', 'slidePuzzle', 'gentleMath', 'walk', 'stretches', 'myReasons', 'delayIt', 'nameCraving', 'urgeSurfing', 'textFriend', 'sayHi']);
+export const TOOL_VIEWS = new Set(['grounding', 'bodyScan', 'muscleRelax', 'countBreaths', 'noticeFive', 'oneObject', 'mindfulMinute', 'sounds', 'memoryMatch', 'slidePuzzle', 'gentleMath', 'doodle', 'walk', 'stretches', 'myReasons', 'delayIt', 'nameCraving', 'urgeSurfing', 'textFriend', 'sayHi']);
 
 export function ToolView({ tool, habit, session, startedAt, onDone }: { tool: ToolDef; habit: QuitHabit; session: QuitCravingSession; startedAt: string; onDone: () => void }) {
   const steps = GUIDED_STEPS[tool.id];
@@ -465,6 +522,8 @@ export function ToolView({ tool, habit, session, startedAt, onDone }: { tool: To
         <CalmSounds />
       ) : tool.id === 'memoryMatch' ? (
         <GentleMemory />
+      ) : tool.id === 'doodle' ? (
+        <DoodlePad />
       ) : tool.id === 'slidePuzzle' ? (
         <SlidePuzzle />
       ) : tool.id === 'gentleMath' ? (
@@ -501,6 +560,9 @@ const styles = themedStyles(() => ({
   memoryCard: { width: 72, height: 72 },
   memoryInner: { flex: 1, borderRadius: radii.md, backgroundColor: colors.stone, alignItems: 'center', justifyContent: 'center' },
   memoryUp: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  canvas: { height: 280, borderRadius: radii.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, overflow: 'hidden', marginBottom: spacing.sm },
+  swatch: { width: 40, height: 40, borderRadius: 20 },
+  swatchOn: { borderWidth: 3, borderColor: colors.ink },
   slideGrid: { flexDirection: 'row', flexWrap: 'wrap', width: 3 * 84, alignSelf: 'center', marginVertical: spacing.md },
   slideCell: { width: 76, height: 76, margin: 4, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   slideTile: { backgroundColor: colors.surface, borderWidth: 1.5 },
