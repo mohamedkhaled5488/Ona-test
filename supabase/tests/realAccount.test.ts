@@ -32,13 +32,16 @@ import { startAccountConsent, noteConsentSource } from '../../src/sync/accountCo
 import { chooseForAccount, useAccountChoiceStore } from '../../src/sync/signInFlow';
 import { startEntitlementSync } from '../../src/utils/entitlementBootstrap';
 import { computeEntitlement } from '../../src/utils/entitlement';
-import { seededSections as seedFor } from '../../src/test-utils/realSeed';
+import { SEED_REFERENCE_DATE, seededSections as seedFor } from '../../src/test-utils/realSeed';
 import { RECAP_CONTRIBUTORS } from '../../src/recap/registry';
 import { periodStats } from '../../src/utils/recapStats';
+import { addDaysISO } from '../../src/utils/date';
 import { admin, newUser, setTrial, setSubscription, DAY, fromNow, type TestUser } from './local';
 
 const storage = AsyncStorage as unknown as { clear: () => Promise<void> };
-const TODAY = new Date().toISOString().slice(0, 10);
+// The seed's fixed reference date, never the calendar: every count below is
+// the same on every day (BE-REAL-005 once failed only because of the date).
+const TODAY = SEED_REFERENCE_DATE;
 
 const seededSections = () => seedFor(TODAY);
 
@@ -158,7 +161,7 @@ test('BE-REAL-002 on the restored phone, Recap has every section that has data, 
     budgets: s('budget').budgets, budgetEntries: s('budget').entries, quitHabits: s('quitHabit').habits, quitTracks: s('quitHabit').tracks, quitFeelingEntries: s('quitHabit').feelingEntries,
     quitSlips: s('quitHabit').slips, quitCravingSessions: s('quitHabit').cravingSessions, bestMoments: [],
   } as never;
-  const range = { start: new Date(Date.now() - 56 * DAY).toISOString().slice(0, 10), end: TODAY };
+  const range = { start: addDaysISO(TODAY, -56), end: TODAY };
   const ctx = { data, stats: periodStats(data, range as never), today: TODAY };
   const empty = RECAP_CONTRIBUTORS.filter((c) => !c.build(ctx).hasData).map((c) => c.section);
   expect(empty).toEqual([]);
@@ -241,12 +244,11 @@ test('BE-REAL-005 two phones: edits and deletes in every section on one reach th
   await signIn(u);
   await sync(); // phone B has everything
   const { edited, deleted } = editAndDeleteEverywhere();
-  // The seed is made relative to today, so how many lists have a text field
-  // to edit varies by day: 13 to 16 across all of 2026 (">15" held on only
-  // 26 days, and failed on 2026-10-26). A floor under that, not an exact
-  // count; what matters (every edit and delete reaches phone B) is below.
-  expect(edited).toBeGreaterThanOrEqual(12);
-  expect(deleted).toBeGreaterThan(20);
+  // Exact, from the seed on its fixed reference date (BE-REAL-SEED-002 keeps
+  // the seed the same whatever the calendar says). A change to the Demo
+  // generator can change these; then update them here.
+  expect(edited).toBe(15);
+  expect(deleted).toBe(24);
   await sync();
   const onB = phoneRecords();
   await freshPhone(); // phone A again, fresh, or a third phone
@@ -354,7 +356,7 @@ test('BE-REAL-009 about a year of data: restore time and memory, on a fresh phon
   // Six eight-week stretches, each its own items.
   const merged: Record<string, Record<string, unknown>> = {};
   for (let k = 0; k < 6; k++) {
-    const day = new Date(Date.now() - k * 56 * DAY).toISOString().slice(0, 10);
+    const day = addDaysISO(TODAY, -k * 56);
     const chunk = JSON.parse(JSON.stringify(seedFor(day, `ona-real-year-${k}`)).split('-seed-').join(`-y${k}-`)) as Record<string, Record<string, unknown>>;
     for (const [section, state] of Object.entries(chunk)) {
       merged[section] ??= {};

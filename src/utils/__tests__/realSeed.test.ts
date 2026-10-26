@@ -3,7 +3,7 @@
 // Recap shows every section from it. Checked here so a CI failure there
 // means the server, not the seed. IDs: docs/test-cases/backend.md (BE-REAL-*)
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
-import { seededSections } from '../../test-utils/realSeed';
+import { SEED_REFERENCE_DATE, seededSections } from '../../test-utils/realSeed';
 import { LOCAL_DATA } from '../localData';
 import { syncedCollections, toRecords } from '../../sync/records';
 import { RECAP_CONTRIBUTORS } from '../../recap/registry';
@@ -13,6 +13,15 @@ import { useClock, restoreClock } from '../../test-utils';
 
 beforeEach(() => useClock('2026-10-25T12:00'));
 afterEach(() => restoreClock());
+
+test('BE-REAL-SEED-002 the seed never depends on the calendar: the same data on any day the tests run, by default for its fixed date', () => {
+  const runs = ['2026-01-02T03:00', '2026-10-26T12:00', '2027-06-30T23:30'].map((when) => {
+    useClock(when);
+    return JSON.stringify(seededSections());
+  });
+  expect(new Set(runs).size).toBe(1);
+  expect(runs[0]).toBe(JSON.stringify(seededSections(SEED_REFERENCE_DATE)));
+});
 
 test('BE-REAL-SEED-001 eight weeks in every section, as ordinary data (no "-demo-" ids), and Recap has every section', () => {
   const today = '2026-10-25';
