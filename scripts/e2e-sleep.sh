@@ -39,8 +39,17 @@ adb shell svc power stayon true > /dev/null 2>&1
 failed=0
 for c in $CASES; do
   echo "=== sleep timer: $c"
+  adb logcat -c > /dev/null 2>&1
   if ! maestro test .maestro/subflows/sleep-start.yaml > "maestro-reports/sleep-$c.log" 2>&1; then
-    note "FAIL $c: couldn't start the sound (see maestro-reports/sleep-$c.log)"; failed=$((failed + 1)); continue
+    # Once more (the start, not the check), with Android's log of the first
+    # try kept; passing the second time is reported, never hidden.
+    { adb logcat -d -b crash 2>/dev/null; adb logcat -d '*:E' 2>/dev/null | tail -300; } > "maestro-reports/sleep-$c-first-try-android.txt"
+    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1
+    if maestro test .maestro/subflows/sleep-start.yaml >> "maestro-reports/sleep-$c.log" 2>&1; then
+      echo "::warning title=Sleep timer ($c)::Starting the sound worked only on the second try; see maestro-reports/sleep-$c-first-try-android.txt"
+    else
+      note "FAIL $c: couldn't start the sound (see maestro-reports/sleep-$c.log)"; failed=$((failed + 1)); continue
+    fi
   fi
   start=$(date +%s)
   acted="yes"

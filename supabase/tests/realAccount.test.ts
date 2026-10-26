@@ -241,7 +241,11 @@ test('BE-REAL-005 two phones: edits and deletes in every section on one reach th
   await signIn(u);
   await sync(); // phone B has everything
   const { edited, deleted } = editAndDeleteEverywhere();
-  expect(edited).toBeGreaterThan(15);
+  // The seed is made relative to today, so how many lists have a text field
+  // to edit varies by day: 13 to 16 across all of 2026 (">15" held on only
+  // 26 days, and failed on 2026-10-26). A floor under that, not an exact
+  // count; what matters (every edit and delete reaches phone B) is below.
+  expect(edited).toBeGreaterThanOrEqual(12);
   expect(deleted).toBeGreaterThan(20);
   await sync();
   const onB = phoneRecords();

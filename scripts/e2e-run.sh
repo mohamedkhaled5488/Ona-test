@@ -52,7 +52,22 @@ adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null
 sleep 20
 adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1
 
+# Android's own record of a failed try: the crash buffer and recent errors
+# (maestro-reports/<name>-android.txt), and a warning naming any crash or
+# "isn't responding" of Ona's, so the run's summary says why.
+PKG=app.ona
+save_android_log() {
+  { echo "--- crash buffer"; adb logcat -d -b crash 2>/dev/null; echo "--- errors"; adb logcat -d '*:E' 2>/dev/null | tail -300; } > "maestro-reports/$1-android.txt"
+  if grep -qE "FATAL EXCEPTION|Process: $PKG" "maestro-reports/$1-android.txt"; then
+    echo "::warning title=Ona crashed during $1::See maestro-reports/$1-android.txt in the run's artifact."
+  fi
+  if adb logcat -d 2>/dev/null | grep -qE "ANR in $PKG"; then
+    echo "::warning title=Ona stopped responding during $1::See maestro-reports/$1-android.txt in the run's artifact."
+  fi
+}
+
 run_flow() {
+  adb logcat -c > /dev/null 2>&1
   maestro test --format junit --output "maestro-reports/$1.xml" --debug-output "maestro-debug/$1" "$2" 2>&1 | tee "maestro-reports/$1.log"
   return "${PIPESTATUS[0]}"
 }
@@ -68,6 +83,7 @@ for flow in $([ "${SLEEP_ONLY:-0}" = "1" ] || ls .maestro/*.yaml); do
     # Once more, after closing any system dialog. Passing the second time is
     # reported as unstable (an annotation), never hidden.
     adb shell uiautomator dump /sdcard/ona-screen.xml > /dev/null 2>&1 && adb pull /sdcard/ona-screen.xml "maestro-screens/$name-first-try.xml" > /dev/null 2>&1
+    save_android_log "$name-first-try"
     adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1
     echo "=== $name (second try)"
     if run_flow "$name" "$flow"; then
@@ -76,6 +92,7 @@ for flow in $([ "${SLEEP_ONLY:-0}" = "1" ] || ls .maestro/*.yaml); do
     fi
     failed=$((failed + 1))
     adb shell uiautomator dump /sdcard/ona-screen.xml > /dev/null 2>&1 && adb pull /sdcard/ona-screen.xml "maestro-screens/$name.xml" > /dev/null 2>&1
+    save_android_log "$name"
     python3 scripts/e2e-annotate.py --flow "$name" "maestro-reports/$name.xml" "maestro-reports/$name.log" "maestro-screens/$name.xml"
   fi
 done
