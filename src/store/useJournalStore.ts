@@ -9,7 +9,7 @@ interface JournalState {
 
   upsertEntry: (
     date: string,
-    zone: FeelingZone,
+    zone: FeelingZone | undefined,
     text: string,
     tags: string[],
     // feelingChosen: undefined keeps what the entry had.

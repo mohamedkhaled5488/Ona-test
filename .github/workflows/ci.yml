@@ -29,6 +29,12 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx jest --ci
+      # Feelings land on the person's own local day in any time zone: the same
+      # tests again, with the phone far ahead of UTC and behind it.
+      - name: Time zones (feelings on the local day)
+        run: |
+          TZ=Pacific/Auckland npx jest --ci src/utils/__tests__/feelingsTimeZones.test.ts
+          TZ=America/Los_Angeles npx jest --ci src/utils/__tests__/feelingsTimeZones.test.ts
 
   backend:
     name: Backend (local Supabase)

@@ -14,10 +14,10 @@ import { useFeelingsStore } from '../../store/useFeelingsStore';
 import { useJournalStore } from '../../store/useJournalStore';
 import { useQuitHabitsStore } from '../../store/useQuitHabitsStore';
 import { useThoughtsStore } from '../../store/useThoughtsStore';
-import { bringFeelingsTogether, journalFeelingId, quitFeelingId, removeJournalFeeling, syncJournalFeeling } from '../../feelings/fromSections';
+import { bringFeelingsTogether, journalFeelingId, quitFeelingId, quitMomentFeelingId, removeJournalFeeling, syncJournalFeeling } from '../../feelings/fromSections';
 import { deleteFeelingEntry } from '../taskFeelings';
 import { mirrorFeelingEdit } from '../itemFeelings';
-import { filterBySource, sourceBreakdown } from '../feelingsInsights';
+import { basedOn, filterBySource, overviewInsight, sourceBreakdown } from '../feelingsInsights';
 import { zoneCounts } from '../feelingsStats';
 import { feelings as wheel } from '../../data/feelingsWheel';
 import { makeQuitHabit, makeTrack, resetAll, useClock, restoreClock } from '../../test-utils';
@@ -53,13 +53,13 @@ describe('the journal, from now on', () => {
     expect(log()[0]).toMatchObject({ zone: 'lively', feelingIds: [lively.id] });
   });
 
-  test('FEEL-ALL-003 not chosen: the Calm a new entry starts on, and the neutral colour of an idea moved from Catch a Thought', () => {
-    journal().upsertEntry('2026-10-26', 'calm', 'Just writing', []);
+  test('FEEL-ALL-003 no colour chosen: a new entry, and an idea moved from Catch a Thought, have no colour and no feeling', () => {
+    journal().upsertEntry('2026-10-26', undefined, 'Just writing', []);
     syncJournalFeeling(entryOn('2026-10-26').id);
     useThoughtsStore.setState({ thoughts: [{ id: 'th1', createdAt: '2026-10-27T09:00:00.000Z', kind: 'idea', text: 'Paint the hall' }] } as never);
     useThoughtsStore.getState().promoteToJournal('th1');
     syncJournalFeeling(entryOn('2026-10-27').id);
-    expect(entryOn('2026-10-27')).toMatchObject({ zone: 'okay', feelingChosen: false });
+    expect(entryOn('2026-10-27')).toMatchObject({ zone: undefined, feelingChosen: false });
     expect(log()).toEqual([]);
   });
 
@@ -137,8 +137,11 @@ describe('from before (brought in once, at start and after a sync)', () => {
     expect(bringFeelingsTogether()).toEqual({ journal: 0, quit: 2 });
     expect(log().find((e) => e.id === quitFeelingId('m1'))).toMatchObject({ zone: 'tense', feelingIds: ['scared-anxious'], reasonTags: ['Vaping'], note: 'after work', createdAt: '2026-09-10T21:30:00.000Z', source: { kind: 'quitHabit', refId: 'q1', linkId: 'm1' } });
     expect(log().find((e) => e.id === quitFeelingId('m3'))!.zone).toBe('lively'); // the colour from its feeling
-    expect(useQuitHabitsStore.getState().feelingEntries.find((q) => q.id === 'm1')!.feelingEntryId).toBe(quitFeelingId('m1'));
-    expect(useQuitHabitsStore.getState().feelingEntries.find((q) => q.id === 'm2')!.feelingEntryId).toBeUndefined(); // no feeling noted
+    // Linked by its own id; bringing it in never edits the moment (FEEL-2P-003).
+    const m = (id: string) => useQuitHabitsStore.getState().feelingEntries.find((q) => q.id === id)!;
+    expect(quitMomentFeelingId(m('m1'))).toBe(quitFeelingId('m1'));
+    expect(m('m1').feelingEntryId).toBeUndefined();
+    expect(quitMomentFeelingId(m('m2'))).toBeUndefined(); // no feeling noted
   });
 
   test('FEEL-ALL-012 a Quit feeling deleted from the Feelings log isn\'t brought back', () => {
@@ -180,3 +183,47 @@ describe('from before (brought in once, at start and after a sync)', () => {
     expect(log().filter((e) => e.source?.kind === 'journal').map((e) => [e.date, e.zone])).toEqual([['2026-09-05', 'low']]);
   });
 });
+
+describe('"Based on N" counts what was brought in, with the usual sample-size wording', () => {
+  const nameOf = (id: string) => wheel.find((f) => f.id === id)?.name;
+  const journalOn = (dates: string[]) =>
+    useJournalStore.setState({ entries: dates.map((date, i) => ({ id: `j${i}`, date, zone: i % 2 ? 'low' : 'tense', text: 'old', tags: [] })) } as never);
+  const dates = (n: number) => Array.from({ length: n }, (_, i) => `2026-09-${String(i + 1).padStart(2, '0')}`);
+
+  test('FEEL-ALL-020 one brought-in feeling: "Based on 1 entry", told as the entry itself', () => {
+    journalOn(dates(1));
+    bringFeelingsTogether();
+    const o = overviewInsight(log(), nameOf)!;
+    expect(o).toMatchObject({ n: 1, level: 'facts' });
+    expect(o.headline).toBe('You logged Tense once.');
+    expect(basedOn(o.n)).toBe('Based on 1 entry');
+  });
+
+  test('FEEL-ALL-021 three to six: counts, "so far"; seven and more: counts; brought-in and new feelings counted together', () => {
+    journalOn(dates(4));
+    bringFeelingsTogether();
+    let o = overviewInsight(log(), nameOf)!;
+    expect(o).toMatchObject({ n: 4, level: 'soFar', headline: 'So far, across 4 entries: Tense 2 · Low 2.' });
+    // Three more, noted today in the journal (chosen): 7 in all.
+    for (const d of ['2026-10-25', '2026-10-26', '2026-10-27']) {
+      journal().upsertEntry(d, 'calm', 'new', [], { feelingChosen: true });
+      syncJournalFeeling(entryOn(d).id);
+    }
+    o = overviewInsight(log(), nameOf)!;
+    expect(o.n).toBe(7);
+    expect(o.level).toBe('tends');
+    expect(o.headline).toMatch(/^Across 7 entries: /);
+    expect(o.headline).not.toMatch(/tends to|usually|most/);
+    expect(basedOn(o.n)).toBe('Based on 7 entries');
+  });
+
+  test('FEEL-ALL-022 under "From your journal": the brought-in ones on their own, with their own count', () => {
+    journalOn(dates(2));
+    bringFeelingsTogether();
+    useFeelingsStore.getState().putEntry({ id: 'standalone', zone: 'calm', feelingIds: [], date: '2026-10-27', createdAt: '2026-10-27T09:00:00.000Z' });
+    const o = overviewInsight(filterBySource(log(), 'journal'), nameOf)!;
+    expect(o.n).toBe(2);
+    expect(basedOn(overviewInsight(log(), nameOf)!.n)).toBe('Based on 3 entries');
+  });
+});
+

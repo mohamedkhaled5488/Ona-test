@@ -66,18 +66,18 @@ export const templateOptions: { id: JournalPageTemplate; label: string; icon: ke
 ];
 
 
-// The shared Feelings Wheel v2 picker (zone → word). Since the color chip
+// The shared Feelings Wheel v2 picker (zone → word). When the color chip
 // (Part A) already picked a zone, "Be more specific" opens directly at the
-// word step for that zone, skipping the zone step entirely — per the
-// Identify the Feeling v2 doc.
+// word step for that zone, skipping the zone step — per the Identify the
+// Feeling v2 doc; with no colour yet it starts at the zones.
 function FeelingDepthPicker({
   initialZone,
   onDone,
 }: {
-  initialZone: FeelingZone;
+  initialZone: FeelingZone | undefined;
   onDone: (zone: FeelingZone, feelingId: string) => void;
 }) {
-  const [step, setStep] = useState<FeelingPickerStep>({ kind: 'word', zone: initialZone });
+  const [step, setStep] = useState<FeelingPickerStep>(initialZone ? { kind: 'word', zone: initialZone } : { kind: 'zone' });
   return (
     <FeelingPicker
       step={step}
@@ -87,6 +87,9 @@ function FeelingDepthPicker({
     />
   );
 }
+
+export const NO_COLOUR = 'How did today feel? (optional)';
+const LEAVE_UNSET = 'Leave it unset';
 
 export function JournalWriteScreen({ route, navigation }: Props) {
   const { date } = route.params;
@@ -107,11 +110,13 @@ export function JournalWriteScreen({ route, navigation }: Props) {
   // Edit switches this same screen into edit mode in place.
   const [mode, setMode] = useState<'read' | 'edit'>(existing ? 'read' : 'edit');
   const [text, setText] = useState(existing?.text ?? '');
-  const [zone, setZone] = useState<FeelingZone>(existing?.zone ?? 'calm');
+  // No colour until one is chosen (owner, 2026-10-27): only a chosen one
+  // becomes a feeling in the Feelings log.
+  const [zone, setZone] = useState<FeelingZone | undefined>(existing?.zone);
   const [preciseFeelingId, setPreciseFeelingId] = useState<string | undefined>(existing?.preciseFeelingId);
-  // Whether the colour or feeling was chosen in this edit (only a chosen one
-  // goes into the Feelings log; feelings/fromSections.ts).
-  const [chose, setChose] = useState(false);
+  // What happened to the colour in this edit: chosen, cleared ("Leave it
+  // unset"), or left as it was (feelings/fromSections.ts).
+  const [choice, setChoice] = useState<'untouched' | 'chosen' | 'cleared'>('untouched');
   const [tags, setTags] = useState(existing?.tags.join(', ') ?? '');
   const [font, setFont] = useState<JournalFont>(existing?.font ?? defaultFont);
   const [showTags, setShowTags] = useState(false);
@@ -130,7 +135,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
     () =>
       mode === 'edit' &&
       (text !== (existing?.text ?? '') ||
-        zone !== (existing?.zone ?? 'calm') ||
+        zone !== existing?.zone ||
         preciseFeelingId !== existing?.preciseFeelingId ||
         tags !== (existing?.tags.join(', ') ?? '') ||
         font !== (existing?.font ?? defaultFont)),
@@ -143,11 +148,11 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       zone,
       text,
       tags.split(',').map((t) => t.trim()).filter(Boolean),
-      { preciseFeelingId, font, ...(chose ? { feelingChosen: true } : {}) }
+      { preciseFeelingId, font, ...(choice === 'untouched' ? {} : { feelingChosen: choice === 'chosen' }) }
     );
     const saved = useJournalStore.getState().entries.find((e) => e.date === date);
     if (saved) syncJournalFeeling(saved.id);
-    setChose(false);
+    setChoice('untouched');
     setMode('read');
   };
 
@@ -227,17 +232,17 @@ export function JournalWriteScreen({ route, navigation }: Props) {
               most — see the Journaling revision doc. */}
           <View style={styles.feelingRow}>
             {mode === 'edit' ? (
-              <Pressable onPress={() => setShowColorSheet(true)} style={[styles.chip, { borderColor: theme.soft }]}>
-                <View style={[styles.chipDot, { backgroundColor: zoneMeta(zone).accent }]} />
-                <Text style={[styles.chipText, { color: theme.text }]}>{feelingLabel({ zone, preciseFeelingId })}</Text>
+              <Pressable onPress={() => setShowColorSheet(true)} style={[styles.chip, { borderColor: theme.soft }]} accessibilityRole="button" accessibilityLabel={zone ? feelingLabel({ zone, preciseFeelingId }) : NO_COLOUR}>
+                {zone && <View style={[styles.chipDot, { backgroundColor: zoneMeta(zone).accent }]} />}
+                <Text style={[styles.chipText, { color: zone ? theme.text : theme.soft }]}>{zone ? feelingLabel({ zone, preciseFeelingId }) : NO_COLOUR}</Text>
                 <Ionicons name="chevron-down" size={12} color={theme.soft} />
               </Pressable>
-            ) : (
+            ) : zone ? (
               <View style={[styles.chip, styles.chipStatic, { borderColor: theme.soft }]}>
                 <View style={[styles.chipDot, { backgroundColor: zoneMeta(zone).accent }]} />
                 <Text style={[styles.chipText, { color: theme.text }]}>{feelingLabel({ zone, preciseFeelingId })}</Text>
               </View>
-            )}
+            ) : null}
             {mode === 'edit' && (
               <Pressable hitSlop={8} onPress={() => setShowFeelingPicker(true)}>
                 <Text style={[styles.beMoreSpecific, { color: theme.soft }]}>Be more specific</Text>
@@ -356,7 +361,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
             onPress={() => {
               setZone(z.id);
               setPreciseFeelingId(undefined);
-              setChose(true);
+              setChoice('chosen');
               setShowColorSheet(false);
             }}
           >
@@ -365,6 +370,20 @@ export function JournalWriteScreen({ route, navigation }: Props) {
             {zone === z.id && <Ionicons name="checkmark" size={18} color={z.accent} style={styles.colorRowCheck} />}
           </Pressable>
         ))}
+        <Pressable
+          style={[styles.colorRow, !zone && { backgroundColor: withAlpha(colors.inkSoft, 0.08) }]}
+          accessibilityRole="button"
+          onPress={() => {
+            setZone(undefined);
+            setPreciseFeelingId(undefined);
+            setChoice('cleared');
+            setShowColorSheet(false);
+          }}
+        >
+          <View style={[styles.colorRowDot, styles.colorRowDotEmpty]} />
+          <SectionHeading style={{ color: colors.inkSoft }}>{LEAVE_UNSET}</SectionHeading>
+          {!zone && <Ionicons name="checkmark" size={18} color={colors.inkSoft} style={styles.colorRowCheck} />}
+        </Pressable>
       </SheetModal>
 
       <SheetModal visible={showFeelingPicker} onClose={() => setShowFeelingPicker(false)}>
@@ -379,7 +398,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
           onDone={(z, feelingId) => {
             setZone(z);
             setPreciseFeelingId(feelingId);
-            setChose(true);
+            setChoice('chosen');
             setShowFeelingPicker(false);
           }}
         />
@@ -528,6 +547,7 @@ const styles = themedStyles(() => ({
     borderRadius: radii.md,
   },
   colorRowDot: { width: 16, height: 16, borderRadius: radii.full },
+  colorRowDotEmpty: { borderWidth: 1.5, borderColor: colors.inkSoft },
   colorRowCheck: { marginLeft: 'auto' },
   swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   swatchWrap: { alignItems: 'center', gap: 4 },

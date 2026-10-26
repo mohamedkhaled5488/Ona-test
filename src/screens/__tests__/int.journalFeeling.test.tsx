@@ -7,7 +7,7 @@ jest.mock('../../utils/notifications', () => ({ cancelReminders: jest.fn(async (
 import { screen } from '@testing-library/react-native';
 import { resetAll, useClock, restoreClock } from '../../test-utils';
 import { renderScreen } from '../../test-utils/render';
-import { JournalWriteScreen } from '../JournalWriteScreen';
+import { JournalWriteScreen, NO_COLOUR } from '../JournalWriteScreen';
 import { useJournalStore } from '../../store/useJournalStore';
 import { useFeelingsStore } from '../../store/useFeelingsStore';
 import { feelings } from '../../data/feelingsWheel';
@@ -29,7 +29,7 @@ describe('INT-JRN: the day\'s colour and the specific feeling', () => {
   test('INT-JRN-001 colour, then "Be more specific": the saved word belongs to the colour, and the label shows both', async () => {
     const { user } = await renderScreen('journalWrite', JournalWriteScreen, { date: '2026-10-18' });
     await user.type(screen.getByPlaceholderText('Start writing...'), 'A good, busy day.');
-    await user.press(screen.getAllByText('Calm')[0]); // the colour chip
+    await user.press(screen.getByText(NO_COLOUR)); // the colour chip, empty to start
     await user.press(screen.getByText('Lively'));
     await user.press(screen.getByText('Be more specific'));
     const word = feelings.find((f) => f.zone === 'lively')!;
@@ -55,7 +55,7 @@ describe('INT-JRN: the day\'s colour and the specific feeling', () => {
   test('INT-JRN-004 a chosen colour, saved, is in the Feelings log for that day; deleting the entry removes it', async () => {
     const { user } = await renderScreen('journalWrite', JournalWriteScreen, { date: '2026-10-18' });
     await user.type(screen.getByPlaceholderText('Start writing...'), 'Heavy day.');
-    await user.press(screen.getAllByText('Calm')[0]);
+    await user.press(screen.getByText(NO_COLOUR));
     await user.press(screen.getByText('Tense'));
     await user.press(screen.getByText('Save'));
     expect(useFeelingsStore.getState().entries).toEqual([expect.objectContaining({ zone: 'tense', date: '2026-10-18', source: { kind: 'journal', refId: entry()!.id } })]);
@@ -66,11 +66,12 @@ describe('INT-JRN: the day\'s colour and the specific feeling', () => {
     expect(useFeelingsStore.getState().entries).toEqual([expect.objectContaining({ zone: 'low' })]); // the same one, changed
   });
 
-  test('INT-JRN-005 writing without choosing a colour adds no feeling (Calm is only where a new entry starts)', async () => {
+  test('INT-JRN-005 a new entry starts with no colour ("How did today feel? (optional)"); saved like that, no feeling', async () => {
     const { user } = await renderScreen('journalWrite', JournalWriteScreen, { date: '2026-10-18' });
+    expect(screen.getByText(NO_COLOUR)).toBeTruthy();
     await user.type(screen.getByPlaceholderText('Start writing...'), 'Notes.');
     await user.press(screen.getByText('Save'));
-    expect(entry()).toMatchObject({ zone: 'calm', feelingChosen: false });
+    expect(entry()).toMatchObject({ zone: undefined, feelingChosen: false });
     expect(useFeelingsStore.getState().entries).toEqual([]);
   });
 

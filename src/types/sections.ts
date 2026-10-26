@@ -221,7 +221,9 @@ export interface JournalPageStyle {
 export interface JournalEntry {
   id: string;
   date: string;
-  zone: FeelingZone; // the one-tap color/name — see zoneColors
+  // The one-tap color/name (see zoneColors), optional: a new entry starts
+  // with none ("How did today feel? (optional)"); older entries always had one.
+  zone?: FeelingZone;
   preciseFeelingId?: string; // set via "Be more specific" (the Feelings Wheel) — a Feeling.id within `zone`
   text: string;
   tags: string[];
@@ -234,6 +236,7 @@ export interface JournalEntry {
   // Its feeling was deleted from the Feelings log: not added back unless a
   // colour is chosen again.
   feelingRemoved?: boolean;
+  conflictCopyOf?: string; // set by sync: this is the other phone's version (sync/engine.ts)
 }
 
 // --- Catch a Feeling or Idea ---

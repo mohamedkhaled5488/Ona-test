@@ -5,7 +5,9 @@ import { zoneMeta, feelings } from '../data/feelingsWheel';
 // "Peaceful" by default, or "Peaceful · Serene" once "Be more specific" has
 // been used — the one place this composed label is built, so list, calendar
 // preview, and the read/edit page all say the same thing the same way.
+// An entry's feeling in words; '' when it has no colour.
 export function feelingLabel(entry: Pick<JournalEntry, 'zone' | 'preciseFeelingId'>): string {
+  if (!entry.zone) return '';
   const zoneLabel = zoneMeta(entry.zone).label;
   const precise = entry.preciseFeelingId ? feelings.find((f) => f.id === entry.preciseFeelingId) : undefined;
   return precise ? `${zoneLabel} · ${precise.name}` : zoneLabel;

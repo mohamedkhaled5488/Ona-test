@@ -128,7 +128,7 @@ export const TOUR: TourSection[] = [
     group: 'reflect',
     title: 'Journaling',
     slides: [
-      { key: 'jr-1', title: 'Write freely', body: 'A quiet page for whatever is on your mind, with a color for how the day felt.', feature: 'journalZone', mock: 'journal' },
+      { key: 'jr-1', title: 'Write freely', body: 'A quiet page for whatever is on your mind, with a color for how the day felt, if you want one.', feature: 'journalZone', mock: 'journal' },
       { key: 'jr-2', title: 'Make it yours', body: 'Choose a handwriting-style font and a page style. Reopen old entries in a calm read mode.', feature: 'journalFont', mock: 'journal' },
       { key: 'jr-3', title: 'On this day', body: 'Now and then, Ona shows what you wrote on this day before.', feature: 'journalOnThisDay', mock: 'journal', tryIt: { route: 'journaling' } },
     ],

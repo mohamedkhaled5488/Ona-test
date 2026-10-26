@@ -30,7 +30,7 @@ const EVIDENCE: Record<string, [string, RegExp][]> = {
   budgetModes: [['src/types/sections.ts', /mode: BudgetMode/], ['src/types/sections.ts', /deadline\?: string/]],
   budgetEntries: [['src/types/sections.ts', /categoryId\?: string;\n  note\?: string;\n  photoUri\?: string/]],
   budgetWarn: [['src/store/useSettingsStore.ts', /budgetWarnAt/]],
-  journalZone: [['src/types/sections.ts', /zone: FeelingZone; \/\/ the one-tap color/]],
+  journalZone: [['src/types/sections.ts', /zone\?: FeelingZone;/], ['src/screens/JournalWriteScreen.tsx', /How did today feel\? \(optional\)/]],
   journalFont: [['src/screens/JournalWriteScreen.tsx', /caveat|handwriting/i], ['src/screens/JournalWriteScreen.tsx', /read mode|readMode/i]],
   journalOnThisDay: [['src/screens/JournalingScreen.tsx', /on this day/i]],
   feelingWheel: [['src/data/feelingsWheel.ts', /description/], ['src/types/sections.ts', /intensities\?:/]],

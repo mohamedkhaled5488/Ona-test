@@ -84,14 +84,14 @@ describe('CAT-C: Catch a Feeling or Idea', () => {
     expect(useThoughtsStore.getState().thoughts[0].promotedTo).toBe('plan');
   });
 
-  test('CAT-C-006 add to the journal: appended to today\'s entry, or a new one with a neutral colour (not "Tense")', async () => {
+  test('CAT-C-006 add to the journal: appended to today\'s entry, or a new one with no colour (not "Tense")', async () => {
     useThoughtsStore.getState().addThought('random', 'The light at 5pm was lovely');
     const { user } = await renderScreen('catchAThought', CatchAThoughtScreen);
     await user.press(screen.getByText('The light at 5pm was lovely'));
     await user.press(screen.getByRole('button', { name: 'Add to Journal' }));
     const entry = useJournalStore.getState().entries.find((e) => e.date === '2026-10-18')!;
     expect(entry.text).toBe('The light at 5pm was lovely');
-    expect(entry.zone).toBe('okay');
+    expect(entry.zone).toBeUndefined(); // no colour: an idea says nothing about how the day felt
     expect(screen.getByText("Added to today's journal entry")).toBeTruthy();
   });
 

@@ -149,11 +149,11 @@ export function JournalingScreen({ navigation }: Props) {
                   <View
                     style={[
                       styles.dayBlock,
-                      entry ? { backgroundColor: zoneColors[entry.zone] } : styles.dayBlockEmpty,
+                      entry ? (entry.zone ? { backgroundColor: zoneColors[entry.zone] } : styles.dayBlockWritten) : styles.dayBlockEmpty,
                       isSelected && styles.dayBlockSelected,
                     ]}
                   >
-                    <Caption style={[styles.dayNumber, !!entry && styles.dayNumberOnColor]}>{dayNumber}</Caption>
+                    <Caption style={[styles.dayNumber, !!entry?.zone && styles.dayNumberOnColor]}>{dayNumber}</Caption>
                   </View>
                   {isToday && <View style={styles.todayDot} />}
                 </Pressable>
@@ -180,10 +180,12 @@ export function JournalingScreen({ navigation }: Props) {
           {selectedEntry ? (
             <>
               <View style={styles.previewBox}>
-                <View style={styles.moodTag}>
-                  <View style={[styles.moodDot, { backgroundColor: zoneColors[selectedEntry.zone] }]} />
-                  <Caption>{feelingLabel(selectedEntry)}</Caption>
-                </View>
+                {selectedEntry.zone && (
+                  <View style={styles.moodTag}>
+                    <View style={[styles.moodDot, { backgroundColor: zoneColors[selectedEntry.zone] }]} />
+                    <Caption>{feelingLabel(selectedEntry)}</Caption>
+                  </View>
+                )}
                 <Body numberOfLines={4}>{selectedEntry.text}</Body>
               </View>
               <PrimaryButton
@@ -210,10 +212,14 @@ export function JournalingScreen({ navigation }: Props) {
           <Pressable key={entry.id} onPress={() => navigation.navigate('journalWrite', { date: entry.date })}>
             <Card style={styles.entryCard} flat>
               <View style={styles.entryHeader}>
-                <View style={styles.moodTag}>
-                  <View style={[styles.moodDot, { backgroundColor: zoneColors[entry.zone] }]} />
-                  <Caption>{feelingLabel(entry)}</Caption>
-                </View>
+                {entry.zone ? (
+                  <View style={styles.moodTag}>
+                    <View style={[styles.moodDot, { backgroundColor: zoneColors[entry.zone] }]} />
+                    <Caption>{feelingLabel(entry)}</Caption>
+                  </View>
+                ) : (
+                  <View />
+                )}
                 <Caption>{entry.date}</Caption>
               </View>
               <Body numberOfLines={2}>{entry.text}</Body>
@@ -319,6 +325,12 @@ const styles = themedStyles(() => ({
     backgroundColor: colors.stone,
     borderWidth: 1,
     borderColor: colors.line,
+  },
+  // Written, with no colour chosen: outlined, unlike an empty day.
+  dayBlockWritten: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.inkSoft,
   },
   dayBlockSelected: {
     borderWidth: 2,

@@ -206,7 +206,7 @@ export function syncNow(): Promise<SyncOutcome> {
       if (result.changedCollections.some((c) => c === 'habits.habits' || c === 'skills.skills')) await resyncFeature('habits');
       // Journal entries or Quit moments from another phone: their feelings into
       // the Feelings log (sent with the next sync).
-      if (result.changedCollections.some((c) => c === 'journaling.entries' || c === 'quitHabit.feelingEntries')) bringFeelingsTogether();
+      if (result.changedCollections.some((c) => c === 'journaling.entries' || c === 'quitHabit.feelingEntries' || c === 'feelings.entries')) bringFeelingsTogether();
       return { ok: true, pulled: result.pulled, pushed: result.pushed, ...(canUpload(gate) ? {} : { downloadOnly: true }) };
     } catch (e) {
       const message = e instanceof OtherAccountError ? e.message : `Couldn't sync: ${e instanceof Error ? e.message : String(e)}`;

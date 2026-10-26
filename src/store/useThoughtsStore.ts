@@ -56,9 +56,9 @@ export const useThoughtsStore = create<ThoughtsState>()(
           .getState()
           .upsertEntry(today, existing.zone, `${existing.text}\n\n${thought.text}`, existing.tags);
       } else {
-        // A new entry gets the neutral colour: a promoted idea says nothing about
-        // how the day felt (it used to be marked "Tense").
-        useJournalStore.getState().upsertEntry(today, 'okay', thought.text, []);
+        // A new entry gets no colour: a promoted idea says nothing about how
+        // the day felt (it used to be marked "Tense", then the neutral colour).
+        useJournalStore.getState().upsertEntry(today, undefined, thought.text, []);
       }
       set((state) => {
         const t = state.thoughts.find((t) => t.id === id);

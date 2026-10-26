@@ -9,7 +9,7 @@ import { useHabitsStore } from '../store/useHabitsStore';
 import { useSkillsStore } from '../store/useSkillsStore';
 import { useQuitHabitsStore } from '../store/useQuitHabitsStore';
 import { addDaysISO } from './date';
-import { mirrorJournalFeelingEdit } from '../feelings/fromSections';
+import { mirrorJournalFeelingEdit, quitMomentFeelingId } from '../feelings/fromSections';
 
 export type ItemKind = 'habit' | 'skill' | 'quitHabit';
 
@@ -62,7 +62,7 @@ export function mirrorFeelingEdit(entryId: string): void {
   if (entry?.source?.kind === 'journal') return mirrorJournalFeelingEdit(entry);
   if (entry?.source?.kind !== 'quitHabit') return;
   const quit = useQuitHabitsStore.getState();
-  const linked = quit.feelingEntries.find((q) => q.feelingEntryId === entryId);
+  const linked = quit.feelingEntries.find((q) => quitMomentFeelingId(q) === entryId);
   if (linked) quit.setEntryFeeling(linked.id, { feelingEntryId: entryId, zone: entry.zone, feelingId: entry.feelingIds[0], note: entry.note ?? '' });
 }
 
@@ -70,7 +70,7 @@ export function mirrorFeelingEdit(entryId: string): void {
 // only its feeling goes.
 export function unlinkDeletedFeeling(entryId: string): void {
   const quit = useQuitHabitsStore.getState();
-  const linked = quit.feelingEntries.find((q) => q.feelingEntryId === entryId);
+  const linked = quit.feelingEntries.find((q) => quitMomentFeelingId(q) === entryId);
   if (linked) quit.setEntryFeeling(linked.id, undefined);
 }
 
@@ -78,6 +78,7 @@ export function unlinkDeletedFeeling(entryId: string): void {
 export function deleteQuitMoment(quitEntryId: string): void {
   const quit = useQuitHabitsStore.getState();
   const entry = quit.feelingEntries.find((q) => q.id === quitEntryId);
-  if (entry?.feelingEntryId) useFeelingsStore.getState().deleteEntry(entry.feelingEntryId);
+  const feelingId = entry && quitMomentFeelingId(entry);
+  if (feelingId) useFeelingsStore.getState().deleteEntry(feelingId);
   quit.deleteFeelingEntry(quitEntryId);
 }

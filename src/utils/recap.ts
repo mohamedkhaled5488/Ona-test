@@ -80,7 +80,7 @@ export function collectRecapEvents(data: RecapSourceData): RecapEvent[] {
       id: `journal-${entry.id}`,
       date: entry.date,
       sectionId: 'journaling',
-      title: `Journaled (${zoneMeta(entry.zone).label})`,
+      title: entry.zone ? `Journaled (${zoneMeta(entry.zone).label})` : 'Journaled',
       detail: truncate(entry.text),
     });
   }
