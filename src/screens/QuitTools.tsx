@@ -23,6 +23,7 @@ import { TOOLKIT_COPY, type ToolDef } from '../quit/toolkit';
 import { BREATHING_PATTERNS, BREATH_LABELS, GUIDED_STEPS, TOOL_VIEW_COPY as COPY } from '../quit/toolContent';
 import { generateProblem, type MathProblem } from '../games/quickMath';
 import { memoryDeck, type MemoryCard } from '../games/memoryMatch';
+import { canSlide, isSolved, shuffledBoard, slide, type Board } from '../games/slidePuzzle';
 import { onSoundsReplaced, playLayer, stopAllLayers, type SoundId } from '../utils/audioEngine';
 import type { QuitCravingSession, QuitHabit } from '../types/sections';
 
@@ -280,6 +281,42 @@ function GentleMemory() {
   );
 }
 
+// The slide puzzle: tap a tile next to the gap to slide it. No move count,
+// no clock; solved: a quiet "nice" and another one.
+const SLIDE_SIZE = 3;
+function SlidePuzzle() {
+  const [board, setBoard] = useState<Board>(() => shuffledBoard(SLIDE_SIZE));
+  const done = isSolved(board);
+  return (
+    <>
+      <View style={styles.slideGrid}>
+        {board.map((n, i) =>
+          n === 0 ? (
+            <View key="gap" style={styles.slideCell} />
+          ) : (
+            <Pressable
+              key={n}
+              onPress={() => setBoard(slide(board, i, SLIDE_SIZE))}
+              disabled={done}
+              style={[styles.slideCell, styles.slideTile, { borderColor: accent }]}
+              accessibilityRole="button"
+              accessibilityLabel={COPY.slideTile(n, !done && canSlide(board, i, SLIDE_SIZE))}
+            >
+              <SectionHeading>{n}</SectionHeading>
+            </Pressable>
+          )
+        )}
+      </View>
+      {done && (
+        <>
+          <Body style={styles.centerText}>{COPY.slideNice}</Body>
+          <PrimaryButton label={COPY.slideAgain} variant="outline" onPress={() => setBoard(shuffledBoard(SLIDE_SIZE))} />
+        </>
+      )}
+    </>
+  );
+}
+
 // Quick Math, gently: easy sums, no clock, no count; a wrong answer just
 // shows the right one and moves on.
 function GentleMath() {
@@ -403,7 +440,7 @@ function NameCraving({ session }: { session: QuitCravingSession }) {
 
 // The tools that have their own view here (the first four keep theirs in
 // QuitHabitScreen).
-export const TOOL_VIEWS = new Set(['grounding', 'bodyScan', 'muscleRelax', 'countBreaths', 'noticeFive', 'oneObject', 'mindfulMinute', 'sounds', 'memoryMatch', 'gentleMath', 'walk', 'stretches', 'myReasons', 'delayIt', 'nameCraving', 'urgeSurfing', 'textFriend', 'sayHi']);
+export const TOOL_VIEWS = new Set(['grounding', 'bodyScan', 'muscleRelax', 'countBreaths', 'noticeFive', 'oneObject', 'mindfulMinute', 'sounds', 'memoryMatch', 'slidePuzzle', 'gentleMath', 'walk', 'stretches', 'myReasons', 'delayIt', 'nameCraving', 'urgeSurfing', 'textFriend', 'sayHi']);
 
 export function ToolView({ tool, habit, session, startedAt, onDone }: { tool: ToolDef; habit: QuitHabit; session: QuitCravingSession; startedAt: string; onDone: () => void }) {
   const steps = GUIDED_STEPS[tool.id];
@@ -428,6 +465,8 @@ export function ToolView({ tool, habit, session, startedAt, onDone }: { tool: To
         <CalmSounds />
       ) : tool.id === 'memoryMatch' ? (
         <GentleMemory />
+      ) : tool.id === 'slidePuzzle' ? (
+        <SlidePuzzle />
       ) : tool.id === 'gentleMath' ? (
         <GentleMath />
       ) : tool.id === 'myReasons' ? (
@@ -462,6 +501,9 @@ const styles = themedStyles(() => ({
   memoryCard: { width: 72, height: 72 },
   memoryInner: { flex: 1, borderRadius: radii.md, backgroundColor: colors.stone, alignItems: 'center', justifyContent: 'center' },
   memoryUp: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  slideGrid: { flexDirection: 'row', flexWrap: 'wrap', width: 3 * 84, alignSelf: 'center', marginVertical: spacing.md },
+  slideCell: { width: 76, height: 76, margin: 4, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  slideTile: { backgroundColor: colors.surface, borderWidth: 1.5 },
   mathCard: { alignItems: 'center', paddingVertical: spacing.lg, marginTop: spacing.sm },
   mathChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center', marginVertical: spacing.md },
   mathChoice: { minWidth: 72, minHeight: 56, alignItems: 'center', justifyContent: 'center', borderRadius: radii.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },

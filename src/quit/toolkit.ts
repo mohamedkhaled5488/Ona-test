@@ -51,6 +51,7 @@ export const BUILT_IN_TOOLS: ToolDef[] = [
   { id: 'mindfulMinute', title: 'A mindful minute', line: 'One quiet minute, just noticing.', label: 'A mindful minute', category: 'mind', why: 'Pausing to notice, without judging, helps some people let a moment pass.' },
   { id: 'sounds', title: 'Calm sounds', line: 'Rain, waves or soft noise. Off until you choose one.', label: 'Calm sounds', category: 'mind', why: 'Steady, gentle sound can make it easier to settle.' },
   { id: 'memoryMatch', title: 'Match pairs', line: 'A calm matching puzzle. No score, no clock.', label: 'Matching pairs', category: 'mind', screenGame: true, why: 'Many people find absorbing tasks help cravings pass.' },
+  { id: 'slidePuzzle', title: 'Slide puzzle', line: 'Slide the tiles back into order. No moves counted, no clock.', label: 'Slide puzzle', category: 'mind', screenGame: true, why: 'A puzzle with no rush can hold your attention for a while.' },
   { id: 'gentleMath', title: 'Gentle sums', line: 'One easy sum at a time. No score, no clock.', label: 'Gentle sums', category: 'mind', screenGame: true, why: 'Many people find absorbing tasks help cravings pass.' },
   // Move
   { id: 'doSomethingInstead', title: 'Do something instead', line: 'A few quick, concrete things to do right now.', label: 'Doing something instead', category: 'move', why: 'Having something concrete to do can make it easier to wait the craving out.' },

@@ -28,6 +28,7 @@ import { BUILT_IN_TOOLS, TOOLKIT_COPY } from '../../quit/toolkit';
 import { BREATHING_PATTERNS, GUIDED_STEPS, TOOL_VIEW_COPY } from '../../quit/toolContent';
 import { TOOL_VIEWS, LONG_STAY_MS } from '../QuitTools';
 import { isLayerActive, playLayer, stopAllLayers } from '../../utils/audioEngine';
+import * as slidePuzzle from '../../games/slidePuzzle';
 import type { QuitHabit } from '../../types/sections';
 
 let clock: ReturnType<typeof useClock>;
@@ -189,6 +190,21 @@ test('QUIT-TOOL-040 match pairs, gently: no moves, no score, nothing saved; all 
   expect(useMindGamesStore.getState().results).toEqual([]);
   await r.user.press(screen.getByText(TOOL_VIEW_COPY.memoryAgain));
   expect(screen.getAllByLabelText(/face down/)).toHaveLength(12);
+});
+
+test('QUIT-TOOL-044 the slide puzzle: no moves or clock; tiles say which can slide; solved: a quiet "nice" and another', async () => {
+  jest.spyOn(slidePuzzle, 'shuffledBoard').mockReturnValueOnce([1, 2, 3, 4, 5, 6, 7, 0, 8]);
+  const r = await openTool('Slide puzzle');
+  expect(screen.queryByText(/move|score|best|seconds|left/i)).toBeNull();
+  expect(screen.getByLabelText('Tile 1')).toBeTruthy(); // not next to the gap
+  await r.user.press(screen.getByLabelText('Tile 1')); // nothing happens
+  expect(screen.queryByText(TOOL_VIEW_COPY.slideNice)).toBeNull();
+  await r.user.press(screen.getByLabelText('Tile 8, can slide'));
+  expect(await screen.findByText(TOOL_VIEW_COPY.slideNice)).toBeTruthy();
+  await r.user.press(screen.getByText(TOOL_VIEW_COPY.slideAgain));
+  expect(screen.queryByText(TOOL_VIEW_COPY.slideNice)).toBeNull();
+  expect(screen.getAllByLabelText(/^Tile \d/)).toHaveLength(8);
+  expect(useMindGamesStore.getState().results).toEqual([]);
 });
 
 test('QUIT-TOOL-041 gentle sums: no clock, no count; a wrong answer shows the right one and moves on; nothing saved', async () => {
