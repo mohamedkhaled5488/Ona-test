@@ -4,6 +4,7 @@
 // means the server, not the seed. IDs: docs/test-cases/backend.md (BE-REAL-*)
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 import { SEED_REFERENCE_DATE, seededSections } from '../../test-utils/realSeed';
+import { bringFeelingsTogether } from '../../feelings/fromSections';
 import { LOCAL_DATA } from '../localData';
 import { syncedCollections, toRecords } from '../../sync/records';
 import { RECAP_CONTRIBUTORS } from '../../recap/registry';
@@ -21,6 +22,18 @@ test('BE-REAL-SEED-002 the seed never depends on the calendar: the same data on 
   });
   expect(new Set(runs).size).toBe(1);
   expect(runs[0]).toBe(JSON.stringify(seededSections(SEED_REFERENCE_DATE)));
+});
+
+test('BE-REAL-SEED-003 the seed is as the app keeps data: bringing feelings together changes nothing (so a restore compares like with like)', () => {
+  const seeded = seededSections();
+  for (const [section, state] of Object.entries(seeded)) LOCAL_DATA[section]?.store.setState(state as never);
+  const before = JSON.stringify(Object.keys(LOCAL_DATA).map((s) => LOCAL_DATA[s].keys.map((k) => (LOCAL_DATA[s].store.getState() as Record<string, unknown>)[k])));
+  expect(bringFeelingsTogether()).toEqual({ journal: 0, quit: 0 });
+  const after = JSON.stringify(Object.keys(LOCAL_DATA).map((s) => LOCAL_DATA[s].keys.map((k) => (LOCAL_DATA[s].store.getState() as Record<string, unknown>)[k])));
+  expect(after).toBe(before);
+  // ...and the seed does carry journal and Quit feelings, so this means something.
+  const kinds = new Set(((seeded.feelings.entries ?? []) as { source?: { kind: string } }[]).map((e) => e.source?.kind));
+  expect(kinds.has('journal') && kinds.has('quitHabit')).toBe(true);
 });
 
 test('BE-REAL-SEED-001 eight weeks in every section, as ordinary data (no "-demo-" ids), and Recap has every section', () => {
