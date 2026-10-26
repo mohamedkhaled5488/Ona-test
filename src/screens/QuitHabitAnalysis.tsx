@@ -5,13 +5,14 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TextInput } from '../components/TextInput';
 import { Card } from '../components/Card';
-import { ScreenTitle, Body, Caption } from '../components/Typography';
+import { ScreenTitle, Body, Caption, Eyebrow } from '../components/Typography';
 import { StatRow, InsightCard, DashboardSectionLabel } from '../components/AnalysisParts';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useUi } from '../components/UiProvider';
 import { shareQuitJourneyAsText, exportQuitJourneyAsPdf } from '../utils/habitExport';
 import { patternRange, quitDayStatuses, type PatternRange, type QuitDayStatus } from '../utils/habitPattern';
 import { quitTiming } from '../utils/habitTimeOfDay';
+import { whatHelps, toolLine, WHAT_HELPS_COPY, type WhatHelps } from '../quit/whatHelps';
 import { DayStrip, RangeChips, SOFT_MISSED } from './habits/HabitPattern';
 import { withAlpha } from '../utils/color';
 import { colors, fonts, radii, spacing } from '../theme';
@@ -22,7 +23,6 @@ import { useFeelingsStore } from '../store/useFeelingsStore';
 import { todayISO, formatDisplayDate } from '../utils/date';
 import { daysBetweenISO, domainLabels } from '../utils/feelingsStats';
 import {
-  approachResults,
   quitAnalysisSummary,
   quitHeaderStats,
   quitJourneyLog,
@@ -56,6 +56,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   const tracks = useQuitHabitsStore((s) => s.tracks);
   const feelingEntries = useQuitHabitsStore((s) => s.feelingEntries);
   const slips = useQuitHabitsStore((s) => s.slips);
+  const cravingSessions = useQuitHabitsStore((s) => s.cravingSessions);
   const personalFeelings = useFeelingsStore((s) => s.personalFeelings);
   const { showToast } = useUi();
   const [search, setSearch] = useState('');
@@ -91,12 +92,12 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   const days = quitDayStatuses(habitId, tracks, feelingEntries, period.start, period.end, today, slips);
 
   // --- 4. Insights ---
-  const approaches = approachResults(feelingEntries, tracks, habitId);
+  const helps = whatHelps(habit, cravingSessions, feelingEntries, tracks, slips);
   const triggers = relapseReasonCounts(tracks, habitId, undefined, slips);
   const timing = quitTiming(feelingEntries, tracks, habitId);
   const trend = resistedUrgeTrend(feelingEntries, tracks, habitId, today, slips);
   const plus = usePlus();
-  const hasInsights = approaches.length > 0 || triggers.length > 0 || timing || trend.direction;
+  const hasInsights = helps.tools.length > 0 || helps.sessions > 0 || triggers.length > 0 || timing || trend.direction;
 
   // --- 5. Full log ---
   const q = search.trim().toLowerCase();
@@ -191,14 +192,7 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
           Patterns need at least 3 matching moments before they're worth calling a pattern — they'll show up here as your journey goes on.
         </Caption>
       )}
-      {plus && approaches.length > 0 && (
-        <InsightCard
-          kind="How each approach went"
-          accent={colors.amber}
-          headline={approaches.map((a) => `${a.approach}: passed ${a.passedCount} of ${a.totalCount}`).join(' · ')}
-          evidence="How many times the urge passed after choosing each approach, out of the times you chose it."
-        />
-      )}
+      {plus && (helps.tools.length > 0 || helps.sessions > 0) && <WhatHelpsCard helps={helps} />}
       {plus && triggers.length > 0 && (
         <InsightCard
           kind="What was going on"
@@ -262,6 +256,40 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
         </View>
       </Card>
     </>
+  );
+}
+
+// "What helps you": each tool in the menu's order with its counts, a
+// comparison only when meaningful, then when cravings came and what set
+// them off (quit/whatHelps.ts holds the words and the rules).
+function WhatHelpsCard({ helps }: { helps: WhatHelps }) {
+  return (
+    <Card style={[styles.helpsCard, { borderLeftColor: colors.amber }]} accessibilityLabel={WHAT_HELPS_COPY.title}>
+      <Body style={styles.helpsTitle}>{WHAT_HELPS_COPY.title}</Body>
+      {helps.tools.length === 0 && <Caption>{WHAT_HELPS_COPY.empty}</Caption>}
+      {helps.tools.map((t) => (
+        <View key={t.label} style={styles.helpsRow}>
+          <Body>{t.label}</Body>
+          <Caption>{toolLine(t)}</Caption>
+        </View>
+      ))}
+      {helps.comparison && <Body style={styles.helpsLine}>{WHAT_HELPS_COPY.comparison(helps.comparison)}</Body>}
+      {helps.timingTotal > 0 && (
+        <View style={styles.helpsRow}>
+          <Eyebrow>{WHAT_HELPS_COPY.timingHeading}</Eyebrow>
+          <Caption>{WHAT_HELPS_COPY.timingCounts(helps.timing)}</Caption>
+          {helps.timingPeak && <Caption>{WHAT_HELPS_COPY.timingPeak(helps.timingPeak, helps.timingTotal)}</Caption>}
+        </View>
+      )}
+      {helps.triggers.length > 0 && (
+        <View style={styles.helpsRow}>
+          <Eyebrow>{WHAT_HELPS_COPY.triggersHeading}</Eyebrow>
+          <Caption>{WHAT_HELPS_COPY.triggersCounts(helps.triggers)}</Caption>
+          <Caption>{WHAT_HELPS_COPY.triggersNote}</Caption>
+        </View>
+      )}
+      <Caption style={styles.helpsFootnote}>{WHAT_HELPS_COPY.footnote}</Caption>
+    </Card>
   );
 }
 
@@ -352,6 +380,11 @@ function withOpacity(color: string, index: number): string {
 }
 
 const styles = themedStyles(() => ({
+  helpsCard: { gap: spacing.sm, borderLeftWidth: 3, marginBottom: spacing.md },
+  helpsTitle: { fontFamily: fonts.bodyMedium },
+  helpsRow: { gap: 2 },
+  helpsLine: { marginTop: spacing.xs },
+  helpsFootnote: { color: colors.inkSoft, marginTop: spacing.xs },
   backLink: {
     flexDirection: 'row',
     alignItems: 'center',

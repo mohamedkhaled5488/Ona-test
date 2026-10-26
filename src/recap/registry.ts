@@ -12,6 +12,7 @@ import { AREA_TITLES, bucketSeries, summarySentence, formatDuration, growDetails
 import { buildSkillsTimeBreakdown } from '../utils/recap';
 import { quitJourneySeries } from '../utils/habitStats';
 import { journeyCounts, localDateOf, sessionSeconds } from '../quit/journey';
+import { allTools } from '../quit/toolkit';
 import { formatMoney } from '../data/currencies';
 import { sectionAccents } from '../theme';
 
@@ -200,14 +201,22 @@ export const RECAP_CONTRIBUTORS: RecapContributor[] = [
         });
       }
       const seconds = sessions.reduce((n, c) => n + sessionSeconds(c, Date.parse(`${end}T23:59:59`)), 0);
-      const tools = new Set(sessions.flatMap((c) => c.tools.map((t) => t.toolId)));
+      // The tools used, by name, in the menu's order (the user's own after).
+      const used = new Set(sessions.flatMap((c) => c.tools.map((t) => t.toolId)));
+      const toolNames = data.quitHabits
+        .flatMap((h) => allTools(h))
+        .filter((t, i, all) => used.has(t.id) && all.findIndex((x) => x.id === t.id) === i)
+        .map((t) => t.title);
       return recap('quitHabit', 'Quitting', items.length > 0, items.length ? [
         { label: 'Clean days', value: String(clean), open: { section: 'quitHabit' } },
         { label: 'Urges ridden out', value: String(urges) },
         ...(hard ? [{ label: hard === 1 ? 'A hard day' : 'Hard days', value: String(hard) }] : []),
         ...(seconds >= 60 ? [{ label: 'Time riding out cravings', value: formatDuration(Math.round(seconds / 60)) }] : []),
-        ...(tools.size ? [{ label: 'Tools tried', value: String(tools.size) }] : []),
-      ] : [], { items, notes: hard ? ['A hard day is part of the journey, not a step back.'] : [] });
+        ...(toolNames.length ? [{ label: 'Tools used', value: String(toolNames.length) }] : []),
+      ] : [], {
+        items,
+        notes: [...(toolNames.length ? [`Tools used: ${toolNames.join(', ')}.`] : []), ...(hard ? ['A hard day is part of the journey, not a step back.'] : [])],
+      });
     },
   },
   {

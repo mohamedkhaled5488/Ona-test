@@ -5,7 +5,6 @@ import {
   relapseReasonCounts,
   urgeTimeOfDayPattern,
   resistedUrgeTrend,
-  approachResults,
   rotatingJourneyStat,
   longestHabitStreak,
   completionSeries,
@@ -179,33 +178,6 @@ describe('resistedUrgeTrend', () => {
     // An older chapter's end counts as a hard day too.
     const old = [{ ...tracks[0], status: 'archived' as const, endDate: '2026-08-17' }, { id: 't2', quitHabitId: HABIT_ID, startDate: '2026-08-17', createdAt: '2026-08-17T20:00:00Z', status: 'active' as const }];
     expect(resistedUrgeTrend(entries, old, HABIT_ID, '2026-10-01').previousRatio).toBe(0.5);
-  });
-});
-
-describe('approachResults', () => {
-  const tracks = [{ id: TRACK_ID, quitHabitId: HABIT_ID, startDate: '2026-08-01', createdAt: '2026-08-01T00:00:00Z', status: 'active' as const }];
-
-  it('shows how every approach went, A to Z, without picking one', () => {
-    const entries = [
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Step outside for a minute', urgePassed: true }),
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Step outside for a minute', urgePassed: true }),
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Step outside for a minute', urgePassed: false }),
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Riding it out', urgePassed: false }),
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Riding it out', urgePassed: false }),
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Riding it out', urgePassed: false }),
-    ];
-    expect(approachResults(entries, tracks, HABIT_ID)).toEqual([
-      { approach: 'Riding it out', passedCount: 0, totalCount: 3 },
-      { approach: 'Step outside for a minute', passedCount: 2, totalCount: 3 },
-    ]);
-  });
-
-  it('leaves out an approach below the minimum sample size', () => {
-    const entries = [
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Reaching out', urgePassed: true }),
-      quitFeelingEntry({ hour: 12, isResistedUrge: true, approach: 'Reaching out', urgePassed: true }),
-    ];
-    expect(approachResults(entries, tracks, HABIT_ID)).toEqual([]);
   });
 });
 

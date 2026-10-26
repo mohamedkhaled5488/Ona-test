@@ -211,32 +211,6 @@ export function quitAnalysisSummary(tracks: QuitTrack[], feelingEntries: QuitFee
   return summary;
 }
 
-export interface ApproachResult {
-  approach: string;
-  passedCount: number;
-  totalCount: number;
-}
-
-// How each craving-menu approach went: how many times the urge passed, out of
-// how many tries, A to Z. Shown once an approach has `minCount` tries; never
-// "what works best".
-export function approachResults(feelingEntries: QuitFeelingEntry[], tracks: QuitTrack[], habitId: string, minCount: number = ANALYSIS_MIN_TAG_COUNT): ApproachResult[] {
-  const trackIds = new Set(tracksForHabit(tracks, habitId).map((t) => t.id));
-  const byApproach = new Map<string, { passed: number; total: number }>();
-  feelingEntries
-    .filter((e) => trackIds.has(e.trackId) && e.isResistedUrge && e.approach)
-    .forEach((e) => {
-      const g = byApproach.get(e.approach!) ?? { passed: 0, total: 0 };
-      g.total += 1;
-      if (e.urgePassed) g.passed += 1;
-      byApproach.set(e.approach!, g);
-    });
-  return Array.from(byApproach.entries())
-    .filter(([, g]) => g.total >= minCount)
-    .map(([approach, g]) => ({ approach, passedCount: g.passed, totalCount: g.total }))
-    .sort((a, b) => a.approach.localeCompare(b.approach));
-}
-
 // A rotating but always-true stat about this specific habit's journey —
 // never a generic quote or manufactured praise, just whichever real fact is
 // "due" today, so the Journey home view doesn't feel static. Rotates by

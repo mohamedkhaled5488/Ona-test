@@ -128,6 +128,20 @@ describe('RECAP-REG: Quit, gently, with the Quit section\'s own numbers', () => 
     expect(r.items[0].caption).toMatch(/^Day 15 of your journey/);
   });
 
+  test("RECAP-REG-012 time spent riding cravings out, and the tools used by name in the menu's order (the user's own after)", () => {
+    const data = quitData();
+    data.quitHabits[0] = { ...data.quitHabits[0], toolkit: { pinned: [], hidden: [], custom: [{ id: 'tea', name: 'Make tea' }] } };
+    const startedAt = '2026-10-23T20:00:00.000Z';
+    const tool = (toolId: string, min: number) => ({ toolId, startedAt: new Date(Date.parse(startedAt) + min * 60_000).toISOString() });
+    data.quitCravingSessions = [
+      { id: 'c1', quitHabitId: 'q1', trackId: 'tr2', startedAt, endedAt: '2026-10-23T20:20:00.000Z', tools: [tool('tea', 0), tool('walk', 5), tool('rideItOut', 10)], outcome: 'passed' },
+      { id: 'c2', quitHabitId: 'q1', trackId: 'tr2', startedAt: '2026-10-22T08:00:00.000Z', endedAt: '2026-10-22T08:10:00.000Z', tools: [{ toolId: 'walk', startedAt: '2026-10-22T08:00:00.000Z' }], outcome: 'passed' },
+    ] as never;
+    const r = contributorFor('quitHabit')!.build(ctx(data));
+    expect(r.rows).toEqual(expect.arrayContaining([expect.objectContaining({ label: 'Time riding out cravings' }), expect.objectContaining({ label: 'Tools used', value: '3' })]));
+    expect(r.notes).toContain('Tools used: Breathe and ride it out, A short walk, Make tea.');
+  });
+
   test('RECAP-REG-011 a slip reads as part of the journey ("a hard day"), never as failing', () => {
     const text = JSON.stringify(contributorFor('quitHabit')!.build(ctx(quitData())));
     expect(text).toMatch(/hard day/i);
