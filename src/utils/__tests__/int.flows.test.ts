@@ -88,6 +88,10 @@ const lookup = (): FeelingSourceLookup => ({
   quitHabit: (id) => useQuitHabitsStore.getState().habits.find((x) => x.id === id)?.name,
   skill: (id) => useSkillsStore.getState().skills.find((x) => x.id === id)?.name,
   study: (id) => (useStudyStore.getState().sessions.find((x) => x.id === id) ? 'Study' : undefined),
+  journal: (id) => {
+    const e = useJournalStore.getState().entries.find((x) => x.id === id);
+    return e ? e.date : undefined;
+  },
 });
 
 describe('INT-FEEL: feelings from every section reach the log, the graph and Analysis', () => {

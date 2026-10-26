@@ -226,6 +226,14 @@ export interface JournalEntry {
   text: string;
   tags: string[];
   font?: JournalFont; // the font this entry was written in; undefined = the current default
+  // Whether the person chose the colour or the specific feeling (a new entry
+  // starts on Calm, and an idea moved here from Catch a Thought gets the
+  // neutral colour): only a chosen feeling goes into the Feelings log.
+  // Unset on entries saved before this existed (feelings/fromSections.ts).
+  feelingChosen?: boolean;
+  // Its feeling was deleted from the Feelings log: not added back unless a
+  // colour is chosen again.
+  feelingRemoved?: boolean;
 }
 
 // --- Catch a Feeling or Idea ---
@@ -433,7 +441,7 @@ export interface PersonalFeeling {
 // reuse all of feelingsStats.ts unchanged, instead of duplicating that logic.
 // Every place outside Identify the Feeling that a feeling can be logged
 // from. One list, so tests can check every source (feelingSourcesContract).
-export const FEELING_SOURCE_KINDS = ['habit', 'quitHabit', 'skill', 'study', 'task', 'book'] as const;
+export const FEELING_SOURCE_KINDS = ['habit', 'quitHabit', 'skill', 'study', 'task', 'book', 'journal'] as const;
 
 export interface FeelingSource {
   kind: (typeof FEELING_SOURCE_KINDS)[number];
@@ -810,7 +818,8 @@ export interface QuitFeelingEntry {
   feelingId?: string;
   zone?: FeelingZone;
   note?: string;
-  // The same feeling in the main Feelings log (new entries only, no backfill).
+  // The same feeling in the main Feelings log (older ones are brought in:
+  // feelings/fromSections.ts).
   feelingEntryId?: string;
   isRelapseMoment: boolean;
   // A craving that was surfed rather than acted on — tracked separately from

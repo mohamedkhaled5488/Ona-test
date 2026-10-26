@@ -18,6 +18,7 @@ import { OtherAccountError, syncOnce, type LocalData, type OutgoingRow, type Pus
 import { DemoModeError, bumpDataGeneration, dataGeneration, isDemo, isSwitchingDataSpace } from '../utils/dataSpace';
 import { CHOICE_NEEDED, prepareAccount, useAccountChoiceStore } from './signInFlow';
 import { withoutDemoItems } from '../utils/demoLeftovers';
+import { bringFeelingsTogether } from '../feelings/fromSections';
 
 // A change is sent about 3 s after it's made (several quick changes go
 // together), and never later than 10 s after the first unsent change, even
@@ -203,6 +204,9 @@ export function syncNow(): Promise<SyncOutcome> {
       // Items from another phone: schedule their reminders on this one.
       if (result.changedCollections.includes('dailyPlanning.tasks')) await resyncFeature('tasks');
       if (result.changedCollections.some((c) => c === 'habits.habits' || c === 'skills.skills')) await resyncFeature('habits');
+      // Journal entries or Quit moments from another phone: their feelings into
+      // the Feelings log (sent with the next sync).
+      if (result.changedCollections.some((c) => c === 'journaling.entries' || c === 'quitHabit.feelingEntries')) bringFeelingsTogether();
       return { ok: true, pulled: result.pulled, pushed: result.pushed, ...(canUpload(gate) ? {} : { downloadOnly: true }) };
     } catch (e) {
       const message = e instanceof OtherAccountError ? e.message : `Couldn't sync: ${e instanceof Error ? e.message : String(e)}`;

@@ -4,6 +4,7 @@ import { useHabitsStore } from '../store/useHabitsStore';
 import { useQuitHabitsStore } from '../store/useQuitHabitsStore';
 import { useSkillsStore } from '../store/useSkillsStore';
 import { useStudyStore } from '../store/useStudyStore';
+import { useJournalStore } from '../store/useJournalStore';
 import { formatDisplayDate } from '../utils/date';
 import type { FeelingSourceLookup } from '../utils/feelingSource';
 
@@ -16,6 +17,7 @@ export function useFeelingSourceLookup(): FeelingSourceLookup {
   const quitHabits = useQuitHabitsStore((s) => s.habits);
   const skills = useSkillsStore((s) => s.skills);
   const studySessions = useStudyStore((s) => s.sessions);
+  const journal = useJournalStore((s) => s.entries);
 
   return {
     task: (id) => {
@@ -29,6 +31,10 @@ export function useFeelingSourceLookup(): FeelingSourceLookup {
     study: (id) => {
       const s = studySessions.find((x) => x.id === id);
       return s ? s.subject || formatDisplayDate(s.date) : undefined;
+    },
+    journal: (id) => {
+      const e = journal.find((x) => x.id === id);
+      return e ? formatDisplayDate(e.date) : undefined;
     },
   };
 }

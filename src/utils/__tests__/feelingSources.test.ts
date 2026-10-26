@@ -27,6 +27,7 @@ function lookup(): FeelingSourceLookup {
     },
     book: (id) => books.find((x) => x.id === id)?.book.title,
     habit: () => undefined,
+    journal: () => undefined,
     quitHabit: () => undefined,
     skill: () => undefined,
     study: () => undefined,

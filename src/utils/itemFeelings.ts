@@ -9,6 +9,7 @@ import { useHabitsStore } from '../store/useHabitsStore';
 import { useSkillsStore } from '../store/useSkillsStore';
 import { useQuitHabitsStore } from '../store/useQuitHabitsStore';
 import { addDaysISO } from './date';
+import { mirrorJournalFeelingEdit } from '../feelings/fromSections';
 
 export type ItemKind = 'habit' | 'skill' | 'quitHabit';
 
@@ -58,6 +59,7 @@ export function logItemFeeling(input: ItemFeelingInput): string {
 // After a Feelings log edit: keep a linked Quit moment showing the same feeling.
 export function mirrorFeelingEdit(entryId: string): void {
   const entry = useFeelingsStore.getState().entries.find((e) => e.id === entryId);
+  if (entry?.source?.kind === 'journal') return mirrorJournalFeelingEdit(entry);
   if (entry?.source?.kind !== 'quitHabit') return;
   const quit = useQuitHabitsStore.getState();
   const linked = quit.feelingEntries.find((q) => q.feelingEntryId === entryId);

@@ -18,6 +18,7 @@ import { setAnalyticsTransport, track } from '../analytics';
 import { todayISO, addDaysISO } from '../date';
 import { tagImpactRanking } from '../feelingsStats';
 import { useClock, restoreClock } from '../../test-utils';
+import { bringFeelingsTogether } from '../../feelings/fromSections';
 
 // A fixed time, so nothing here depends on the real date (see src/test-utils/time.ts).
 beforeEach(() => {
@@ -130,7 +131,8 @@ describe('C2. Where a feeling came from', () => {
   });
 
   test('labels read "Habit: …", "Quit: …", "Skill: …"', () => {
-    const lookup = { task: () => 'T', book: () => 'B', habit: () => 'Reading', quitHabit: () => 'Late-night scrolling', skill: () => 'Guitar', study: () => 'S' };
+    const lookup = { task: () => 'T', book: () => 'B', habit: () => 'Reading', quitHabit: () => 'Late-night scrolling', skill: () => 'Guitar', study: () => 'S', journal: () => 'Oct 21' };
+    expect(describeFeelingSource({ kind: 'journal', refId: 'x' }, lookup)!.text).toBe('Journal: Oct 21');
     expect(describeFeelingSource({ kind: 'habit', refId: 'x' }, lookup)!.text).toBe('Habit: Reading');
     expect(describeFeelingSource({ kind: 'quitHabit', refId: 'x' }, lookup)!.text).toBe('Quit: Late-night scrolling');
     expect(describeFeelingSource({ kind: 'skill', refId: 'x' }, lookup)!.text).toBe('Skill: Guitar');
@@ -219,9 +221,13 @@ describe('C2. One record in the Feelings log, linked both ways', () => {
     expect(useFeelingsStore.getState().entries).toHaveLength(0);
   });
 
-  test('older Quit feelings are not copied into the Feelings log (no backfill)', () => {
-    useQuitHabitsStore.getState().addFeelingEntry('t1', 'anxious', 'tense', 'old one', false, true);
+  // Owner, 2026-10-27: every feeling, older ones too, is in the Feelings log
+  // (was "no backfill"). The full rules: feelingsFromSections.test.ts.
+  test('older Quit feelings are brought into the Feelings log', () => {
+    useQuitHabitsStore.getState().addFeelingEntry('t1', 'scared-anxious', 'tense', 'old one', false, true);
     expect(useFeelingsStore.getState().entries).toHaveLength(0);
+    bringFeelingsTogether();
+    expect(useFeelingsStore.getState().entries.filter((e) => e.source?.kind === 'quitHabit')).toEqual([expect.objectContaining({ zone: 'tense', note: 'old one' })]);
   });
 });
 

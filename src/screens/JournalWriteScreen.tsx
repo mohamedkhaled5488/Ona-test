@@ -13,6 +13,7 @@ import { useUi } from '../components/UiProvider';
 import { SectionHeading, Eyebrow, Caption } from '../components/Typography';
 import { colors, fonts, radii, spacing } from '../theme';
 import { useJournalStore } from '../store/useJournalStore';
+import { removeJournalFeeling, syncJournalFeeling } from '../feelings/fromSections';
 import type { JournalBackground, JournalFont, JournalPageTemplate, JournalTextSize } from '../types/sections';
 import type { FeelingZone } from '../types/sections';
 import { JournalPageSurface, MARGIN_INSET } from '../components/JournalPageSurface';
@@ -108,6 +109,9 @@ export function JournalWriteScreen({ route, navigation }: Props) {
   const [text, setText] = useState(existing?.text ?? '');
   const [zone, setZone] = useState<FeelingZone>(existing?.zone ?? 'calm');
   const [preciseFeelingId, setPreciseFeelingId] = useState<string | undefined>(existing?.preciseFeelingId);
+  // Whether the colour or feeling was chosen in this edit (only a chosen one
+  // goes into the Feelings log; feelings/fromSections.ts).
+  const [chose, setChose] = useState(false);
   const [tags, setTags] = useState(existing?.tags.join(', ') ?? '');
   const [font, setFont] = useState<JournalFont>(existing?.font ?? defaultFont);
   const [showTags, setShowTags] = useState(false);
@@ -139,8 +143,11 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       zone,
       text,
       tags.split(',').map((t) => t.trim()).filter(Boolean),
-      { preciseFeelingId, font }
+      { preciseFeelingId, font, ...(chose ? { feelingChosen: true } : {}) }
     );
+    const saved = useJournalStore.getState().entries.find((e) => e.date === date);
+    if (saved) syncJournalFeeling(saved.id);
+    setChose(false);
     setMode('read');
   };
 
@@ -154,9 +161,13 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       toastMessage: 'Entry deleted',
       perform: () => {
         deleteEntry(existing.id);
+        removeJournalFeeling(existing.id); // its feeling goes too
         navigation.goBack();
       },
-      restore: () => useJournalStore.setState({ entries: previous }),
+      restore: () => {
+        useJournalStore.setState({ entries: previous });
+        syncJournalFeeling(existing.id);
+      },
     });
   };
 
@@ -345,6 +356,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
             onPress={() => {
               setZone(z.id);
               setPreciseFeelingId(undefined);
+              setChose(true);
               setShowColorSheet(false);
             }}
           >
@@ -367,6 +379,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
           onDone={(z, feelingId) => {
             setZone(z);
             setPreciseFeelingId(feelingId);
+            setChose(true);
             setShowFeelingPicker(false);
           }}
         />

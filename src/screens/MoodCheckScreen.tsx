@@ -584,7 +584,7 @@ function EntryEditSheet({ entry, onClose }: { entry: FeelingCheckIn | null; onCl
   const save = () => {
     // Changing the zone drops words from the old zone (they no longer fit).
     useFeelingsStore.getState().updateEntry(entry.id, { zone, note, ...(zone !== entry.zone ? { feelingIds: [], intensities: undefined } : {}) });
-    mirrorFeelingEdit(entry.id); // a linked Quit moment shows the same feeling
+    mirrorFeelingEdit(entry.id); // a linked Quit moment or journal entry shows the same feeling
     onClose();
   };
 

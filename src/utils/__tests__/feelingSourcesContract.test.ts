@@ -14,6 +14,8 @@ import { useSkillsStore } from '../../store/useSkillsStore';
 import { useQuitHabitsStore } from '../../store/useQuitHabitsStore';
 import { useDailyPlanningStore } from '../../store/useDailyPlanningStore';
 import { logFeeling } from '../../feelings/logFeeling';
+import { useJournalStore } from '../../store/useJournalStore';
+import { journalFeelingId, syncJournalFeeling } from '../../feelings/fromSections';
 import { dailyTrendPoints, datesInRange, zoneCounts } from '../feelingsStats';
 import { filterBySource, overviewInsight, sourceBreakdown } from '../feelingsInsights';
 import { periodStats } from '../recapStats';
@@ -36,6 +38,16 @@ const BY_KIND: Record<(typeof FEELING_SOURCE_KINDS)[number] | 'standalone', Case
   quitHabit: { name: 'Quit moment', log: () => logFeeling({ source: { kind: 'quitHabit', refId: 'quit-1', trackId: 'track-1' }, zone: 'tense' }) },
   study: { name: 'Study session', log: () => logFeeling({ source: { kind: 'study', refId: 'study-1' }, zone: 'okay' }) },
   book: { name: 'Book', log: () => logFeeling({ source: { kind: 'book', refId: 'book-1' }, zone: 'low', note: 'A slow chapter' }) },
+  // The journal keeps its own colour too; a chosen one is in the Feelings log.
+  journal: {
+    name: 'Journal entry',
+    log: () => {
+      useJournalStore.getState().upsertEntry(TODAY, 'lively', 'A good day', [], { feelingChosen: true });
+      const id = useJournalStore.getState().entries.find((e) => e.date === TODAY)!.id;
+      syncJournalFeeling(id);
+      return journalFeelingId(id);
+    },
+  },
 };
 const CASES = (Object.entries(BY_KIND) as [string, Case][]).map(([kind, c]) => ({ ...c, kind }));
 

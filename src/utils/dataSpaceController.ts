@@ -23,6 +23,7 @@ import { fromRecords, syncedCollections, toRecords } from '../sync/records';
 import { demoSeed, DEMO_SEED_VERSION } from '../demo/demoData';
 import { todayISO } from './date';
 import type { StartScreen } from '../navigation/startScreen';
+import { bringFeelingsTogether } from '../feelings/fromSections';
 
 type Storage = Pick<StateStorage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -90,6 +91,17 @@ async function writeDemoSeed(storage: Storage, keep: Partial<Pick<DemoMeta, 'not
 // it. Nothing else crosses over, and nothing ever goes the other way.
 export const CARRIED_INTO_DEMO = ['theme', 'accent', 'textSize', 'timeFormat', 'weekStartsOn', 'haptics'] as const;
 
+// Feelings noted in the journal or Quit before they were in the Feelings log
+// are brought in (feelings/fromSections.ts). After saving starts, so they're
+// stored; never in the way of the app starting.
+function bringFeelingsTogetherSafely(): void {
+  try {
+    bringFeelingsTogether();
+  } catch (e) {
+    if (__DEV__) console.warn('[data] feelings', e);
+  }
+}
+
 async function load(space: DataSpace, storage: Storage, keepSamples: boolean): Promise<void> {
   const settings = await settingsFor(space, storage);
   if (space === 'demo' && getDataSpace() === 'real') {
@@ -110,6 +122,7 @@ async function load(space: DataSpace, storage: Storage, keepSamples: boolean): P
   persistence = startLocalPersistence(storage);
   // After saving starts, so the cleaned data is what gets stored.
   purgeDemoLeftovers();
+  bringFeelingsTogetherSafely();
 }
 
 // At app start. Reopens in Demo mode if that's where the app was; if the
@@ -137,6 +150,7 @@ export async function startAppData(storage: Storage = AsyncStorage, keepSamplesO
     await hydrateLocalData(storage, keepSamplesOnFirstRun);
     persistence = startLocalPersistence(storage);
     purgeDemoLeftovers();
+    bringFeelingsTogetherSafely();
   }
   return space;
 }

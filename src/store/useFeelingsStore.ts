@@ -28,6 +28,9 @@ interface FeelingsState {
   // Editing and deleting from the Feelings log (or from a task it's linked to).
   updateEntry: (id: string, patch: Partial<Pick<FeelingCheckIn, 'zone' | 'feelingIds' | 'intensities' | 'reasonTags' | 'note'>>) => void;
   deleteEntry: (id: string) => void;
+  // Adds an entry with its own id, or replaces the one with that id (a
+  // feeling brought in from another section: feelings/fromSections.ts).
+  putEntry: (entry: FeelingCheckIn) => void;
   restoreEntries: (entries: FeelingCheckIn[]) => void;
   toggleBookmark: (feelingId: string) => void;
   retagEntry: (id: string, zone: FeelingZone, feelingIds: string[]) => void;
@@ -87,6 +90,13 @@ export const useFeelingsStore = create<FeelingsState>()(
     deleteEntry: (id) =>
       set((state) => {
         state.entries = state.entries.filter((e) => e.id !== id);
+      }),
+
+    putEntry: (entry) =>
+      set((state) => {
+        const i = state.entries.findIndex((e) => e.id === entry.id);
+        if (i >= 0) state.entries[i] = entry;
+        else state.entries.push(entry);
       }),
 
     restoreEntries: (entries) =>

@@ -12,6 +12,7 @@ export interface FeelingSourceLookup {
   quitHabit: (id: string) => string | undefined;
   skill: (id: string) => string | undefined;
   study: (id: string) => string | undefined;
+  journal: (id: string) => string | undefined; // the entry's date, in words
 }
 
 const kindWords: Record<FeelingSource['kind'], { prefix: string; noun: string }> = {
@@ -21,6 +22,7 @@ const kindWords: Record<FeelingSource['kind'], { prefix: string; noun: string }>
   quitHabit: { prefix: 'Quit', noun: 'quit habit' },
   skill: { prefix: 'Skill', noun: 'skill' },
   study: { prefix: 'Study session', noun: 'study session' },
+  journal: { prefix: 'Journal', noun: 'journal entry' },
 };
 
 export interface FeelingSourceLabel {

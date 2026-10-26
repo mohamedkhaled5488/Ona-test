@@ -12,9 +12,13 @@ interface JournalState {
     zone: FeelingZone,
     text: string,
     tags: string[],
-    options?: { preciseFeelingId?: string; font?: JournalFont }
+    // feelingChosen: undefined keeps what the entry had.
+    options?: { preciseFeelingId?: string; font?: JournalFont; feelingChosen?: boolean }
   ) => void;
   deleteEntry: (id: string) => void;
+  // From the Feelings log: its feeling was edited there, or deleted.
+  setEntryFeeling: (id: string, zone: FeelingZone, preciseFeelingId: string | undefined) => void;
+  setFeelingRemoved: (id: string, removed: boolean) => void;
 }
 
 export const useJournalStore = create<JournalState>()(
@@ -30,6 +34,8 @@ export const useJournalStore = create<JournalState>()(
           existing.tags = tags;
           existing.preciseFeelingId = options?.preciseFeelingId;
           existing.font = options?.font;
+          if (options?.feelingChosen !== undefined) existing.feelingChosen = options.feelingChosen;
+          if (options?.feelingChosen) existing.feelingRemoved = undefined;
         } else {
           state.entries.push({
             id: genId('journal'),
@@ -39,6 +45,7 @@ export const useJournalStore = create<JournalState>()(
             tags,
             preciseFeelingId: options?.preciseFeelingId,
             font: options?.font,
+            feelingChosen: options?.feelingChosen ?? false,
           });
         }
       }),
@@ -46,6 +53,20 @@ export const useJournalStore = create<JournalState>()(
     deleteEntry: (id) =>
       set((state) => {
         state.entries = state.entries.filter((e) => e.id !== id);
+      }),
+
+    setEntryFeeling: (id, zone, preciseFeelingId) =>
+      set((state) => {
+        const e = state.entries.find((x) => x.id === id);
+        if (!e) return;
+        e.zone = zone;
+        e.preciseFeelingId = preciseFeelingId;
+      }),
+
+    setFeelingRemoved: (id, removed) =>
+      set((state) => {
+        const e = state.entries.find((x) => x.id === id);
+        if (e) e.feelingRemoved = removed || undefined;
       }),
   }))
 );

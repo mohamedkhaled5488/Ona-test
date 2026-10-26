@@ -88,7 +88,7 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // --- Where a feeling was logged from ----------------------------------------
 
-export type SourceGroup = 'all' | 'standalone' | 'habits' | 'practice' | 'tasks' | 'quit' | 'other';
+export type SourceGroup = 'all' | 'standalone' | 'habits' | 'practice' | 'tasks' | 'journal' | 'quit' | 'other';
 
 export const SOURCE_GROUP_LABEL: Record<SourceGroup, string> = {
   all: 'All',
@@ -96,6 +96,7 @@ export const SOURCE_GROUP_LABEL: Record<SourceGroup, string> = {
   habits: 'After habits',
   practice: 'After practice',
   tasks: 'After tasks',
+  journal: 'From your journal',
   quit: 'Quit moments',
   other: 'Other',
 };
@@ -111,6 +112,8 @@ export function sourceGroupOf(source: FeelingSource | undefined): Exclude<Source
       return 'tasks';
     case 'quitHabit':
       return 'quit';
+    case 'journal':
+      return 'journal';
     default:
       return 'other'; // reading, study sessions
   }
@@ -127,6 +130,6 @@ export function sourceBreakdown(entries: FeelingCheckIn[]): { group: SourceGroup
     const g = sourceGroupOf(e.source);
     counts.set(g, (counts.get(g) ?? 0) + 1);
   });
-  const order: SourceGroup[] = ['standalone', 'habits', 'practice', 'tasks', 'quit', 'other'];
+  const order: SourceGroup[] = ['standalone', 'habits', 'practice', 'tasks', 'journal', 'quit', 'other'];
   return [{ group: 'all' as SourceGroup, count: entries.length }, ...order.filter((g) => counts.has(g)).map((group) => ({ group, count: counts.get(group)! }))];
 }
