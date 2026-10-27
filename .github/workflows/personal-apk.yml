@@ -7,8 +7,9 @@ name: Personal APK
 # every build: CI and E2E green on the commit (scripts/require-green-ci.js).
 # Not for testers (docs/building.md).
 #
-# Needs one repository secret: EXPO_TOKEN (an Expo access token: expo.dev →
-# Account settings → Access tokens).
+# Needs one repository secret holding an Expo access token (expo.dev →
+# Account settings → Access tokens): ONASECET (the owner's name for it), or
+# MO, or EXPO_TOKEN.
 on:
   workflow_dispatch:
     inputs:
@@ -50,7 +51,10 @@ jobs:
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          token: ${{ secrets.ONASECET || secrets.MO || secrets.EXPO_TOKEN }}
+
+      - name: The Expo token works
+        run: eas whoami
 
       - name: Build the APK
         env:
