@@ -1,0 +1,65 @@
+name: Personal APK
+
+# The owner's own APK (EAS profile "personal"), built here on GitHub instead
+# of on EAS's servers: "eas build --local" uses the same signing key and the
+# same app settings stored in Expo, so it installs over the Ona already on the
+# phone, and it doesn't use the Expo plan's monthly builds. The same rule as
+# every build: CI and E2E green on the commit (scripts/require-green-ci.js).
+# Not for testers (docs/building.md).
+#
+# Needs one repository secret: EXPO_TOKEN (an Expo access token: expo.dev →
+# Account settings → Access tokens).
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "The commit to build (empty: the latest). It must have passed CI and E2E."
+        required: false
+        default: ''
+
+concurrency:
+  group: personal-apk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+      - name: The commit being built
+        run: echo "BUILD_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+
+      - name: CI and E2E passed on this commit
+        env:
+          EAS_BUILD_PROFILE: personal
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/require-green-ci.js "$BUILD_SHA"
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build the APK
+        env:
+          EAS_BUILD_GIT_COMMIT_HASH: ${{ env.BUILD_SHA }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: eas build --platform android --profile personal --local --non-interactive --output "ona-${BUILD_SHA::7}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ona-personal-apk
+          path: ona-*.apk
+          retention-days: 14

@@ -59,6 +59,8 @@ Before starting one: push, wait for both runs, then `npm run check:ci` (the same
 
 `eas build -p android --profile personal` builds the same APK as `preview`, with the same CI and E2E rule, but without the staging run (the build log says so). It's for the owner's own phones while staging isn't set up (owner, 2026-10-27). Don't give it to testers: tester builds stay on `preview`.
 
+When the Expo plan has no builds left that month: GitHub → Actions → **Personal APK** → Run workflow (optionally a commit that passed CI and E2E). It runs `eas build --local` on GitHub with the same signing key and app settings from Expo, so it installs over the Ona on the phone; the APK is in the run's artifacts. It needs the repository secret `EXPO_TOKEN` (expo.dev → Account settings → Access tokens).
+
 ## Real-account tests on staging
 
 The real-account tests (`supabase/tests/realAccount.test.ts`, BE-REAL-001..004) run on the local Supabase in every CI run, and nightly against a separate staging project, **ona-staging** (same region as production, same migrations including 0009). The staging harness refuses to run unless every value points at staging and none at production (`supabase/tests/globalSetup.staging.js`, tested in STAGING-GUARD-001..002): the project ref must not be production's, the URL must be exactly the staging project's, any JWT-style key must name the staging ref, and the service key must be accepted by the staging URL. Before each run it deletes earlier test accounts (emails ending `@ona.test`, nothing else).
