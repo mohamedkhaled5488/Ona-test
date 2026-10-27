@@ -1,8 +1,9 @@
 // No tester APK from a commit whose CI isn't green (scripts/require-green-ci.js,
 // run by EAS before every build). IDs: docs/building.md (GATE-*)
-const { verdict, stagingVerdict, REQUIRED, GUARDED_PROFILES } = require('../../../scripts/require-green-ci.js') as {
+const { verdict, stagingVerdict, needsStaging, REQUIRED, GUARDED_PROFILES } = require('../../../scripts/require-green-ci.js') as {
   verdict: (runs: object[]) => { ok: boolean; problems: string[] };
   stagingVerdict: (latest: object | undefined, now?: number) => string[];
+  needsStaging: (profile: string | undefined) => boolean;
   REQUIRED: string[];
   GUARDED_PROFILES: string[];
 };
@@ -47,4 +48,12 @@ test('GATE-005 the real-account tests on staging: the latest nightly run passed 
   expect(stagingVerdict(latest('failure', 2), now).join(' ')).toMatch(/last run failure/);
   expect(stagingVerdict(latest('skipped', 2), now).join(' ')).toMatch(/last run skipped/);
   expect(stagingVerdict(latest('success', 40), now).join(' ')).toMatch(/40 h ago/);
+});
+
+test("GATE-006 the owner's personal build: the same CI and E2E rule, only the staging run not required; the tester build still needs it", () => {
+  const eas = JSON.parse(fs.readFileSync(`${process.cwd()}/eas.json`, 'utf8'));
+  expect(eas.build.personal).toMatchObject({ extends: 'preview' });
+  expect(GUARDED_PROFILES).toEqual(expect.arrayContaining(['preview', 'personal']));
+  expect(needsStaging('personal')).toBe(false);
+  expect(needsStaging('preview')).toBe(true);
 });

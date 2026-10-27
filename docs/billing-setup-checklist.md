@@ -6,7 +6,7 @@ Prices are never set in code. Change them in Play Console (and the RevenueCat of
 
 ## 1. App basics
 
-- [ ] Choose the Android package name (e.g. `app.ona`) and add it to `app.json` → `expo.android.package`. Nothing in Play Console can be created until this is fixed.
+- [x] The Android package name is `app.ona` (`app.json` → `expo.android.package`). Nothing in Play Console can be created without it.
 - [ ] Upload a first build to an internal testing track (products can't be created before an app bundle exists).
 - [ ] Once the package name is known, set `PLAY_SUBSCRIPTIONS_URL` in `src/config/plans.ts` to deep-link to Ona's subscription (`?sku=ona_sync&package=<package>`).
 

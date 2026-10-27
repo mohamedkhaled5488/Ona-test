@@ -8,11 +8,15 @@
 // and the latest nightly "Real account (staging)" run passed (30 h).
 // Anything else (still running, failed, cancelled, never run, or GitHub not
 // reachable) stops the build. Other profiles are left alone.
+// "personal" (the owner's own phones, never for testers; owner, 2026-10-27):
+// the same CI and E2E rule, without the staging run, said in the log.
 const { execSync } = require('child_process');
 
 const REPO = 'mohamedkhaled5488/Ona-test';
 const REQUIRED = ['CI', 'E2E (Android)'];
-const GUARDED_PROFILES = ['preview'];
+const GUARDED_PROFILES = ['preview', 'personal'];
+// Profiles that also need the nightly staging run.
+const needsStaging = (profile) => profile !== 'personal';
 
 function commitToCheck() {
   // GitHub needs the full id: a short one given by hand is resolved here.
@@ -63,7 +67,9 @@ async function main() {
     process.exit(1);
   }
   const { problems } = verdict(runs);
-  try {
+  if (!needsStaging(profile)) {
+    console.warn(`⚠ Personal build (owner's own phones, not for testers): the staging check is skipped. CI and E2E are still required.`);
+  } else try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${STAGING_WORKFLOW}/runs?branch=main&status=completed&per_page=1`, { headers });
     const latest = res.ok ? ((await res.json()).workflow_runs ?? [])[0] : undefined;
     problems.push(...stagingVerdict(latest));
@@ -79,4 +85,4 @@ async function main() {
 }
 
 if (require.main === module) void main();
-module.exports = { verdict, stagingVerdict, REQUIRED, GUARDED_PROFILES };
+module.exports = { verdict, stagingVerdict, needsStaging, REQUIRED, GUARDED_PROFILES };
