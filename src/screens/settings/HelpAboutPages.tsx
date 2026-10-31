@@ -164,11 +164,12 @@ export function SafetyPage() {
 
 export function AboutPage({ go }: { go: Go }) {
   const open = useOpen();
-  const { version, build } = appVersion();
+  const { version, build, commit } = appVersion();
   return (
     <>
       <Group>
         <InfoRow label="Version" value={build ? `${version} (${build})` : version} />
+        {commit && <InfoRow label="Built from" value={commit} />}
         <NavRow label="What's new" onPress={() => go('whatsNew')} />
       </Group>
       <Group title="Legal" footer={LEGAL.privacyPolicyUrl ? undefined : 'The privacy policy and terms will be published before launch.'}>

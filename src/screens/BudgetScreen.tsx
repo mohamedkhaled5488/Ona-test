@@ -15,6 +15,7 @@ import { colors, radii, spacing, fonts } from '../theme';
 import { sectionAccents } from '../theme/accents';
 import { withAlpha } from '../utils/color';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useSectionStack } from '../hooks/useSectionStack';
 import { useUi } from '../components/UiProvider';
 import { todayISO, formatDisplayDate } from '../utils/date';
 import { currencies, formatMoney } from '../data/currencies';
@@ -568,22 +569,21 @@ function EntryDetailStage({ budgetId, entryId, onBack }: { budgetId: string; ent
 // ---------------------------------------------------------------------------
 export function BudgetScreen({ route }: Props) {
   const { openBudgetId } = route.params ?? {};
-  const [stack, setStack] = useState<ScreenState[]>(() =>
-    openBudgetId ? [{ kind: 'overview' }, { kind: 'folder', budgetId: openBudgetId }] : [{ kind: 'overview' }]
+  // Opened at a budget (from Recap): its page first, Back to where it was
+  // opened from (hooks/useSectionStack.ts).
+  const { current, push, stepBack, up } = useSectionStack<ScreenState>({ kind: 'overview' }, openBudgetId ? [{ kind: 'folder', budgetId: openBudgetId }] : [], (s) =>
+    s.kind === 'entryDetail' ? { kind: 'folder', budgetId: s.budgetId } : undefined
   );
-  const current = stack[stack.length - 1];
-  const push = (s: ScreenState) => setStack((prev) => [...prev, s]);
-  const stepBack = () => setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
 
-  useBackHandler({ stepBack: stack.length > 1 ? stepBack : undefined });
+  useBackHandler({ stepBack });
 
   return (
     <Screen>
       {current.kind === 'overview' && <OverviewStage onOpenBudget={(budgetId) => push({ kind: 'folder', budgetId })} />}
       {current.kind === 'folder' && (
-        <FolderStage budgetId={current.budgetId} onBack={stepBack} onOpenEntry={(entryId) => push({ kind: 'entryDetail', budgetId: current.budgetId, entryId })} />
+        <FolderStage budgetId={current.budgetId} onBack={up} onOpenEntry={(entryId) => push({ kind: 'entryDetail', budgetId: current.budgetId, entryId })} />
       )}
-      {current.kind === 'entryDetail' && <EntryDetailStage budgetId={current.budgetId} entryId={current.entryId} onBack={stepBack} />}
+      {current.kind === 'entryDetail' && <EntryDetailStage budgetId={current.budgetId} entryId={current.entryId} onBack={up} />}
     </Screen>
   );
 }

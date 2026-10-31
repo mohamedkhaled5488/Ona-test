@@ -16,6 +16,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { colors, sectionAccents, spacing, radii, fonts } from '../theme';
 import { withAlpha } from '../utils/color';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useSectionStack } from '../hooks/useSectionStack';
 import { useUi } from '../components/UiProvider';
 import { extractTextFromImage } from '../utils/ocr';
 import { shareQuotesAsText, exportQuotesAsPdf } from '../utils/bookExport';
@@ -1121,12 +1122,9 @@ function QuoteSearchStage({ onBack, onOpenFolder }: { onBack: () => void; onOpen
 // ---------------------------------------------------------------------------
 export function BookScreen({ route, navigation }: Props) {
   const openEntryId = route.params?.openEntryId;
-  const [stack, setStack] = useState<ScreenState[]>(
-    openEntryId ? [{ kind: 'list' }, { kind: 'folder', entryId: openEntryId }] : [{ kind: 'list' }]
-  );
-  const current = stack[stack.length - 1];
-  const push = (s: ScreenState) => setStack((prev) => [...prev, s]);
-  const stepBack = () => setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  // Opened at a book (from Recap): its page first, Back to where it was
+  // opened from (hooks/useSectionStack.ts).
+  const { current, push, stepBack, up } = useSectionStack<ScreenState>({ kind: 'list' }, openEntryId ? [{ kind: 'folder', entryId: openEntryId }] : []);
 
   const [folderDirty, setFolderDirty] = useState(false);
   const folderSave = useRef<() => void>(() => {});
@@ -1134,7 +1132,7 @@ export function BookScreen({ route, navigation }: Props) {
   useBackHandler({
     dirty: current.kind === 'folder' && folderDirty,
     onSave: () => folderSave.current(),
-    stepBack: stack.length > 1 ? stepBack : undefined,
+    stepBack,
   });
 
   return (
@@ -1149,7 +1147,7 @@ export function BookScreen({ route, navigation }: Props) {
         <FolderStage
           key={current.entryId}
           entryId={current.entryId}
-          onBack={stepBack}
+          onBack={up}
           onLogFeeling={(entryId) => navigation.push('moodCheck', { source: { kind: 'book', refId: entryId } })}
           onDirtyChange={(dirty, save) => {
             setFolderDirty(dirty);
@@ -1158,7 +1156,7 @@ export function BookScreen({ route, navigation }: Props) {
         />
       )}
       {current.kind === 'quoteSearch' && (
-        <QuoteSearchStage onBack={stepBack} onOpenFolder={(entryId) => push({ kind: 'folder', entryId })} />
+        <QuoteSearchStage onBack={up} onOpenFolder={(entryId) => push({ kind: 'folder', entryId })} />
       )}
     </Screen>
   );

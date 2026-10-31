@@ -20,6 +20,7 @@ import { colors, radii, spacing, fonts } from '../theme';
 import { sectionAccents } from '../theme/accents';
 import { withAlpha } from '../utils/color';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useSectionStack } from '../hooks/useSectionStack';
 import { useUi } from '../components/UiProvider';
 import { todayISO, formatDisplayDate, formatClockTime } from '../utils/date';
 import { durationPresets, starterHabitIdeas } from '../data/habitPresets';
@@ -1103,16 +1104,14 @@ function FolderStage({
 export function HabitBuilderScreen({ route, header }: Props & { header?: React.ReactNode }) {
   const { openHabitId, openDate } = route.params ?? {};
   const { showDialog } = useUi();
-  const [stack, setStack] = useState<ScreenState[]>(() => {
-    if (openHabitId && openDate) {
-      return [{ kind: 'overview' }, { kind: 'folder', habitId: openHabitId }, { kind: 'dayDetail', habitId: openHabitId, date: openDate }];
-    }
-    if (openHabitId) return [{ kind: 'overview' }, { kind: 'folder', habitId: openHabitId }];
-    return [{ kind: 'overview' }];
-  });
-  const current = stack[stack.length - 1];
-  const push = (s: ScreenState) => setStack((prev) => [...prev, s]);
-  const stepBack = () => setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  // Opened at a habit or one of its days (from Recap, Quit's "Doing
+  // instead", a reminder): that page first, Back to where it was opened from
+  // (hooks/useSectionStack.ts).
+  const { stack, current, push, stepBack, up } = useSectionStack<ScreenState>(
+    { kind: 'overview' },
+    openHabitId && openDate ? [{ kind: 'dayDetail', habitId: openHabitId, date: openDate }] : openHabitId ? [{ kind: 'folder', habitId: openHabitId }] : [],
+    (s) => (s.kind === 'dayDetail' || s.kind === 'analysis' ? { kind: 'folder', habitId: s.habitId } : undefined)
+  );
 
   // Owned here, not inside FolderStage/DayDetailStage, so "Edit" from a
   // day's detail view can reopen the exact same sheet those two screens share.
@@ -1120,7 +1119,7 @@ export function HabitBuilderScreen({ route, header }: Props & { header?: React.R
 
   // A day's page with unsaved edits asks Save / Discard / Keep editing.
   const [guard, setGuard] = useState<LeaveGuard | null>(null);
-  useBackHandler({ stepBack: stack.length > 1 ? stepBack : undefined, dirty: !!guard?.dirty, onSave: () => guard?.save() });
+  useBackHandler({ stepBack, dirty: !!guard?.dirty, onSave: () => guard?.save() });
 
   // Coming back to a list (the logs) lands where you were.
   const scrollRef = React.useRef<ScrollView>(null);
@@ -1150,14 +1149,14 @@ export function HabitBuilderScreen({ route, header }: Props & { header?: React.R
       {current.kind === 'folder' && (
         <FolderStage
           habitId={current.habitId}
-          onBack={stepBack}
+          onBack={up}
           onOpenDetail={(date) => pushKeepingScroll({ kind: 'dayDetail', habitId: current.habitId, date })}
           onOpenAnalysis={() => pushKeepingScroll({ kind: 'analysis', habitId: current.habitId })}
           onRequestCheckIn={(date, initialDone) => setCheckInTarget({ habitId: current.habitId, date, initialDone })}
         />
       )}
       {current.kind === 'analysis' && (
-        <BuildHabitAnalysisStage habitId={current.habitId} onBack={stepBack} onOpenLog={(date) => pushKeepingScroll({ kind: 'dayDetail', habitId: current.habitId, date })} />
+        <BuildHabitAnalysisStage habitId={current.habitId} onBack={up} onOpenLog={(date) => pushKeepingScroll({ kind: 'dayDetail', habitId: current.habitId, date })} />
       )}
       {current.kind === 'dayDetail' && (
         <HabitLogDetail
@@ -1172,11 +1171,11 @@ export function HabitBuilderScreen({ route, header }: Props & { header?: React.R
                 title: 'Save your changes before leaving?',
                 actions: [
                   { label: 'Keep editing', style: 'cancel' },
-                  { label: 'Discard', style: 'destructive', onPress: () => { setGuard(null); stepBack(); } },
-                  { label: 'Save', style: 'default', onPress: () => { guard.save(); setGuard(null); stepBack(); } },
+                  { label: 'Discard', style: 'destructive', onPress: () => { setGuard(null); up(); } },
+                  { label: 'Save', style: 'default', onPress: () => { guard.save(); setGuard(null); up(); } },
                 ],
               });
-            } else stepBack();
+            } else up();
           }}
         />
       )}

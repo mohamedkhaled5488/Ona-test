@@ -132,8 +132,12 @@ describe('E2E-GUARD: the Maestro flows match the app', () => {
   });
 
   test('E2E-GUARD-004 every id a flow taps is a testID in the app', () => {
+    // Also a template id (testID={`recap-area-${a.area}`}, tabBarButtonTestID:
+    // `tab-${route.name}`): its fixed start, then a value quoted in the app.
+    const templates = [...SOURCE.matchAll(/(?:testID=\{|tabBarButtonTestID:\s*)`([^`$]+)\$\{/g)].map((m) => m[1]);
+    const fromTemplate = (id: string) => templates.some((start) => id.startsWith(start) && new RegExp(`['"]${id.slice(start.length)}['"]`).test(SOURCE));
     for (const f of flowFiles) {
-      for (const id of selectors(f).ids) expect({ f, id, found: SOURCE.includes(`testID="${id}"`) }).toEqual({ f, id, found: true });
+      for (const id of selectors(f).ids) expect({ f, id, found: SOURCE.includes(`testID="${id}"`) || fromTemplate(id) }).toEqual({ f, id, found: true });
     }
   });
 

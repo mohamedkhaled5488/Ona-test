@@ -19,6 +19,7 @@ import { colors, radii, spacing, fonts } from '../theme';
 import { sectionAccents } from '../theme/accents';
 import { withAlpha } from '../utils/color';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useSectionStack } from '../hooks/useSectionStack';
 import { useUi } from '../components/UiProvider';
 import { todayISO, addDaysISO, formatDisplayDate, formatClockTime } from '../utils/date';
 import { daysBetweenISO } from '../utils/feelingsStats';
@@ -981,18 +982,15 @@ function MilestoneDetailStage({ skillId, milestoneId, onBack }: { skillId: strin
 // ---------------------------------------------------------------------------
 export function SkillsScreen({ route }: Props) {
   const { openSkillId, openSessionId } = route.params ?? {};
-  const [stack, setStack] = useState<ScreenState[]>(() => {
-    if (openSkillId && openSessionId) {
-      return [{ kind: 'overview' }, { kind: 'folder', skillId: openSkillId }, { kind: 'sessionDetail', skillId: openSkillId, sessionId: openSessionId }];
-    }
-    if (openSkillId) return [{ kind: 'overview' }, { kind: 'folder', skillId: openSkillId }];
-    return [{ kind: 'overview' }];
-  });
-  const current = stack[stack.length - 1];
-  const push = (s: ScreenState) => setStack((prev) => [...prev, s]);
-  const stepBack = () => setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  // Opened at a skill or a session (from Recap): that page first, Back to
+  // where it was opened from (hooks/useSectionStack.ts).
+  const { current, push, setStack, stepBack, up } = useSectionStack<ScreenState>(
+    { kind: 'overview' },
+    openSkillId && openSessionId ? [{ kind: 'sessionDetail', skillId: openSkillId, sessionId: openSessionId }] : openSkillId ? [{ kind: 'folder', skillId: openSkillId }] : [],
+    (s) => (s.kind === 'overview' || s.kind === 'folder' ? undefined : { kind: 'folder', skillId: s.skillId })
+  );
 
-  useBackHandler({ stepBack: stack.length > 1 ? stepBack : undefined });
+  useBackHandler({ stepBack });
 
   return (
     <Screen>
@@ -1005,25 +1003,25 @@ export function SkillsScreen({ route }: Props) {
           onSetupConsumed={() =>
             setStack((prev) => prev.map((s, i) => (i === prev.length - 1 && s.kind === 'folder' ? { ...s, openSetup: false } : s)))
           }
-          onBack={stepBack}
+          onBack={up}
           onOpenSession={(sessionId) => push({ kind: 'sessionDetail', skillId: current.skillId, sessionId })}
           onOpenAnalysis={() => push({ kind: 'analysis', skillId: current.skillId })}
           onOpenJourney={() => push({ kind: 'journey', skillId: current.skillId })}
         />
       )}
       {current.kind === 'analysis' && (
-        <SkillAnalysisStage skillId={current.skillId} onBack={stepBack} onOpenSession={(sessionId) => push({ kind: 'sessionDetail', skillId: current.skillId, sessionId })} />
+        <SkillAnalysisStage skillId={current.skillId} onBack={up} onOpenSession={(sessionId) => push({ kind: 'sessionDetail', skillId: current.skillId, sessionId })} />
       )}
       {current.kind === 'journey' && (
         <SkillJourneyStage
           skillId={current.skillId}
-          onBack={stepBack}
+          onBack={up}
           onOpenSession={(sessionId) => push({ kind: 'sessionDetail', skillId: current.skillId, sessionId })}
           onOpenMilestone={(milestoneId) => push({ kind: 'milestoneDetail', skillId: current.skillId, milestoneId })}
         />
       )}
-      {current.kind === 'sessionDetail' && <SessionDetailStage skillId={current.skillId} sessionId={current.sessionId} onBack={stepBack} />}
-      {current.kind === 'milestoneDetail' && <MilestoneDetailStage skillId={current.skillId} milestoneId={current.milestoneId} onBack={stepBack} />}
+      {current.kind === 'sessionDetail' && <SessionDetailStage skillId={current.skillId} sessionId={current.sessionId} onBack={up} />}
+      {current.kind === 'milestoneDetail' && <MilestoneDetailStage skillId={current.skillId} milestoneId={current.milestoneId} onBack={up} />}
     </Screen>
   );
 }

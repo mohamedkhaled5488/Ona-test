@@ -11,6 +11,7 @@ import { sectionsMeta } from '../data/sectionsMeta';
 import { habitsCardMeta, type FolderMeta } from '../data/folders';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
+import { openSection } from '../navigation/navigationRef';
 
 
 
@@ -39,7 +40,7 @@ export function FolderScreen({
             return (
               <Pressable
                 key="habits"
-                onPress={() => navigation.navigate('habitsHub')}
+                onPress={() => openSection('habitsHub')}
                 style={({ pressed }) => [styles.cardWrapper, pressed && styles.pressed]}
               >
                 <Card style={[styles.card, { borderLeftColor: colors.teal }]}>
@@ -61,7 +62,7 @@ export function FolderScreen({
           return (
             <Pressable
               key={id}
-              onPress={() => navigation.navigate(id as any)}
+              onPress={() => openSection(id as any)}
               style={({ pressed }) => [styles.cardWrapper, pressed && styles.pressed]}
             >
               <Card style={[styles.card, { borderLeftColor: accent }]}>

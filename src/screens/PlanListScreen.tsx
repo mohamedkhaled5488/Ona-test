@@ -18,6 +18,7 @@ import type { PlanTemplate } from '../data/planTemplates';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { SeeHowItWorks } from '../discover/SeeHowItWorks';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'planBuilder'>;
 
@@ -68,7 +69,7 @@ export function PlanListScreen({ navigation }: Props) {
   const finishCreate = () => {
     const id = createPlan(title, motive, color, chosenSteps);
     setSheetVisible(false);
-    navigation.navigate('planDetail', { planId: id });
+    openSection('planDetail', { planId: id });
   };
 
   return (
@@ -113,7 +114,7 @@ export function PlanListScreen({ navigation }: Props) {
         {filtered.map((plan) => {
           const progress = computePlanProgress(plan.steps);
           return (
-            <Pressable key={plan.id} onPress={() => navigation.navigate('planDetail', { planId: plan.id })}>
+            <Pressable key={plan.id} onPress={() => openSection('planDetail', { planId: plan.id })}>
               <Card style={[styles.planCard, { borderLeftColor: plan.color, borderLeftWidth: 4 }]}>
                 <View style={styles.planHeader}>
                   <SectionHeading style={styles.planTitle}>{plan.title}</SectionHeading>

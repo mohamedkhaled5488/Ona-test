@@ -17,6 +17,7 @@ import { computeStreak, countWords, totalWordCount, findOnThisDay, feelingLabel 
 import { addMonthsISO, formatDisplayDate, formatMonthLabel, getMonthGrid, rotateWeekdays, todayISO } from '../utils/date';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { themedStyles } from '../theme/runtime';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'journaling'>;
 
@@ -53,7 +54,7 @@ export function JournalingScreen({ navigation }: Props) {
       <View style={styles.headerRow}>
         <ScreenTitle>Journaling</ScreenTitle>
         <View style={styles.headerActions}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Catch a thought" onPress={() => navigation.navigate('catchAThought')} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Catch a thought" onPress={() => openSection('catchAThought')} hitSlop={8}>
             <Ionicons name="sparkles-outline" size={20} color={colors.inkSoft} />
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Share journal"
@@ -87,7 +88,7 @@ export function JournalingScreen({ navigation }: Props) {
 
       <Pressable
         style={styles.lockRow}
-        onPress={() => navigation.navigate('settings', { page: 'section', section: 'journaling' })}
+        onPress={() => openSection('settings', { page: 'section', section: 'journaling' })}
         accessibilityRole="button"
         accessibilityLabel="Journaling lock settings"
       >
@@ -190,7 +191,7 @@ export function JournalingScreen({ navigation }: Props) {
               </View>
               <PrimaryButton
                 label="Open entry"
-                onPress={() => navigation.navigate('journalWrite', { date: selectedDate })}
+                onPress={() => openSection('journalWrite', { date: selectedDate })}
               />
             </>
           ) : (
@@ -198,7 +199,7 @@ export function JournalingScreen({ navigation }: Props) {
               <Caption>Nothing written for this day yet.</Caption>
               <PrimaryButton
                 label="Start writing"
-                onPress={() => navigation.navigate('journalWrite', { date: selectedDate })}
+                onPress={() => openSection('journalWrite', { date: selectedDate })}
               />
             </>
           )}
@@ -209,7 +210,7 @@ export function JournalingScreen({ navigation }: Props) {
       <View style={styles.entries}>
         {historyList.length === 0 && <Body style={styles.emptyText}>No entries found.</Body>}
         {historyList.map((entry) => (
-          <Pressable key={entry.id} onPress={() => navigation.navigate('journalWrite', { date: entry.date })}>
+          <Pressable key={entry.id} onPress={() => openSection('journalWrite', { date: entry.date })}>
             <Card style={styles.entryCard} flat>
               <View style={styles.entryHeader}>
                 {entry.zone ? (

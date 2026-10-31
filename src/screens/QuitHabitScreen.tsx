@@ -14,6 +14,7 @@ import { colors, radii, spacing, fonts } from '../theme';
 import { sectionAccents } from '../theme/accents';
 import { withAlpha } from '../utils/color';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useSectionStack } from '../hooks/useSectionStack';
 import { useUi } from '../components/UiProvider';
 import { todayISO, formatDisplayDate } from '../utils/date';
 import { feelings, zoneMeta, reasonTagOptions } from '../data/feelingsWheel';
@@ -43,6 +44,7 @@ import { SeeHowItWorks } from '../discover/SeeHowItWorks';
 import { LongStayCheck, PacedBreathing, TOOL_VIEWS, ToolView, WhyLine } from './QuitTools';
 import { CravingMenu, HabitTypeChips, OwnToolView, ToolkitEntry, ToolkitOffer, ToolkitStage } from './QuitToolkit';
 import { DEFAULT_TOOL, TOOLKIT_COPY, findTool, needsSubstanceNote } from '../quit/toolkit';
+import { openSection } from '../navigation/navigationRef';
 
 // "1 day", "5 days".
 const dayCount = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -243,7 +245,7 @@ function SoftFeelingOffer({ habit, source }: { habit: QuitHabit; source: Feeling
 function SupportLink() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   return (
-    <Pressable onPress={() => navigation.navigate('settings', { page: 'safety' })} accessibilityRole="link" hitSlop={8} style={styles.supportLink}>
+    <Pressable onPress={() => openSection('settings', { page: 'safety' })} accessibilityRole="link" hitSlop={8} style={styles.supportLink}>
       <Ionicons name="call-outline" size={14} color={colors.inkSoft} />
       <Caption> Need to talk to someone now? Support lines</Caption>
     </Pressable>
@@ -1007,14 +1009,13 @@ function OverviewStage({ onOpenHabit }: { onOpenHabit: (habitId: string) => void
 // ---------------------------------------------------------------------------
 export function QuitHabitScreen({ route, header }: Props & { header?: React.ReactNode }) {
   const { openHabitId } = route.params ?? {};
-  const [stack, setStack] = useState<ScreenState[]>(() =>
-    openHabitId ? [{ kind: 'overview' }, { kind: 'journey', habitId: openHabitId }] : [{ kind: 'overview' }]
+  // Opened at a habit (from Recap, Home): its journey is the first page, and
+  // Back returns to where it was opened from (hooks/useSectionStack.ts).
+  const { current, push, stepBack, up } = useSectionStack<ScreenState>({ kind: 'overview' }, openHabitId ? [{ kind: 'journey', habitId: openHabitId }] : [], (s) =>
+    s.kind === 'overview' ? undefined : s.kind === 'journey' ? { kind: 'overview' } : { kind: 'journey', habitId: s.habitId }
   );
-  const current = stack[stack.length - 1];
-  const push = (s: ScreenState) => setStack((prev) => [...prev, s]);
-  const stepBack = () => setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
 
-  useBackHandler({ stepBack: stack.length > 1 ? stepBack : undefined });
+  useBackHandler({ stepBack });
 
   return (
     <Screen>
@@ -1023,15 +1024,15 @@ export function QuitHabitScreen({ route, header }: Props & { header?: React.Reac
       {current.kind === 'journey' && (
         <JourneyStage
           habitId={current.habitId}
-          onBack={stepBack}
+          onBack={up}
           onOpenTrack={(trackId) => push({ kind: 'trackDetail', habitId: current.habitId, trackId })}
           onOpenAnalysis={() => push({ kind: 'analysis', habitId: current.habitId })}
           onOpenToolkit={() => push({ kind: 'toolkit', habitId: current.habitId })}
         />
       )}
-      {current.kind === 'toolkit' && <ToolkitStage habitId={current.habitId} onBack={stepBack} />}
-      {current.kind === 'analysis' && <QuitHabitAnalysisStage habitId={current.habitId} onBack={stepBack} />}
-      {current.kind === 'trackDetail' && <TrackDetailStage habitId={current.habitId} trackId={current.trackId} onBack={stepBack} />}
+      {current.kind === 'toolkit' && <ToolkitStage habitId={current.habitId} onBack={up} />}
+      {current.kind === 'analysis' && <QuitHabitAnalysisStage habitId={current.habitId} onBack={up} />}
+      {current.kind === 'trackDetail' && <TrackDetailStage habitId={current.habitId} trackId={current.trackId} onBack={up} />}
     </Screen>
   );
 }

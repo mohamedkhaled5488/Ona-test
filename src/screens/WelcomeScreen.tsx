@@ -16,6 +16,7 @@ import { setStartScreen } from '../navigation/startScreen';
 import { colors, fonts, spacing } from '../theme';
 import { themedStyles } from '../theme/runtime';
 import type { RootStackParamList } from '../navigation/types';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'welcome'>;
 
@@ -48,7 +49,7 @@ export function WelcomeScreen({ navigation, route }: Props) {
       <PrimaryButton label={returning ? 'Back to my Ona' : 'Start using Ona'} onPress={start} style={styles.primary} />
       <Caption style={styles.hint}>No account needed.</Caption>
 
-      <PrimaryButton label="Sign in or create an account" variant="outline" onPress={() => navigation.navigate('signIn')} style={styles.secondary} />
+      <PrimaryButton label="Sign in or create an account" variant="outline" onPress={() => openSection('signIn')} style={styles.secondary} />
       <Caption style={styles.hint}>Only needed to sync between devices.</Caption>
 
       <Pressable
@@ -63,7 +64,7 @@ export function WelcomeScreen({ navigation, route }: Props) {
         <Body style={styles.demoText}>Explore with sample data</Body>
         <Caption style={styles.hint}>See what Ona looks like after a few weeks of use.</Caption>
       </Pressable>
-      <Pressable onPress={() => navigation.navigate('discoverTour', {})} style={styles.demo} accessibilityRole="button">
+      <Pressable onPress={() => openSection('discoverTour', {})} style={styles.demo} accessibilityRole="button">
         <Body style={styles.demoText}>Take a 5-minute tour</Body>
       </Pressable>
     </Screen>

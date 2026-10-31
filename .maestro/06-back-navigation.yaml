@@ -1,0 +1,74 @@
+# E2E-007 Android's Back key goes exactly one step back, everywhere, and
+# never closes Ona by surprise (docs/navigation.md). Found on a phone
+# (2026-10-29): Back on a Recap area page closed the app.
+# Not here: a notification tap (it opens Ona at Home; no screen of its own)
+# and the account choice after sign-in (needs a server; NAV-012 and MAN-117).
+appId: app.ona
+tags:
+  - core
+---
+- runFlow: subflows/fresh-start.yaml
+
+# A Recap area page: Back returns to Home's overview, the app stays open.
+- tapOn:
+    id: "recap-area-grow"
+- assertNotVisible:
+    id: "home-settings"
+- pressKey: back
+- assertVisible:
+    id: "home-settings"
+
+# A Feelings sub-page: Analysis → Back → Check In → Back → the Reflect folder.
+- tapOn:
+    id: "tab-reflectFolder"
+- tapOn: "Identify the Feeling"
+- tapOn: "Analysis"
+- assertVisible: "What came up together. Never what caused what."
+- pressKey: back
+- assertNotVisible: "What came up together. Never what caused what."
+- assertVisible: "Check In"
+- pressKey: back
+- assertVisible: "Identify the Feeling"
+- assertVisible:
+    id: "tab-reflectFolder"
+
+# A Quit sub-page: My toolkit → Back → the journey → Back → the list.
+- tapOn:
+    id: "tab-growFolder"
+- tapOn: "Habits"
+- tapOn: "Quit"
+- tapOn: "Start quitting something"
+- tapOn: "e.g. Smoking, nail biting, late-night scrolling"
+- inputText: "late-night scrolling"
+- hideKeyboard
+- tapOn: "Start"
+- extendedWaitUntil:
+    visible: "I'm craving it"
+    timeout: 10000
+- scrollUntilVisible:
+    element: "Set it up"
+- tapOn: "Set it up"
+- assertVisible: "If-then plans"
+- pressKey: back
+- assertVisible: "I'm craving it"
+- pressKey: back
+- assertVisible: "Start quitting something"
+
+# The tour, from Discover: Back returns to Discover.
+- pressKey: back
+- tapOn:
+    id: "tab-home"
+- tapOn:
+    id: "home-discover"
+- tapOn: "Start the tour"
+- pressKey: back
+- assertVisible: "Start the tour"
+- pressKey: back
+- assertVisible:
+    id: "home-settings"
+
+# Home: Back says how to close Ona instead of closing it.
+- pressKey: back
+- assertVisible: "Press Back again to close Ona"
+- assertVisible:
+    id: "home-settings"

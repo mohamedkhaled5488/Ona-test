@@ -13,6 +13,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UiProvider } from '../components/UiProvider';
 import type { RootStackParamList } from '../navigation/types';
+import { navigationRef } from '../navigation/navigationRef';
 
 const ROUTES: (keyof RootStackParamList)[] = [
   'Main', 'welcome', 'planBuilder', 'dailyPlanning', 'taskEditor', 'planningInsights', 'journaling', 'catchAThought', 'studySession',
@@ -33,7 +34,7 @@ export async function renderScreen(name: keyof RootStackParamList, Screen: React
   const result = await render(
     <SafeAreaProvider initialMetrics={METRICS}>
       <UiProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef}>
           <Stack.Navigator initialRouteName={name} screenOptions={{ animation: 'none' }}>
             {ROUTES.map((r) => (
               <Stack.Screen key={r} name={r} component={r === name ? Screen : (Stub as never)} initialParams={r === name ? params : undefined} />
@@ -52,7 +53,7 @@ export async function renderWithApp(ui: React.ReactElement) {
   const result = await render(
     <SafeAreaProvider initialMetrics={METRICS}>
       <UiProvider>
-        <NavigationContainer>{ui}</NavigationContainer>
+        <NavigationContainer ref={navigationRef}>{ui}</NavigationContainer>
       </UiProvider>
     </SafeAreaProvider>
   );

@@ -24,6 +24,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
 import { parseWholeNumberInput } from '../utils/numberInput';
 import { deletePlanKeepingTasks } from '../utils/planLinks';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'planDetail'>;
 
@@ -231,7 +232,7 @@ export function PlanDetailScreen({ route, navigation }: Props) {
     });
   };
 
-  const openStep = (path: string[]) => navigation.navigate('planStepDetail', { planId, path });
+  const openStep = (path: string[]) => openSection('planStepDetail', { planId, path });
   const progress = computePlanProgress(plan.steps);
 
   return (

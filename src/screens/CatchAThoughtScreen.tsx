@@ -15,6 +15,7 @@ import { addDaysISO, todayISO } from '../utils/date';
 import type { CapturedThought, ThoughtKind } from '../types/sections';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'catchAThought'>;
 
@@ -76,7 +77,7 @@ export function CatchAThoughtScreen({ navigation }: Props) {
   const handlePromoteToPlan = (thought: CapturedThought) => {
     const planId = promoteToPlan(thought.id);
     setSelectedThought(null);
-    if (planId) navigation.navigate('planDetail', { planId });
+    if (planId) openSection('planDetail', { planId });
   };
 
   const handlePromoteToJournal = (thought: CapturedThought) => {

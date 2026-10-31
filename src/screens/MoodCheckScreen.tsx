@@ -84,6 +84,7 @@ import { useDailyPlanningStore } from '../store/useDailyPlanningStore';
 import { basedOn, filterBySource, overviewInsight, sourceBreakdown, tagInsight, SOURCE_GROUP_LABEL, type SourceGroup } from '../utils/feelingsInsights';
 import { CONFIDENCE_NOTE } from '../config/feelingsAnalysis';
 import { useUi } from '../components/UiProvider';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'moodCheck'>;
 
@@ -539,7 +540,7 @@ function ResultStage({
       <SectionHeading style={styles.suggestTitle}>You might find these helpful</SectionHeading>
       <View style={styles.suggestList}>
         {suggestions.map((sug) => (
-          <Pressable key={sug.section.id} onPress={() => navigation.navigate(sug.section.id as any)}>
+          <Pressable key={sug.section.id} onPress={() => openSection(sug.section.id as any)}>
             <Card style={styles.suggestCard}>
               <Ionicons name={sug.section.icon} size={18} color={colors.teal} />
               <View style={styles.suggestBody}>
@@ -1800,7 +1801,9 @@ export function MoodCheckScreen({ navigation, route }: Props) {
   useBackHandler({
     dirty: !leaving && current.kind === 'result' && current.mode.type === 'logged' && !!noteDraft.trim() && !noteSaved,
     onSave: saveNote,
-    stepBack: !leaving && stack.length > 1 ? stepBack : undefined,
+    // Patterns and Analysis are pages of Feelings: Back returns to Check In
+    // first, then leaves (docs/navigation.md).
+    stepBack: leaving ? undefined : stack.length > 1 ? stepBack : current.kind === 'patterns' || current.kind === 'analysis' ? () => setStack([{ kind: 'zone' }]) : undefined,
   });
 
   // Settings → Sections → Identify the Feeling: which optional steps to ask.

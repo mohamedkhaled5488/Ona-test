@@ -20,6 +20,7 @@ import { appVersion } from '../utils/diagnostics';
 import { PAGE_TITLES, type SettingsPage, type SettingsParams } from './settings/pages';
 import { PinPage } from './settings/SecurityPages';
 import type { LockScope } from '../utils/pinLock';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'settings'>;
 
@@ -66,7 +67,7 @@ export function SettingsScreen({ navigation, route }: Props) {
       case 'root':
         return <RootPage go={go} />;
       case 'account':
-        return <AccountPage go={go} openSignIn={() => navigation.navigate('signIn')} />;
+        return <AccountPage go={go} openSignIn={() => openSection('signIn')} />;
       case 'plan':
         return <PlanPage />;
       case 'changeEmail':
@@ -88,7 +89,7 @@ export function SettingsScreen({ navigation, route }: Props) {
       case 'section':
         return section ? <SectionSettingsPage section={section} go={go} openPin={openPin} /> : null;
       case 'help':
-        return <HelpPage go={go} openSleepHelp={() => navigation.navigate('sleep')} />;
+        return <HelpPage go={go} openSleepHelp={() => openSection('sleep')} />;
       case 'safety':
         return <SafetyPage />;
       case 'about':

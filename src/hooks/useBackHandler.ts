@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useCallback, useEffect, useRef } from 'react';
+import { BackHandler } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useUi } from '../components/UiProvider';
 
 interface BackHandlerOptions {
@@ -15,8 +16,15 @@ interface BackHandlerOptions {
   stepBack?: () => void;
 }
 
-// One place that decides what "back" means for a screen — used by the header
-// back button, the swipe gesture and the Android hardware back button alike.
+// One place that decides what "back" means for a screen: the header back
+// button, the swipe gesture and the Android Back key alike (the app-wide rule
+// is in docs/navigation.md).
+// - Leaving a pushed screen fires "beforeRemove": an inner view steps back
+//   first, unsaved changes are asked about.
+// - The Android Back key also steps out of an inner view while the screen is
+//   focused, also where nothing can be removed: Home (the first tab, the root)
+//   used to let Back close the app from a Recap area page (found on a phone,
+//   2026-10-29; "beforeRemove" never fires for a root).
 export function useBackHandler({ dirty = false, onSave, stepBack }: BackHandlerOptions) {
   const navigation = useNavigation();
   const { showDialog } = useUi();
@@ -63,4 +71,20 @@ export function useBackHandler({ dirty = false, onSave, stepBack }: BackHandlerO
       });
     });
   }, [navigation, showDialog]);
+
+  // Registered on focus, so it's newer than the navigator's own listener and
+  // is asked first. Anything else (no inner view to leave) goes to the
+  // navigator as before, and through "beforeRemove" above.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        const { stepBack: step, dirty: unsaved } = latest.current;
+        // Unsaved changes: the navigator's back, so "beforeRemove" asks first.
+        if (!step || unsaved) return false;
+        step();
+        return true;
+      });
+      return () => sub.remove();
+    }, [])
+  );
 }

@@ -59,6 +59,7 @@ jobs:
       - name: Build the APK
         env:
           EAS_BUILD_GIT_COMMIT_HASH: ${{ env.BUILD_SHA }}
+          EXPO_PUBLIC_GIT_COMMIT: ${{ env.BUILD_SHA }} # shown in Settings → About
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: eas build --platform android --profile personal --local --non-interactive --output "ona-${BUILD_SHA::7}.apk"
 

@@ -252,7 +252,7 @@ describe('A4. The log detail page', () => {
     expect(src).toMatch(/actionLabel: 'Undo', onAction: \(\) => useHabitsStore\.getState\(\)\.restoreCheckIn\(removed\)/);
     expect(src).toMatch(/setGuard\(dirty \? \{ dirty, save \} : null\)/);
     const screen = read('src/screens/HabitBuilderScreen.tsx');
-    expect(screen).toMatch(/useBackHandler\(\{ stepBack: stack\.length > 1 \? stepBack : undefined, dirty: !!guard\?\.dirty, onSave: \(\) => guard\?\.save\(\) \}\)/);
+    expect(screen).toMatch(/useBackHandler\(\{ stepBack, dirty: !!guard\?\.dirty, onSave: \(\) => guard\?\.save\(\) \}\)/);
     // Coming back to the logs lands at the same place.
     expect(screen).toMatch(/saved\.current\[stack\.length\] = scrollY\.current/);
   });

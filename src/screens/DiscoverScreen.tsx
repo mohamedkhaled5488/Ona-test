@@ -16,6 +16,7 @@ import { track } from '../utils/analytics';
 import { colors, fonts, spacing } from '../theme';
 import { themedStyles } from '../theme/runtime';
 import type { RootStackParamList } from '../navigation/types';
+import { openSection } from '../navigation/navigationRef';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'discover'>;
 
@@ -56,11 +57,11 @@ export function DiscoverScreen({ navigation }: Props) {
         <Body style={styles.cardBody}>{t('tourBody')}</Body>
         <PrimaryButton
           label={canResume ? t('tourResume') : done ? t('tourReplay') : t('tourStart')}
-          onPress={() => navigation.navigate('discoverTour', canResume ? { resume: true } : {})}
+          onPress={() => openSection('discoverTour', canResume ? { resume: true } : {})}
           style={styles.button}
         />
         {canResume && (
-          <Pressable onPress={() => navigation.navigate('discoverTour', {})} accessibilityRole="button" style={styles.restart}>
+          <Pressable onPress={() => openSection('discoverTour', {})} accessibilityRole="button" style={styles.restart}>
             <Caption style={styles.link}>{t('tourStart')}</Caption>
           </Pressable>
         )}
@@ -74,7 +75,7 @@ export function DiscoverScreen({ navigation }: Props) {
           {sections.map((s) => (
             <Pressable
               key={s.id}
-              onPress={() => navigation.navigate('discoverTour', { sectionId: s.id })}
+              onPress={() => openSection('discoverTour', { sectionId: s.id })}
               accessibilityRole="button"
               accessibilityHint="Opens the tour at this section"
               style={styles.row}

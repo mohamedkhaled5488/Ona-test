@@ -11,6 +11,16 @@ For each row, record Pass / Fail, the device, the build number (Settings → Abo
 | A | | | | | | |
 | B | | | | | | |
 
+## Must-pass subset (every build)
+
+Run these on every build, even when there's no time for the full pass. Each one is something that once broke on a real phone.
+
+| ID | What |
+|---|---|
+| MAN-117 | Back from a Recap area page returns to Home, not out of Ona |
+| MAN-118 | Back goes one step everywhere (a Quit sub-page, a Feelings sub-page, the tour); Home says how to close Ona |
+| MAN-099 | Killed by the system mid-step |
+
 ## 1. Install and first run
 
 | ID | Check | How | Expected | A | B | Notes |
@@ -150,6 +160,8 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-114 | Craving toolkit: reduce motion and big text | Turn on Remove animations (Android) / Reduce Motion (iOS) and the largest text; open breathing, the slide puzzle and the doodle pad | The breathing circle doesn't move (the words still change); all tools readable and tappable at the largest text; screen reader reads each tool, tile and button | | | |
 | MAN-115 | Craving toolkit: battery and warmth | Fully charged, screen on: 30 minutes in paced breathing, then 30 in the doodle pad drawing now and then, then 30 in calm sounds with the screen off | Note the battery used (Settings → Battery) for each half hour, and whether the phone gets warm; compare with 30 minutes of the Journal screen open. Expect about the same as any app with the screen on; tell me if one tool stands out | | | |
 | MAN-116 | Craving toolkit: a slow phone | On the older or cheaper phone: open each tool, draw for a minute, slide the puzzle quickly, flip cards quickly | No stutter you notice; taps answer at once; nothing freezes | | | |
+| MAN-117 | Back from a Recap area page | Home → tap the Grow tile → Android Back (the button or the gesture) | Home's overview again, scrolled where it was; Ona stays open. Then Grow tile → open a section from it → Back: the Grow area page; Back again: Home | | | |
+| MAN-118 | Back, one step everywhere | Reflect → Identify the Feeling → Analysis → Back (Check In) → Back (Reflect). Quit habit → My toolkit → Back (the journey) → Back (the list). Home → Discover → Start the tour → Back (Discover). On Home: Back | Each Back goes exactly one step; on Home, "Press Back again to close Ona", and only a second Back within 2 seconds closes it. Settings → About shows "Built from" with the commit | | | |
 
 ## Sign-off
 

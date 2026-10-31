@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { BackHandler, Pressable } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme, type NavigationState } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -40,6 +40,8 @@ import { getStartScreen } from './startScreen';
 import { navigationRef } from './navigationRef';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { DiscoverTourScreen } from '../screens/DiscoverTourScreen';
+import { openSection } from './navigationRef';
+import { useUi } from '../components/UiProvider';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const LockedJournalWrite = sensitiveScreen(JournalWriteScreen, 'journalWrite', true);
@@ -128,6 +130,7 @@ function MainTabs() {
           <Ionicons name={tabIcons[route.name as keyof MainTabParamList]} size={size} color={color} />
         ),
         tabBarLabel: tabLabels[route.name as keyof MainTabParamList],
+        tabBarButtonTestID: `tab-${route.name}`, // for E2E flows (a tab and a Recap tile can share a name)
       })}
     >
       <Tab.Screen name="home" component={RecapScreen as any} />
@@ -149,7 +152,40 @@ export function resetNavigationState(): void {
   savedState = undefined;
 }
 
+// The last word on Android's Back key (docs/navigation.md): registered before
+// the navigator and every screen, so it's asked only when none of them used
+// the press (Back is called newest first). By then the person is on Home
+// (another tab's root already went to Home, the navigator's first-tab rule) or
+// on the first-run screen: the first press says how to close Ona, a second
+// within 2 seconds closes it.
+export const EXIT_HINT = 'Press Back again to close Ona';
+const EXIT_WINDOW_MS = 2000;
+function useExitOnSecondBack() {
+  const { showToast } = useUi();
+  const toast = useRef(showToast);
+  toast.current = showToast;
+  const sub = useRef<{ remove: () => void } | null>(null);
+  if (!sub.current) {
+    let last = 0;
+    sub.current = BackHandler.addEventListener('hardwareBackPress', () => {
+      const now = Date.now();
+      if (now - last < EXIT_WINDOW_MS) return false; // let Android close the app
+      last = now;
+      toast.current({ message: EXIT_HINT });
+      return true;
+    });
+  }
+  useEffect(
+    () => () => {
+      sub.current?.remove();
+      sub.current = null;
+    },
+    []
+  );
+}
+
 export function RootNavigator() {
+  useExitOnSecondBack();
   const start = getStartScreen();
   return (
     <NavigationContainer ref={navigationRef} theme={navTheme()} initialState={savedState} onStateChange={(state) => (savedState = state)}>
@@ -179,7 +215,7 @@ export function RootNavigator() {
                   ? () => (
                       <SectionSettingsButton
                         section={section.id as SettingsSectionId}
-                        onPress={() => navigation.navigate('settings', { page: 'section', section: section.id })}
+                        onPress={() => openSection('settings', { page: 'section', section: section.id })}
                       />
                     )
                   : undefined,

@@ -4,7 +4,7 @@
 jest.mock('../../sync/signInFlow', () => ({ ...jest.requireActual('../../sync/signInFlow'), chooseForAccount: jest.fn(async () => {}) }));
 
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { act, screen } from '@testing-library/react-native';
 import { AccountChoiceSheet, CHOICE_COPY } from '../../components/AccountChoiceSheet';
 import { chooseForAccount, useAccountChoiceStore } from '../../sync/signInFlow';
 import { renderWithApp } from '../../test-utils/render';
@@ -42,3 +42,17 @@ test('JRN-ACC-052 Decide later closes the sheet and the choice keeps waiting', a
   expect(useAccountChoiceStore.getState()).toMatchObject({ hidden: true, pending: { kind: 'merge' } });
   expect(chooseForAccount).not.toHaveBeenCalled();
 });
+
+test('NAV-012 Android Back on the sheet is "Decide later": it closes, nothing is chosen, the choice waits (docs/navigation.md)', async () => {
+  useAccountChoiceStore.setState({ pending: { kind: 'merge', userId: 'u1', here: 3, inAccount: 5 } });
+  await renderWithApp(<AccountChoiceSheet />);
+  // Android sends Back to the sheet's modal (onRequestClose).
+  type Node = { props: Record<string, unknown>; parent: Node | null };
+  let node = screen.getByText(CHOICE_COPY.merge.title) as unknown as Node | null;
+  while (node && typeof node.props.onRequestClose !== 'function') node = node.parent;
+  expect(node).toBeTruthy();
+  await act(async () => (node!.props.onRequestClose as () => void)());
+  expect(useAccountChoiceStore.getState()).toMatchObject({ hidden: true, pending: { kind: 'merge' } });
+  expect(chooseForAccount).not.toHaveBeenCalled();
+});
+

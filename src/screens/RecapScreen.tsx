@@ -92,6 +92,7 @@ import { useQuitHabitsStore } from '../store/useQuitHabitsStore';
 import type { RootStackParamList } from '../navigation/types';
 import type { SectionId } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
+import { openSection } from '../navigation/navigationRef';
 
 // Recap is rendered directly as the Home tab, not pushed as its own stack
 // route — but it still needs to navigate to every other section, which all
@@ -121,9 +122,6 @@ function sectionTitle(id: SectionId): string {
   return sectionsMeta.find((s) => s.id === id)?.title ?? id;
 }
 
-function openSection(navigation: Nav, section: SectionId, params?: Record<string, string>) {
-  (navigation.navigate as (name: string, params?: object) => void)(section, params);
-}
 
 // ---------------------------------------------------------------------------
 // Data — every store, read-only, raw arrays (never filtered in a selector)
@@ -320,7 +318,7 @@ function DayList({ navigation, data, date }: { navigation: Nav; data: RecapData;
           const accent = sectionAccents[event.sectionId];
           const isBest = bestMoment?.refId === event.id;
           return (
-            <Pressable key={event.id} onPress={() => openSection(navigation, event.sectionId, event.navParams)}>
+            <Pressable key={event.id} onPress={() => openSection(event.sectionId, event.navParams)}>
               <Card style={[styles.itemCard, { borderLeftColor: accent, borderLeftWidth: 3 }]}>
                 {meta && <Ionicons name={meta.icon} size={18} color={accent} />}
                 <View style={styles.itemBody}>
@@ -382,7 +380,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
   const [heatMonth, setHeatMonth] = useState(stats.range.end);
   useEffect(() => setHeatMonth(stats.range.end > todayISO() ? todayISO() : stats.range.end), [stats.range.end]);
 
-  const openHighlight = (h: Highlight) => (h.target.kind === 'day' ? onOpenDay(h.target.date) : openSection(navigation, h.target.section, h.target.params));
+  const openHighlight = (h: Highlight) => (h.target.kind === 'day' ? onOpenDay(h.target.date) : openSection(h.target.section, h.target.params));
 
   // Effort over time — stacked by area, hours on the y-axis.
   const slots = useMemo(() => effortSlots(stats, granularity), [stats, granularity]);
@@ -412,7 +410,7 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
         {summary.numbers.length > 0 && (
           <View style={styles.bigGrid}>
             {summary.numbers.map((n) => (
-              <Pressable key={n.id} style={styles.bigCell} onPress={() => openSection(navigation, n.section)} accessibilityRole="button">
+              <Pressable key={n.id} style={styles.bigCell} onPress={() => openSection(n.section)} accessibilityRole="button">
                 <SectionHeading style={styles.bigValue}>{n.display}</SectionHeading>
                 <Caption>{n.label}</Caption>
                 {n.delta && <Caption style={styles.delta}>{n.delta}</Caption>}
@@ -460,8 +458,9 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
             <Pressable
               key={a.area}
               style={styles.areaCell}
-              onPress={() => (areaPages ? onOpenArea(a.area) : openSection(navigation, AREA_SECTIONS[a.area][0]))}
+              onPress={() => (areaPages ? onOpenArea(a.area) : openSection(AREA_SECTIONS[a.area][0]))}
               accessibilityRole="button"
+              testID={`recap-area-${a.area}`}
             >
               <Card style={[styles.areaCard, { borderTopColor: AREA_ACCENT[a.area] }]}>
                 <View style={styles.headerRow}>
@@ -584,7 +583,7 @@ function AreaPage({
   const recaps = useMemo(() => sectionRecaps(area, { data, stats, today: todayISO() }, hidden, hideSensitive).filter((r) => r.hasData), [area, data, stats, hidden, hideSensitive]);
   const open = (target?: RecapOpen) => {
     if (!target) return undefined;
-    return () => ('route' in target ? navigation.navigate('planDetail', target.params) : openSection(navigation, target.section, target.params));
+    return () => ('route' in target ? openSection('planDetail', target.params) : openSection(target.section, target.params));
   };
 
   return (
@@ -825,22 +824,22 @@ export function RecapScreen({ navigation }: Props) {
             <View style={styles.brandRow}>
               <Pressable
                 hitSlop={8}
-                onPress={() => navigation.navigate('settings', { page: 'section', section: 'recap' })}
+                onPress={() => openSection('settings', { page: 'section', section: 'recap' })}
                 accessibilityLabel="Choose what Recap shows"
               >
                 <Ionicons name="options-outline" size={20} color={colors.inkSoft} />
               </Pressable>
-              <Pressable hitSlop={8} onPress={() => navigation.navigate('discover')} accessibilityRole="button" accessibilityLabel="Discover Ona" testID="home-discover">
+              <Pressable hitSlop={8} onPress={() => openSection('discover')} accessibilityRole="button" accessibilityLabel="Discover Ona" testID="home-discover">
                 <Ionicons name="compass-outline" size={22} color={colors.teal} />
               </Pressable>
-              <Pressable hitSlop={8} onPress={() => navigation.navigate('settings')} accessibilityLabel="Settings" testID="home-settings">
+              <Pressable hitSlop={8} onPress={() => openSection('settings')} accessibilityLabel="Settings" testID="home-settings">
                 <Ionicons name="settings-outline" size={22} color={colors.inkSoft} />
               </Pressable>
             </View>
           </View>
 
           <PlanNotice />
-          <WeeklyReviewCard onOpenInsights={() => navigation.navigate('planningInsights')} />
+          <WeeklyReviewCard onOpenInsights={() => openSection('planningInsights')} />
 
           <ScreenTitle>Recap</ScreenTitle>
           <Caption style={styles.subtitle}>A calm look back, pulled from everywhere else in Ona.</Caption>
