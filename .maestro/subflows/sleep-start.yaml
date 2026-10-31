@@ -4,7 +4,8 @@
 appId: app.ona
 ---
 - runFlow: fresh-start.yaml
-- tapOn: "Reflect"
+- tapOn:
+    id: "tab-reflectFolder" # the tab (a Recap tile has the same name)
 - tapOn: "Sleep"
 - scrollUntilVisible:
     element: "White noise"

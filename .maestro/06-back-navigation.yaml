@@ -9,14 +9,18 @@ tags:
 ---
 - runFlow: subflows/fresh-start.yaml
 
-# A Recap area page: Back returns to Home's overview, the app stays open.
+# A Recap area page: Back returns to Home's overview, scrolled where it was
+# (the Grow tile in view again), and the app stays open.
+- scrollUntilVisible:
+    element:
+      id: "recap-area-grow"
 - tapOn:
     id: "recap-area-grow"
 - assertNotVisible:
-    id: "home-settings"
+    id: "recap-area-grow"
 - pressKey: back
 - assertVisible:
-    id: "home-settings"
+    id: "recap-area-grow"
 
 # A Feelings sub-page: Analysis → Back → Check In → Back → the Reflect folder.
 - tapOn:
@@ -58,6 +62,10 @@ tags:
 - pressKey: back
 - tapOn:
     id: "tab-home"
+- scrollUntilVisible:
+    element:
+      id: "home-discover"
+    direction: UP
 - tapOn:
     id: "home-discover"
 - tapOn: "Start the tour"

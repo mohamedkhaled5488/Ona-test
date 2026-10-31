@@ -6,7 +6,8 @@ tags:
 ---
 - runFlow: subflows/fresh-start.yaml
 - setAirplaneMode: enabled
-- tapOn: "Plan"
+- tapOn:
+    id: "tab-planFolder" # the tab (a Recap tile has the same name)
 - tapOn: "Daily Planning"
 - extendedWaitUntil:
     visible: "Add a task..."
@@ -17,7 +18,8 @@ tags:
 - assertVisible: "Written offline"
 - stopApp
 - launchApp
-- tapOn: "Plan"
+- tapOn:
+    id: "tab-planFolder" # the tab (a Recap tile has the same name)
 - tapOn: "Daily Planning"
 - assertVisible: "Written offline"
 - setAirplaneMode: disabled

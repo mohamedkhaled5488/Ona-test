@@ -5,7 +5,8 @@ tags:
   - core
 ---
 - runFlow: subflows/fresh-start.yaml
-- tapOn: "Plan"
+- tapOn:
+    id: "tab-planFolder" # the tab (a Recap tile has the same name)
 - tapOn: "Plan Builder"
 - tapOn: "New Plan"
 - tapOn: "Start from scratch"
@@ -50,6 +51,7 @@ tags:
 # Survives a relaunch.
 - stopApp
 - launchApp
-- tapOn: "Plan"
+- tapOn:
+    id: "tab-planFolder" # the tab (a Recap tile has the same name)
 - tapOn: "Daily Planning"
 - assertVisible: "Mark \"Buy running shoes\" not done"

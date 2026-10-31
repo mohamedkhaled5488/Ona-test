@@ -1,6 +1,7 @@
 # Grow tab → Habits hub.
 appId: app.ona
 ---
-- tapOn: "Grow"
+- tapOn:
+    id: "tab-growFolder" # the tab (a Recap tile has the same name)
 - tapOn: "Habits"
 - assertVisible: "Build a new habit, or work on quitting one."
