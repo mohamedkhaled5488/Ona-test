@@ -13,7 +13,10 @@ import { useUi } from '../components/UiProvider';
 import { SectionHeading, Eyebrow, Caption } from '../components/Typography';
 import { colors, fonts, radii, spacing } from '../theme';
 import { useJournalStore } from '../store/useJournalStore';
-import { removeJournalFeeling, syncJournalFeeling } from '../feelings/fromSections';
+import { journalFeelingChosen, journalFeelingId, removeJournalFeeling, syncJournalFeeling } from '../feelings/fromSections';
+import { logFeeling } from '../feelings/logFeeling';
+import { useFeelingsStore } from '../store/useFeelingsStore';
+import { ReasonTagPicker, REASON_TAGS_LABEL } from '../components/ReasonTagPicker';
 import type { JournalBackground, JournalFont, JournalPageTemplate, JournalTextSize } from '../types/sections';
 import type { FeelingZone } from '../types/sections';
 import { JournalPageSurface, MARGIN_INSET } from '../components/JournalPageSurface';
@@ -117,6 +120,14 @@ export function JournalWriteScreen({ route, navigation }: Props) {
   // What happened to the colour in this edit: chosen, cleared ("Leave it
   // unset"), or left as it was (feelings/fromSections.ts).
   const [choice, setChoice] = useState<'untouched' | 'chosen' | 'cleared'>('untouched');
+  // "What's behind this?": kept on the entry's feeling in the Feelings log,
+  // so Feelings and the journal show the same tags.
+  const linkedFeeling = useFeelingsStore((s) => (existing ? s.entries.find((e) => e.id === journalFeelingId(existing.id)) : undefined));
+  const [reasonTags, setReasonTags] = useState<string[]>(linkedFeeling?.reasonTags ?? []);
+  const pickTags = (tags: string[]) => {
+    setReasonTags(tags);
+    if (zone) setChoice('chosen'); // picking what's behind it means the feeling is meant
+  };
   const [tags, setTags] = useState(existing?.tags.join(', ') ?? '');
   const [font, setFont] = useState<JournalFont>(existing?.font ?? defaultFont);
   const [showTags, setShowTags] = useState(false);
@@ -138,8 +149,9 @@ export function JournalWriteScreen({ route, navigation }: Props) {
         zone !== existing?.zone ||
         preciseFeelingId !== existing?.preciseFeelingId ||
         tags !== (existing?.tags.join(', ') ?? '') ||
+        reasonTags.join() !== (linkedFeeling?.reasonTags ?? []).join() ||
         font !== (existing?.font ?? defaultFont)),
-    [mode, text, zone, preciseFeelingId, tags, font, existing]
+    [mode, text, zone, preciseFeelingId, tags, font, existing, reasonTags, linkedFeeling]
   );
 
   const save = () => {
@@ -151,7 +163,12 @@ export function JournalWriteScreen({ route, navigation }: Props) {
       { preciseFeelingId, font, ...(choice === 'untouched' ? {} : { feelingChosen: choice === 'chosen' }) }
     );
     const saved = useJournalStore.getState().entries.find((e) => e.date === date);
-    if (saved) syncJournalFeeling(saved.id);
+    // A chosen feeling goes into the Feelings log the one way every feeling
+    // does (logFeeling), with its tags; otherwise the log follows the entry
+    // (a cleared colour removes its feeling).
+    if (saved && saved.zone && journalFeelingChosen(saved)) {
+      logFeeling({ source: { kind: 'journal', refId: saved.id }, zone: saved.zone, feelingIds: saved.preciseFeelingId ? [saved.preciseFeelingId] : [], tags: reasonTags });
+    } else if (saved) syncJournalFeeling(saved.id);
     setChoice('untouched');
     setMode('read');
   };
@@ -249,6 +266,13 @@ export function JournalWriteScreen({ route, navigation }: Props) {
               </Pressable>
             )}
           </View>
+          {mode === 'edit' && zone && (
+            <View style={styles.reasons}>
+              <Text style={[styles.reasonsLabel, { color: theme.soft }]}>{REASON_TAGS_LABEL}</Text>
+              <ReasonTagPicker selected={reasonTags} onChange={pickTags} accent={zoneMeta(zone).accent} />
+            </View>
+          )}
+          {mode === 'read' && zone && reasonTags.length > 0 && <Text style={[styles.reasonsLabel, { color: theme.soft }]}>{reasonTags.join(' · ')}</Text>}
 
           {mode === 'edit' && promptIndex !== null && (
             <Pressable onPress={() => setPromptIndex((i) => ((i ?? 0) + 1) % journalPrompts.length)}>
@@ -376,6 +400,7 @@ export function JournalWriteScreen({ route, navigation }: Props) {
           onPress={() => {
             setZone(undefined);
             setPreciseFeelingId(undefined);
+            setReasonTags([]);
             setChoice('cleared');
             setShowColorSheet(false);
           }}
@@ -547,6 +572,8 @@ const styles = themedStyles(() => ({
     borderRadius: radii.md,
   },
   colorRowDot: { width: 16, height: 16, borderRadius: radii.full },
+  reasons: { marginBottom: spacing.md, gap: spacing.xs },
+  reasonsLabel: { fontSize: 13, marginBottom: spacing.xs },
   colorRowDotEmpty: { borderWidth: 1.5, borderColor: colors.inkSoft },
   colorRowCheck: { marginLeft: 'auto' },
   swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },

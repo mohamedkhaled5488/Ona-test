@@ -41,7 +41,6 @@ import {
   siblingFeelings,
   suggestionsByZone,
   highArousalFeelingIds,
-  reasonTagOptions,
 } from '../data/feelingsWheel';
 import {
   checkInStreak,
@@ -85,6 +84,7 @@ import { basedOn, filterBySource, overviewInsight, sourceBreakdown, tagInsight, 
 import { CONFIDENCE_NOTE } from '../config/feelingsAnalysis';
 import { useUi } from '../components/UiProvider';
 import { openSection } from '../navigation/navigationRef';
+import { ReasonTagPicker, REASON_TAGS_LABEL } from '../components/ReasonTagPicker';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'moodCheck'>;
 
@@ -298,60 +298,13 @@ function IntensityStage({
 // ---------------------------------------------------------------------------
 function ReasonsStage({ zone, onDone }: { zone: FeelingZone; onDone: (tags: string[]) => void }) {
   const meta = zoneMeta(zone);
-  const customReasonTags = useFeelingsStore((s) => s.customReasonTags);
-  const addCustomReasonTag = useFeelingsStore((s) => s.addCustomReasonTag);
   const [selected, setSelected] = useState<string[]>([]);
-  const [addingCustom, setAddingCustom] = useState(false);
-  const [customDraft, setCustomDraft] = useState('');
-  const toggle = (tag: string) => setSelected((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-
-  const confirmCustom = () => {
-    const trimmed = customDraft.trim();
-    if (!trimmed) {
-      setAddingCustom(false);
-      return;
-    }
-    const created = addCustomReasonTag(trimmed);
-    setSelected((prev) => (prev.includes(created) ? prev : [...prev, created]));
-    setCustomDraft('');
-    setAddingCustom(false);
-  };
-
   return (
     <>
-      <ScreenTitle style={{ color: meta.accent }}>What's contributing to this?</ScreenTitle>
+      <ScreenTitle style={{ color: meta.accent }}>What's behind this?</ScreenTitle>
       <Caption style={styles.subtitle}>Optional — pick as many as fit, or none.</Caption>
-      <View style={styles.wordGrid}>
-        {[...reasonTagOptions, ...customReasonTags].map((tag) => (
-          <Pressable
-            key={tag}
-            onPress={() => toggle(tag)}
-            style={[styles.wordChip, { borderColor: meta.accent }, selected.includes(tag) && { backgroundColor: meta.accent }]}
-          >
-            <Body style={selected.includes(tag) ? styles.wordChipTextActive : { color: meta.accent }}>{tag}</Body>
-          </Pressable>
-        ))}
-        {!addingCustom && (
-          <Pressable onPress={() => setAddingCustom(true)} style={[styles.wordChip, styles.addChip, { borderColor: meta.accent }]}>
-            <Ionicons name="add" size={14} color={meta.accent} />
-            <Body style={{ color: meta.accent }}>Add your own</Body>
-          </Pressable>
-        )}
-      </View>
-      {addingCustom && (
-        <View style={styles.customTagRow}>
-          <TextInput
-            value={customDraft}
-            onChangeText={setCustomDraft}
-            placeholder="e.g. Exam, Move, a name..."
-            placeholderTextColor={colors.inkSoft}
-            style={styles.customTagInput}
-            autoFocus
-            onSubmitEditing={confirmCustom}
-          />
-          <PrimaryButton label="Add" onPress={confirmCustom} disabled={!customDraft.trim()} style={styles.customTagAddButton} />
-        </View>
-      )}
+      {/* The same picker everywhere a feeling is noted (components/ReasonTagPicker). */}
+      <ReasonTagPicker selected={selected} onChange={setSelected} accent={meta.accent} />
       <PrimaryButton
         label={selected.length > 0 ? 'Continue' : 'Skip'}
         variant={selected.length > 0 ? 'primary' : 'outline'}
@@ -574,17 +527,19 @@ function ResultStage({
 function EntryEditSheet({ entry, onClose }: { entry: FeelingCheckIn | null; onClose: () => void }) {
   const [zone, setZone] = useState<FeelingZone>('okay');
   const [note, setNote] = useState('');
+  const [reasonTags, setReasonTags] = useState<string[]>([]);
   const { showDialog, showToast } = useUi();
   useEffect(() => {
     if (!entry) return;
     setZone(entry.zone);
     setNote(entry.note ?? '');
+    setReasonTags(entry.reasonTags ?? []);
   }, [entry]);
   if (!entry) return null;
 
   const save = () => {
     // Changing the zone drops words from the old zone (they no longer fit).
-    useFeelingsStore.getState().updateEntry(entry.id, { zone, note, ...(zone !== entry.zone ? { feelingIds: [], intensities: undefined } : {}) });
+    useFeelingsStore.getState().updateEntry(entry.id, { zone, note, reasonTags: reasonTags.length ? reasonTags : undefined, ...(zone !== entry.zone ? { feelingIds: [], intensities: undefined } : {}) });
     mirrorFeelingEdit(entry.id); // a linked Quit moment or journal entry shows the same feeling
     onClose();
   };
@@ -638,6 +593,9 @@ function EntryEditSheet({ entry, onClose }: { entry: FeelingCheckIn | null; onCl
           </Pressable>
         ))}
       </View>
+      <Caption style={styles.editTagsLabel}>{REASON_TAGS_LABEL}</Caption>
+      {/* Tags live on the feeling: a journal entry or task shows the same ones. */}
+      <ReasonTagPicker selected={reasonTags} onChange={setReasonTags} accent={zoneMeta(zone).accent} />
       <TextInput value={note} onChangeText={setNote} placeholder="A note (optional)" placeholderTextColor={colors.inkSoft} style={styles.editNote} accessibilityLabel="Note" />
       <View style={styles.editActions}>
         <PrimaryButton label="Delete" variant="outline" style={styles.editAction} onPress={remove} />
@@ -2122,6 +2080,7 @@ const styles = themedStyles(() => ({
   },
   flex1: { flex: 1 },
   entryMore: { marginLeft: spacing.sm, paddingHorizontal: 4, minHeight: 28, justifyContent: 'center' },
+  editTagsLabel: { marginTop: spacing.md, color: colors.inkSoft },
   editZones: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.md },
   editZone: { paddingVertical: 8, paddingHorizontal: spacing.sm + 2, borderRadius: radii.full, borderWidth: 1.5, minHeight: 40, justifyContent: 'center' },
   editNote: { fontFamily: fonts.body, fontSize: 16, color: colors.ink, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.line, marginTop: spacing.md },

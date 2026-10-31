@@ -19,6 +19,8 @@ Run these on every build, even when there's no time for the full pass. Each one 
 |---|---|
 | MAN-117 | Back from a Recap area page returns to Home, not out of Ona |
 | MAN-118 | Back goes one step everywhere (a Quit sub-page, a Feelings sub-page, the tour); Home says how to close Ona |
+| MAN-119 | A journal feeling, with tags, in Analysis | Journaling → today → write a line → "How did today feel?" → Tense → under "What's behind this?" pick Work → Save. Back to Reflect → Identify the Feeling → Analysis (period "All") | "From your journal" is among the sources; the Tags card shows "Work: tagged once, with Tense." with "Based on 1 entry", without restarting or syncing. Then edit the feeling in Feelings (add Sleep): the journal entry shows "Work · Sleep" | | | |
+| MAN-119 | A journal feeling with "What's behind this?" tags is in Feelings → Analysis by tag |
 | MAN-099 | Killed by the system mid-step |
 
 ## 1. Install and first run

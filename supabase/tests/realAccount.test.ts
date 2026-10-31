@@ -36,6 +36,10 @@ import { SEED_REFERENCE_DATE, seededSections as seedFor } from '../../src/test-u
 import { RECAP_CONTRIBUTORS } from '../../src/recap/registry';
 import { periodStats } from '../../src/utils/recapStats';
 import { addDaysISO } from '../../src/utils/date';
+import { tagInsight } from '../../src/utils/feelingsInsights';
+import { logFeeling } from '../../src/feelings/logFeeling';
+import { useFeelingsStore } from '../../src/store/useFeelingsStore';
+import { useJournalStore } from '../../src/store/useJournalStore';
 import { admin, newUser, setTrial, setSubscription, DAY, fromNow, type TestUser } from './local';
 
 const storage = AsyncStorage as unknown as { clear: () => Promise<void> };
@@ -382,3 +386,25 @@ test('BE-REAL-009 about a year of data: restore time and memory, on a fresh phon
   console.log(`BE-REAL-009: ${total} items restored in ${ms} ms, heap +${mb.toFixed(1)} MB`);
   expect(ms).toBeLessThan(60_000);
 });
+
+// Problem 1 from a phone (2026-10-29): a feeling noted in the journal, with a
+// "What's behind this?" tag, through a real account: on a fresh phone it's in
+// the Feelings log and in Analysis by tag, linked to its entry.
+test('BE-REAL-010 a journal feeling with a tag reaches a fresh phone and its Analysis by tag', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  useJournalStore.getState().upsertEntry(TODAY, undefined, 'A long meeting.', []);
+  const jid = useJournalStore.getState().entries.find((e) => e.date === TODAY)!.id;
+  logFeeling({ source: { kind: 'journal', refId: jid }, zone: 'tense', tags: ['Work'] });
+  await sync();
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  const entries = useFeelingsStore.getState().entries;
+  expect(entries.find((e) => e.source?.kind === 'journal' && e.source.refId === jid)).toMatchObject({ zone: 'tense', reasonTags: ['Work'], date: TODAY });
+  expect(useJournalStore.getState().entries.find((e) => e.id === jid)).toMatchObject({ zone: 'tense', feelingChosen: true });
+  expect(tagInsight(entries, 'Work')).toMatchObject({ n: 1 });
+});
+

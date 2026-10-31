@@ -5,12 +5,14 @@
 // - a task: linked both ways (the task shows it; it carries the task's tags)
 // - a habit, practice session or Quit moment: carries that item's name as a
 //   tag (and a Quit moment keeps its link to the urge or slip)
+// - a journal entry: its one feeling, linked both ways (feelings/fromSections)
 // - Study, Book, or standalone: saved as is, with its source if any.
 // Screens and components never call the store's addEntry or the helpers
 // below directly (logFeeling.test.ts checks that).
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { logItemFeeling } from '../utils/itemFeelings';
 import { logTaskFeeling } from '../utils/taskFeelings';
+import { logJournalFeeling } from './fromSections';
 import { todayISO } from '../utils/date';
 import type { FeelingSource, FeelingZone } from '../types/sections';
 
@@ -40,6 +42,10 @@ export function logFeeling(input: LogFeelingInput): string {
     });
     if (id) return id;
     // The task no longer exists: the feeling is still kept, with its source.
+  } else if (source?.kind === 'journal') {
+    // The entry's own feeling (one per entry, linked both ways).
+    const id = logJournalFeeling({ journalEntryId: source.refId, zone: input.zone, feelingIds: input.feelingIds, intensities: input.intensities, tags: input.tags, note: input.note });
+    if (id) return id;
   } else if (source && (source.kind === 'habit' || source.kind === 'skill' || source.kind === 'quitHabit')) {
     return logItemFeeling({ source, zone: input.zone, feelingIds: input.feelingIds, intensities: input.intensities, reasonTags: input.tags, note: input.note });
   }

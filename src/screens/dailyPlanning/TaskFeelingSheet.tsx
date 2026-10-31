@@ -14,6 +14,7 @@ import { useDailyPlanningStore, resolveTaskTitle } from '../../store/useDailyPla
 import { useFeelingsStore } from '../../store/useFeelingsStore';
 import { clearTaskFeeling, linkedEntry, type FeelingPhase } from '../../utils/taskFeelings';
 import { logFeeling } from '../../feelings/logFeeling';
+import { ReasonTagPicker, REASON_TAGS_LABEL } from '../../components/ReasonTagPicker';
 import { withAlpha } from '../../utils/color';
 import { colors, fonts, radii, spacing } from '../../theme';
 import { themedStyles } from '../../theme/runtime';
@@ -48,6 +49,8 @@ export function TaskFeelingSheet({
   const [zone, setZone] = useState<FeelingZone | undefined>(undefined);
   const [difficulty, setDifficulty] = useState<TaskDifficulty | undefined>(undefined);
   const [note, setNote] = useState('');
+  const [reasonTags, setReasonTags] = useState<string[]>([]);
+  const [showTags, setShowTags] = useState(false);
 
   // Fill in what's already there each time the sheet opens.
   useEffect(() => {
@@ -55,6 +58,8 @@ export function TaskFeelingSheet({
     setZone(entry?.zone);
     setDifficulty(note0?.difficulty);
     setNote(entry?.note ?? (phase === 'after' ? note0?.comment ?? '' : ''));
+    setReasonTags(entry?.reasonTags ?? []); // the task's own tags are added again on save
+    setShowTags(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 
@@ -80,6 +85,7 @@ export function TaskFeelingSheet({
         zone,
         feelingIds: entry && entry.zone === zone ? entry.feelingIds : [],
         intensities: entry && entry.zone === zone ? entry.intensities : undefined,
+        tags: reasonTags,
         note: note.trim(),
       });
     } else if (entry) {
@@ -131,6 +137,12 @@ export function TaskFeelingSheet({
         <Ionicons name="search-outline" size={15} color={colors.teal} />
         <Caption style={styles.link}>Be more specific</Caption>
       </Pressable>
+
+      <Pressable style={styles.linkRow} onPress={() => setShowTags((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: showTags }}>
+        <Ionicons name={showTags ? 'chevron-up' : 'chevron-down'} size={15} color={colors.inkSoft} />
+        <Caption style={styles.muted}>{REASON_TAGS_LABEL}</Caption>
+      </Pressable>
+      {showTags && <ReasonTagPicker selected={reasonTags} onChange={setReasonTags} />}
 
       {phase === 'after' && (
         <>

@@ -130,64 +130,6 @@ function AddQuitHabitSheet({ visible, onClose, onCreated }: { visible: boolean; 
   );
 }
 
-// ---------------------------------------------------------------------------
-// A feeling + free-text capture, built on the shared Feelings Wheel picker —
-// used both for "document how I feel right now" and inside the relapse flow.
-function FeelingCapture({
-  onSubmit,
-  intro,
-  noteLabel,
-}: {
-  onSubmit: (feeling: PickedFeeling, zone: FeelingZone, note: string) => void;
-  intro?: React.ReactNode;
-  noteLabel?: string;
-}) {
-  const [step, setStep] = useState<FeelingPickerStep>({ kind: 'zone' });
-  const [chosen, setChosen] = useState<PickedFeeling | null>(null);
-  const [note, setNote] = useState('');
-
-  if (chosen) {
-    return (
-      <>
-        <SectionHeading style={{ color: zoneMeta(chosen.zone).accent }}>{chosen.name}</SectionHeading>
-        {!isPersonalFeeling(chosen) && <Body style={styles.definitionText}>{chosen.definition}</Body>}
-        <Eyebrow style={styles.fieldLabel}>{noteLabel ?? 'Write as much or as little as you want (optional)'}</Eyebrow>
-        <TextInput value={note} onChangeText={setNote} placeholder="What's going on..." style={styles.notesInput} multiline />
-        <PrimaryButton label="Save" onPress={() => onSubmit(chosen, chosen.zone, note)} style={styles.sheetSubmit} />
-        <Pressable onPress={() => setChosen(null)}>
-          <Caption style={styles.changeFeelingLink}>Choose a different feeling</Caption>
-        </Pressable>
-      </>
-    );
-  }
-
-  return (
-    <>
-      {intro}
-      <FeelingPicker
-        step={step}
-        subtitle="Where are you right now?"
-        onPickZone={(zone) => setStep({ kind: 'word', zone })}
-        onBack={() => setStep({ kind: 'zone' })}
-        onPickFeeling={(f) => setChosen(f)}
-      />
-    </>
-  );
-}
-
-function FeelingSheet({ visible, onClose, onSubmit }: { visible: boolean; onClose: () => void; onSubmit: (feeling: PickedFeeling, zone: FeelingZone, note: string) => void }) {
-  return (
-    <SheetModal visible={visible} onClose={onClose}>
-      <FeelingCapture
-        onSubmit={(f, zone, note) => {
-          onSubmit(f, zone, note);
-          onClose();
-        }}
-      />
-    </SheetModal>
-  );
-}
-
 // After an urge or a slip: a gentle offer to note a feeling, never a step
 // you have to go through. Skip and "Note a feeling" carry the same weight.
 // With Settings on "Never", only a quiet link is shown.
@@ -885,11 +827,16 @@ function JourneyStage({
         ))}
       </View>
 
+      {/* The same sheet as everywhere a feeling is noted: a colour, "Be more
+          specific", what's behind it, a note (components/ItemFeelingSheet). */}
       {active && (
-        <FeelingSheet
+        <ItemFeelingPrompt
           visible={feelingSheetOpen}
-          onClose={() => setFeelingSheetOpen(false)}
-          onSubmit={(feeling, zone, note) => logFeeling({ source: { kind: 'quitHabit', refId: habitId, trackId: active.id }, zone, feelingIds: [feeling.id], note })}
+          source={{ kind: 'quitHabit', refId: habitId, trackId: active.id }}
+          context={habit.name}
+          heading="How are you feeling right now?"
+          gentle
+          onDone={() => setFeelingSheetOpen(false)}
         />
       )}
     </>

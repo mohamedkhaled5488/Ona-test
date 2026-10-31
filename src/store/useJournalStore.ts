@@ -19,6 +19,8 @@ interface JournalState {
   // From the Feelings log: its feeling was edited there, or deleted.
   setEntryFeeling: (id: string, zone: FeelingZone, preciseFeelingId: string | undefined) => void;
   setFeelingRemoved: (id: string, removed: boolean) => void;
+  // The person chose this entry's feeling (and it's no longer "removed").
+  setFeelingChosen: (id: string) => void;
 }
 
 export const useJournalStore = create<JournalState>()(
@@ -61,6 +63,14 @@ export const useJournalStore = create<JournalState>()(
         if (!e) return;
         e.zone = zone;
         e.preciseFeelingId = preciseFeelingId;
+      }),
+
+    setFeelingChosen: (id) =>
+      set((state) => {
+        const e = state.entries.find((x) => x.id === id);
+        if (!e) return;
+        e.feelingChosen = true;
+        e.feelingRemoved = undefined;
       }),
 
     setFeelingRemoved: (id, removed) =>

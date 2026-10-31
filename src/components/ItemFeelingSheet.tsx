@@ -10,8 +10,8 @@ import { SheetModal } from './SheetModal';
 import { TextInput } from './TextInput';
 import { PrimaryButton } from './PrimaryButton';
 import { Caption, Eyebrow, SectionHeading } from './Typography';
-import { feelingZones, reasonTagOptions } from '../data/feelingsWheel';
-import { useFeelingsStore } from '../store/useFeelingsStore';
+import { feelingZones } from '../data/feelingsWheel';
+import { ReasonTagPicker, REASON_TAGS_LABEL } from './ReasonTagPicker';
 import { withAlpha } from '../utils/color';
 import { colors, fonts, radii, spacing } from '../theme';
 import { themedStyles } from '../theme/runtime';
@@ -46,7 +46,6 @@ export function ItemFeelingSheet({
   // Opens Identify the Feeling (optionally at the chosen zone), carrying over what's been filled in.
   onMoreSpecific: (draft: ItemFeelingDraft) => void;
 }) {
-  const customTags = useFeelingsStore((s) => s.customReasonTags);
   const [zone, setZone] = useState<FeelingZone | undefined>(undefined);
   const [reasonTags, setReasonTags] = useState<string[]>([]);
   const [note, setNote] = useState('');
@@ -61,8 +60,6 @@ export function ItemFeelingSheet({
     setShowTags(false);
   }, [visible]);
 
-  const toggleTag = (t: string) => setReasonTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
-  const tags = [...reasonTagOptions, ...customTags.filter((t) => !(reasonTagOptions as readonly string[]).includes(t))];
 
   return (
     <SheetModal visible={visible} onClose={onSkip}>
@@ -105,30 +102,12 @@ export function ItemFeelingSheet({
 
       <Pressable style={styles.linkRow} onPress={() => setShowTags((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: showTags }}>
         <Ionicons name={showTags ? 'chevron-up' : 'chevron-down'} size={15} color={colors.inkSoft} />
-        <Caption style={styles.muted}>What was going on? (optional){reasonTags.length ? ` · ${reasonTags.length} picked` : ''}</Caption>
+        <Caption style={styles.muted}>
+          {REASON_TAGS_LABEL}
+          {reasonTags.length ? ` · ${reasonTags.length} picked` : ''}
+        </Caption>
       </Pressable>
-      {showTags && (
-        <>
-          <Eyebrow style={styles.label}>Reasons</Eyebrow>
-          <View style={styles.zones}>
-            {tags.map((t) => {
-              const active = reasonTags.includes(t);
-              return (
-                <Pressable
-                  key={t}
-                  onPress={() => toggleTag(t)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: active }}
-                  hitSlop={4}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <Caption style={active ? styles.chipTextActive : undefined}>{t}</Caption>
-                </Pressable>
-              );
-            })}
-          </View>
-        </>
-      )}
+      {showTags && <ReasonTagPicker selected={reasonTags} onChange={setReasonTags} />}
 
       <TextInput
         value={note}

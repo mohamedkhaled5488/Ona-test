@@ -20,7 +20,7 @@
 // load or a sync, each feeling is made to follow its source again (so two
 // phones end up agreeing, and a feeling deleted on one phone that another
 // sent back before it knew is removed again).
-import type { FeelingCheckIn, JournalEntry, QuitFeelingEntry, QuitHabit, QuitTrack } from '../types/sections';
+import type { FeelingCheckIn, FeelingZone, JournalEntry, QuitFeelingEntry, QuitHabit, QuitTrack } from '../types/sections';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { useJournalStore } from '../store/useJournalStore';
 import { useQuitHabitsStore } from '../store/useQuitHabitsStore';
@@ -126,6 +126,33 @@ export function syncJournalFeeling(journalEntryId: string): void {
     return;
   }
   if (wanted !== existing) feelings.putEntry(wanted);
+}
+
+// A journal entry's feeling, saved through logFeeling (the one way a feeling
+// is saved): the entry's colour and specific feeling, and its "What's behind
+// this?" tags, on its own day. Tags live on the feeling, so Feelings and the
+// journal show the same ones. Returns the Feelings log entry's id.
+export function logJournalFeeling(input: { journalEntryId: string; zone: FeelingZone; feelingIds?: string[]; intensities?: FeelingCheckIn['intensities']; tags?: string[]; note?: string }): string | undefined {
+  const journal = useJournalStore.getState();
+  const entry = journal.entries.find((e) => e.id === input.journalEntryId);
+  if (!entry) return undefined;
+  const first = input.feelingIds?.[0];
+  const precise = first && wheel.some((f) => f.id === first && f.zone === input.zone) ? first : undefined;
+  journal.setEntryFeeling(entry.id, input.zone, precise);
+  journal.setFeelingChosen(entry.id);
+  const chosen = useJournalStore.getState().entries.find((e) => e.id === entry.id)!;
+  const feelings = useFeelingsStore.getState();
+  const id = journalFeelingId(entry.id);
+  const existing = feelings.entries.find((e) => e.id === id);
+  const base = journalFeelingFor(chosen, existing)!;
+  const tags = input.tags !== undefined ? [...new Set(input.tags)] : existing?.reasonTags;
+  feelings.putEntry({
+    ...base,
+    intensities: input.intensities ?? base.intensities,
+    reasonTags: tags?.length ? tags : undefined,
+    note: input.note !== undefined ? input.note.trim() || undefined : base.note,
+  });
+  return id;
 }
 
 // Deleting a journal entry removes its feeling too.

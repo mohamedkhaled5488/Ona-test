@@ -15,9 +15,8 @@ import { useQuitHabitsStore } from '../../store/useQuitHabitsStore';
 import { useDailyPlanningStore } from '../../store/useDailyPlanningStore';
 import { logFeeling } from '../../feelings/logFeeling';
 import { useJournalStore } from '../../store/useJournalStore';
-import { journalFeelingId, syncJournalFeeling } from '../../feelings/fromSections';
 import { dailyTrendPoints, datesInRange, zoneCounts } from '../feelingsStats';
-import { filterBySource, overviewInsight, sourceBreakdown } from '../feelingsInsights';
+import { filterBySource, overviewInsight, sourceBreakdown, tagInsight } from '../feelingsInsights';
 import { periodStats } from '../recapStats';
 import { localData } from '../../sync/syncController';
 import { EMPTY_SYNC_STATE, syncOnce, type OutgoingRow, type RemoteRow, type SyncServer } from '../../sync/engine';
@@ -31,21 +30,20 @@ const TODAY = '2026-10-24';
 // FEELING_SOURCE_KINDS, so a new kind of source doesn't compile until it's here.
 type Case = { name: string; log: () => string | undefined };
 const BY_KIND: Record<(typeof FEELING_SOURCE_KINDS)[number] | 'standalone', Case> = {
-  standalone: { name: 'Identify the Feeling (standalone)', log: () => logFeeling({ zone: 'calm', feelingIds: ['calm-content'], tags: ['tea'] }) },
-  task: { name: 'Daily Planning task', log: () => logFeeling({ source: { kind: 'task', refId: 'task-1', date: TODAY, phase: 'after' }, zone: 'lively' }) },
-  habit: { name: 'Habit check-in', log: () => logFeeling({ source: { kind: 'habit', refId: 'habit-1' }, zone: 'calm' }) },
-  skill: { name: 'Skill practice', log: () => logFeeling({ source: { kind: 'skill', refId: 'skill-1' }, zone: 'lively' }) },
-  quitHabit: { name: 'Quit moment', log: () => logFeeling({ source: { kind: 'quitHabit', refId: 'quit-1', trackId: 'track-1' }, zone: 'tense' }) },
-  study: { name: 'Study session', log: () => logFeeling({ source: { kind: 'study', refId: 'study-1' }, zone: 'okay' }) },
-  book: { name: 'Book', log: () => logFeeling({ source: { kind: 'book', refId: 'book-1' }, zone: 'low', note: 'A slow chapter' }) },
+  standalone: { name: 'Identify the Feeling (standalone)', log: () => logFeeling({ zone: 'calm', feelingIds: ['calm-content'], tags: ['tea', 'Work'] }) },
+  task: { name: 'Daily Planning task', log: () => logFeeling({ source: { kind: 'task', refId: 'task-1', date: TODAY, phase: 'after' }, zone: 'lively', tags: ['Work'] }) },
+  habit: { name: 'Habit check-in', log: () => logFeeling({ source: { kind: 'habit', refId: 'habit-1' }, zone: 'calm', tags: ['Work'] }) },
+  skill: { name: 'Skill practice', log: () => logFeeling({ source: { kind: 'skill', refId: 'skill-1' }, zone: 'lively', tags: ['Work'] }) },
+  quitHabit: { name: 'Quit moment', log: () => logFeeling({ source: { kind: 'quitHabit', refId: 'quit-1', trackId: 'track-1' }, zone: 'tense', tags: ['Work'] }) },
+  study: { name: 'Study session', log: () => logFeeling({ source: { kind: 'study', refId: 'study-1' }, zone: 'okay', tags: ['Work'] }) },
+  book: { name: 'Book', log: () => logFeeling({ source: { kind: 'book', refId: 'book-1' }, zone: 'low', note: 'A slow chapter', tags: ['Work'] }) },
   // The journal keeps its own colour too; a chosen one is in the Feelings log.
   journal: {
     name: 'Journal entry',
     log: () => {
-      useJournalStore.getState().upsertEntry(TODAY, 'lively', 'A good day', [], { feelingChosen: true });
+      useJournalStore.getState().upsertEntry(TODAY, 'lively', 'A good day', []);
       const id = useJournalStore.getState().entries.find((e) => e.date === TODAY)!.id;
-      syncJournalFeeling(id);
-      return journalFeelingId(id);
+      return logFeeling({ source: { kind: 'journal', refId: id }, zone: 'lively', tags: ['Work'] });
     },
   },
 };
@@ -110,6 +108,9 @@ describe.each(CASES)('FEEL-SRC: a feeling from $name', ({ kind, log }) => {
     const groups = sourceBreakdown(entries);
     expect(groups.find((g) => g.group === 'all')?.count).toBe(1);
     expect(groups.filter((g) => g.group !== 'all').map((g) => g.count)).toEqual([1]);
+    // Its "What's behind this?" tag: on the entry, and in Analysis by tag.
+    expect(entry.reasonTags).toContain('Work');
+    expect(tagInsight(entries, 'Work')).toMatchObject({ n: 1 });
     // Recap: one feeling named this week.
     // Every other section empty.
     const data = new Proxy({ feelingCheckIns: entries } as Record<string, unknown>, { get: (t, k) => (k in t ? t[k as string] : []) });
@@ -139,3 +140,40 @@ describe.each(CASES)('FEEL-SRC: a feeling from $name', ({ kind, log }) => {
     expect(useFeelingsStore.getState().entries.map((e) => e.id)).toContain(id);
   });
 });
+
+// The shared sheet everywhere (Problem 1, found on a phone 2026-10-29: the
+// journal had no "What's behind this?"). Each source's capture uses the
+// shared quick sheet (components/ItemFeelingSheet), the shared tag picker
+// (components/ReasonTagPicker), or the full Feelings flow (which uses it).
+const CAPTURE: Record<(typeof FEELING_SOURCE_KINDS)[number] | 'standalone', [string, RegExp][]> = {
+  standalone: [['src/screens/MoodCheckScreen.tsx', /<ReasonTagPicker/]],
+  task: [['src/screens/dailyPlanning/TaskFeelingSheet.tsx', /<ReasonTagPicker/]],
+  habit: [['src/screens/HabitBuilderScreen.tsx', /<ItemFeelingPrompt/]],
+  skill: [['src/screens/SkillsScreen.tsx', /<ItemFeelingPrompt/]],
+  quitHabit: [['src/screens/QuitHabitScreen.tsx', /<ItemFeelingPrompt/]],
+  study: [['src/screens/StudySessionDetail.tsx', /push\('moodCheck', \{ source: \{ kind: 'study'/]],
+  book: [['src/screens/BookScreen.tsx', /push\('moodCheck', \{ source: \{ kind: 'book'/]],
+  journal: [['src/screens/JournalWriteScreen.tsx', /<ReasonTagPicker/], ['src/screens/JournalWriteScreen.tsx', /logFeeling\(\{ source: \{ kind: 'journal'/]],
+};
+
+test("FEEL-SRC-004 every source notes a feeling with the shared sheet or the shared 'What's behind this?' picker", () => {
+  const fs = require('fs') as { readFileSync: (p: string, e: string) => string };
+  expect(Object.keys(CAPTURE).sort()).toEqual(CASES.map((c) => c.kind).sort());
+  const src = (f: string) => fs.readFileSync(`${process.cwd()}/${f}`, 'utf8');
+  for (const [kind, checks] of Object.entries(CAPTURE)) for (const [file, re] of checks) expect({ kind, file, uses: re.test(src(file)) }).toEqual({ kind, file, uses: true });
+  expect(src('src/components/ItemFeelingSheet.tsx')).toMatch(/<ReasonTagPicker/);
+});
+
+test('FEEL-SRC-005 no screen draws its own feeling-tag chips (only the shared picker shows the tag list)', () => {
+  const fs = require('fs') as { readFileSync: (p: string, e: string) => string; readdirSync: (p: string, o: { withFileTypes: true }) => { name: string; isDirectory: () => boolean }[] };
+  const path = require('path') as { join: (...p: string[]) => string; relative: (a: string, b: string) => string };
+  const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (e.name === '__tests__' ? [] : walk(path.join(d, e.name))) : /\.tsx$/.test(e.name) ? [path.join(d, e.name)] : []));
+  // The same tag list, for things that aren't feelings: a habit's skip reason,
+  // a slip's "what was happening before", a craving's trigger.
+  const notFeelings = ['src/screens/HabitBuilderScreen.tsx', 'src/screens/QuitHabitScreen.tsx', 'src/screens/QuitTools.tsx', 'src/components/ReasonTagPicker.tsx'];
+  const users = [...walk(path.join(process.cwd(), 'src/screens')), ...walk(path.join(process.cwd(), 'src/components'))]
+    .map((f) => path.relative(process.cwd(), f).split('\\').join('/'))
+    .filter((f) => /reasonTagOptions/.test(fs.readFileSync(f, 'utf8')) && !notFeelings.includes(f));
+  expect(users).toEqual([]);
+});
+
