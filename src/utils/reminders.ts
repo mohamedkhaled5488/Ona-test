@@ -31,6 +31,7 @@ export const NOTIFICATION_SECTION: Record<NotificationFeature, SectionId> = {
   studyEnd: 'studySession',
   weeklyStory: 'recap',
   letters: 'letters',
+  support: 'support',
 };
 export const liveNotificationFeatures = (): NotificationFeature[] => (Object.keys(NOTIFICATION_SECTION) as NotificationFeature[]).filter((f) => isLive(NOTIFICATION_SECTION[f]));
 
@@ -64,6 +65,8 @@ export async function resyncFeature(feature: NotificationFeature): Promise<void>
     case 'letters':
       await resyncLetterReminders();
       return;
+    case 'support':
+      return; // a one-off check-in, scheduled when asked
   }
 }
 

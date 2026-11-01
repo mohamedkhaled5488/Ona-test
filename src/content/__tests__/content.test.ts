@@ -6,9 +6,9 @@
 // a review flag and a sensitivity; nothing is marked reviewed until a
 // clinician has read it.
 // IDs: docs/test-cases/integration.md (CONTENT-*)
-import { allReviewable, allText, BREATHING_TOOL, FOLLOW_UPS, HARD_MODE, LETTERS, REFLECT_QUESTIONS, REFLECT_THEMES, ZONE_SUPPORT } from '../index';
+import { allReviewable, allText, BREATHING_TOOL, FOLLOW_UPS, HARD_MODE, LETTERS, REFLECT_QUESTIONS, REFLECT_THEMES, WORD_SUPPORT, ZONE_SUPPORT } from '../index';
 import { BUILT_IN_TOOLS } from '../../quit/toolkit';
-import { feelingZones } from '../../data/feelingsWheel';
+import { feelingZones, feelings as wheel } from '../../data/feelingsWheel';
 import type { Depth } from '../types';
 
 const DEPTHS: Depth[] = ['light', 'medium', 'deep'];
@@ -101,6 +101,31 @@ describe('shape', () => {
         expect({ id: o.id, links: [o.tool, o.letter, o.support].filter(Boolean).length <= 1 }).toEqual({ id: o.id, links: true });
       }
   });
+});
+
+test('CONTENT-013 every one of the 89 feeling words has its own lines, in its own zone file: an acknowledgement and two options or more; the heaviest are heavy (shown after review), with a safe body option and "Talk to someone"', () => {
+  expect(wheel).toHaveLength(89);
+  const tools = new Set([BREATHING_TOOL, ...BUILT_IN_TOOLS.map((t) => t.id)]);
+  const files: Record<string, string[]> = {
+    lively: require('../support/words/lively.json').map((w: { feelingId: string }) => w.feelingId),
+    calm: require('../support/words/calm.json').map((w: { feelingId: string }) => w.feelingId),
+    tense: require('../support/words/tense.json').map((w: { feelingId: string }) => w.feelingId),
+    low: require('../support/words/low.json').map((w: { feelingId: string }) => w.feelingId),
+    okay: require('../support/words/okay.json').map((w: { feelingId: string }) => w.feelingId),
+  };
+  for (const f of wheel) {
+    const w = WORD_SUPPORT[f.id];
+    expect({ id: f.id, has: !!w, inZone: files[f.zone].includes(f.id) }).toEqual({ id: f.id, has: true, inZone: true });
+    if (!w.written) continue;
+    expect({ id: f.id, ack: w.acknowledge.length >= 1, options: w.options.length >= 2 }).toEqual({ id: f.id, ack: true, options: true });
+    for (const o of w.options) if (o.tool) expect({ id: o.id, tool: tools.has(o.tool) }).toEqual({ id: o.id, tool: true });
+    if (w.sensitivity === 'heavy') {
+      const safe = w.options.filter((o) => o.sensitivity === 'standard');
+      expect({ id: f.id, safeSupport: safe.some((o) => o.support) || safe.some((o) => o.kind === 'body') }).toEqual({ id: f.id, safeSupport: true });
+    }
+  }
+  const heavy = Object.values(WORD_SUPPORT).filter((w) => w.sensitivity === 'heavy').map((w) => w.feelingId).sort();
+  expect(heavy).toEqual(['low-numb', 'mad-hateful', 'mad-rage', 'sad-ashamed', 'sad-depressed', 'sad-miserable', 'scared-helpless', 'scared-insignificant']);
 });
 
 describe('the words', () => {

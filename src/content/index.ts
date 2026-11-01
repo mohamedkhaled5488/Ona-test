@@ -2,7 +2,7 @@
 // app reads content only from here. A new Reflect theme's questions or a
 // feeling word's Support text is a new JSON file added below.
 import type { FeelingZone } from '../types/sections';
-import type { ClosingCopy, FollowUp, HardModeCopy, LettersCopy, ReflectQuestion, ReflectTheme, SupportLine, SupportOption, ZoneSupport } from './types';
+import type { ClosingCopy, FollowUp, HardModeCopy, LettersCopy, ReflectQuestion, ReflectTheme, SupportLine, SupportOption, WordSupport, ZoneSupport } from './types';
 import themesJson from './reflect/themes.json';
 import whereIAm from './reflect/where-i-am.json';
 import knowMyself from './reflect/know-myself.json';
@@ -14,6 +14,11 @@ import tense from './support/tense.json';
 import low from './support/low.json';
 import okay from './support/okay.json';
 import hardModeJson from './support/hardMode.json';
+import wordsLively from './support/words/lively.json';
+import wordsCalm from './support/words/calm.json';
+import wordsTense from './support/words/tense.json';
+import wordsLow from './support/words/low.json';
+import wordsOkay from './support/words/okay.json';
 
 export const REFLECT_THEMES = themesJson as ReflectTheme[];
 export const REFLECT_QUESTIONS = [...whereIAm, ...knowMyself] as ReflectQuestion[];
@@ -24,6 +29,8 @@ export const LETTERS = lettersJson as LettersCopy;
 
 export const ZONE_SUPPORT = { lively, calm, tense, low, okay } as unknown as Record<FeelingZone, ZoneSupport>;
 export const HARD_MODE = hardModeJson as HardModeCopy;
+// Each of the 89 feeling words' own Support lines, by feeling id.
+export const WORD_SUPPORT: Record<string, WordSupport> = Object.fromEntries(([...wordsLively, ...wordsCalm, ...wordsTense, ...wordsLow, ...wordsOkay] as WordSupport[]).map((w) => [w.feelingId, w]));
 
 // Where a Support option can lead: a Quit toolkit tool (the same screen) or
 // the shared breathing exercise. content.test.ts checks every link.
@@ -38,6 +45,7 @@ export function allReviewable(): (ReflectQuestion | FollowUp | SupportLine | Sup
     ...LETTERS.kinds.map((k) => k.starters),
     ...Object.values(ZONE_SUPPORT).flatMap((z) => [...z.acknowledge, ...z.understand, ...z.options]),
     ...HARD_MODE.lines,
+    ...Object.values(WORD_SUPPORT).flatMap((w) => [...w.acknowledge, ...w.options]),
   ];
 }
 
@@ -56,6 +64,10 @@ export function allText(): { where: string; text: string }[] {
     for (const o of z.options) add(o.id, o.title, o.text, o.why, o.prompt);
   }
   for (const l of HARD_MODE.lines) add(l.id, l.text);
+  for (const w of Object.values(WORD_SUPPORT)) {
+    for (const l of w.acknowledge) add(l.id, l.text);
+    for (const o of w.options) add(o.id, o.title, o.text, o.why, o.prompt);
+  }
   add('hardMode', HARD_MODE.talkTitle, HARD_MODE.talkLine, HARD_MODE.dangerTitle, HARD_MODE.dangerLine, HARD_MODE.checkInLater, ...Object.values(HARD_MODE.helped));
   return out;
 }

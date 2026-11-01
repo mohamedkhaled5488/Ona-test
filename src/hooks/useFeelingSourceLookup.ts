@@ -39,6 +39,7 @@ export function useFeelingSourceLookup(): FeelingSourceLookup {
       const e = journal.find((x) => x.id === id);
       return e ? formatDisplayDate(e.date) : undefined;
     },
+    support: () => '',
     reflect: (id) => {
       const s = reflections.find((x) => x.id === id);
       return s ? formatDisplayDate(localDateOf(s.startedAt)) : undefined;

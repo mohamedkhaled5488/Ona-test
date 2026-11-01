@@ -23,6 +23,7 @@ import { isLive, sectionsMeta } from '../data/sectionsMeta';
 import type { SectionId } from '../types/sections';
 import { useReflectionStore } from '../store/useReflectionStore';
 import { useLettersStore } from '../store/useLettersStore';
+import { useSupportStore } from '../store/useSupportStore';
 
 interface DataStore {
   getState: () => object;
@@ -58,6 +59,7 @@ export const LOCAL_DATA: Record<string, { store: DataStore; keys: string[]; pref
   recap: { store: useRecapStore as never, keys: ['bestMoments'] },
   reflection: { store: useReflectionStore as never, keys: ['sessions'], prefs: ['supportCardShownAt'] },
   letters: { store: useLettersStore as never, keys: ['letters'], prefs: ['later', 'offeredFor'] },
+  support: { store: useSupportStore as never, keys: ['votes', 'hidden', 'history'], prefs: ['offerAfterLog', 'checkInIds'] },
 };
 
 // A value as the current version expects it (see `normalize` above).

@@ -16,7 +16,8 @@ export type SectionId =
   | 'budget'
   | 'quitHabit'
   | 'reflection'
-  | 'letters';
+  | 'letters'
+  | 'support';
 
 // live: shipped. held: built but not in this release; it doesn't exist for
 // the person (see data/sectionsMeta.ts). Its data stays on the phone.
@@ -451,7 +452,7 @@ export interface PersonalFeeling {
 // reuse all of feelingsStats.ts unchanged, instead of duplicating that logic.
 // Every place outside Identify the Feeling that a feeling can be logged
 // from. One list, so tests can check every source (feelingSourcesContract).
-export const FEELING_SOURCE_KINDS = ['habit', 'quitHabit', 'skill', 'study', 'task', 'book', 'journal', 'reflect'] as const;
+export const FEELING_SOURCE_KINDS = ['habit', 'quitHabit', 'skill', 'study', 'task', 'book', 'journal', 'reflect', 'support'] as const;
 
 export interface FeelingSource {
   kind: (typeof FEELING_SOURCE_KINDS)[number];

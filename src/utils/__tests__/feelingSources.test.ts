@@ -32,6 +32,7 @@ function lookup(): FeelingSourceLookup {
     skill: () => undefined,
     study: () => undefined,
     reflect: () => undefined,
+    support: () => '',
   };
 }
 

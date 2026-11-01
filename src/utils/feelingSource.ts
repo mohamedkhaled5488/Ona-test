@@ -14,6 +14,7 @@ export interface FeelingSourceLookup {
   study: (id: string) => string | undefined;
   journal: (id: string) => string | undefined; // the entry's date, in words
   reflect: (id: string) => string | undefined; // the session's date, in words (never its theme or words)
+  support: (id: string) => string | undefined; // '' (no name of its own)
 }
 
 const kindWords: Record<FeelingSource['kind'], { prefix: string; noun: string }> = {
@@ -25,6 +26,7 @@ const kindWords: Record<FeelingSource['kind'], { prefix: string; noun: string }>
   study: { prefix: 'Study session', noun: 'study session' },
   journal: { prefix: 'Journal', noun: 'journal entry' },
   reflect: { prefix: 'Reflection', noun: 'reflection' },
+  support: { prefix: 'Support for this feeling', noun: 'support' },
 };
 
 export interface FeelingSourceLabel {

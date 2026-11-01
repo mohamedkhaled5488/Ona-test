@@ -48,6 +48,8 @@ export type RootStackParamList = {
   // A letter to read, or a new one to write (of a kind, or from a
   // reflection's answer).
   letters: { openLetterId?: string; write?: LetterKind; draftText?: string; fromReflection?: string } | undefined;
+  // The feeling to help with (a Feelings log id), or none: pick one.
+  support: { feelingId?: string } | undefined;
   habitsHub: { initialMode?: 'build' | 'quit' } | undefined;
   discover: undefined;
   // Start at a section, resume where it was left, or from the beginning.

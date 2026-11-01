@@ -27,6 +27,7 @@ const FEATURES: { id: NotificationFeature; label: string; explain: string }[] = 
   { id: 'sleep', label: 'Bedtime and wake-up reminders', explain: 'The ones you set up in Sleep' },
   { id: 'weeklyStory', label: 'Weekly "Your week in Ona" story', explain: 'Evening of the first day of your week' },
   { id: 'letters', label: 'Dated letters to yourself', explain: 'On the day a letter waits for, if you asked. Never its words' },
+  { id: 'support', label: 'Gentle check-ins', explain: 'An hour after Support, only if you asked. Never says what you felt' },
 ];
 
 function useNotificationPermission() {

@@ -22,5 +22,6 @@ export const sectionAccents: Record<SectionId, string> = {
   budget: '#4E9A7A', // money-green, distinct from dietPlanning's fresher green and skills' olive
   reflection: '#8C7BA8', // dusk violet: quiet, inward
   letters: '#B88A6A', // warm paper
+  support: '#6F9A9E', // soft sea
   quitHabit: '#7A9E8E', // soft sage — calm, self-compassionate, deliberately not clinical or alarm-toned
 };

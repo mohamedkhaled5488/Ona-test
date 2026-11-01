@@ -136,6 +136,14 @@ export const sectionsMeta: SectionMeta[] = [
     icon: 'mail-outline',
     status: 'held',
   },
+  // Working name; held until the owner's final review.
+  {
+    id: 'support',
+    title: 'Support for this feeling',
+    tagline: 'A few ideas for how you feel right now',
+    icon: 'hand-left-outline',
+    status: 'held',
+  },
 ];
 
 // Read from the list each time (a test can turn a held section on, as it

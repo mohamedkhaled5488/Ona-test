@@ -39,6 +39,8 @@ const BY_KIND: Record<(typeof FEELING_SOURCE_KINDS)[number] | 'standalone', Case
   book: { name: 'Book', log: () => logFeeling({ source: { kind: 'book', refId: 'book-1' }, zone: 'low', note: 'A slow chapter', tags: ['Work'] }) },
   // A reflection: before or after the session (shared quick sheet).
   reflect: { name: 'Reflection', log: () => logFeeling({ source: { kind: 'reflect', refId: 'reflection-1', phase: 'before' }, zone: 'tense', tags: ['Work'] }) },
+  // Support for this feeling: saved to the log only if the person chooses.
+  support: { name: 'Support for this feeling', log: () => logFeeling({ source: { kind: 'support', refId: '' }, zone: 'low', tags: ['Work'] }) },
   // The journal keeps its own colour too; a chosen one is in the Feelings log.
   journal: {
     name: 'Journal entry',
@@ -157,6 +159,7 @@ const CAPTURE: Record<(typeof FEELING_SOURCE_KINDS)[number] | 'standalone', [str
   book: [['src/screens/BookScreen.tsx', /push\('moodCheck', \{ source: \{ kind: 'book'/]],
   journal: [['src/screens/JournalWriteScreen.tsx', /<ReasonTagPicker/], ['src/screens/JournalWriteScreen.tsx', /logFeeling\(\{ source: \{ kind: 'journal'/]],
   reflect: [['src/screens/ReflectionSession.tsx', /<ItemFeelingPrompt[\s\S]*kind: 'reflect'/]],
+  support: [['src/screens/SupportScreen.tsx', /logFeeling\(\{ source: \{ kind: 'support'/], ['src/screens/SupportScreen.tsx', /<ReasonTagPicker/]],
 };
 
 test("FEEL-SRC-004 every source notes a feeling with the shared sheet or the shared 'What's behind this?' picker", () => {

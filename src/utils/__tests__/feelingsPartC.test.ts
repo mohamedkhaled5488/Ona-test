@@ -131,7 +131,7 @@ describe('C2. Where a feeling came from', () => {
   });
 
   test('labels read "Habit: …", "Quit: …", "Skill: …"', () => {
-    const lookup = { task: () => 'T', book: () => 'B', habit: () => 'Reading', quitHabit: () => 'Late-night scrolling', skill: () => 'Guitar', study: () => 'S', journal: () => 'Oct 21', reflect: () => 'Oct 22' };
+    const lookup = { task: () => 'T', book: () => 'B', habit: () => 'Reading', quitHabit: () => 'Late-night scrolling', skill: () => 'Guitar', study: () => 'S', journal: () => 'Oct 21', reflect: () => 'Oct 22', support: () => '' };
     expect(describeFeelingSource({ kind: 'journal', refId: 'x' }, lookup)!.text).toBe('Journal: Oct 21');
     expect(describeFeelingSource({ kind: 'habit', refId: 'x' }, lookup)!.text).toBe('Habit: Reading');
     expect(describeFeelingSource({ kind: 'quitHabit', refId: 'x' }, lookup)!.text).toBe('Quit: Late-night scrolling');

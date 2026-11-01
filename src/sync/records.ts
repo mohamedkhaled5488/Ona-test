@@ -22,6 +22,7 @@ export const DEVICE_ONLY_FIELDS: Record<string, string[]> = {
 // Section keys that describe this phone right now, not the user's data.
 const NOT_SYNCED: Record<string, string[]> = {
   studySession: ['active', 'pendingSummary'], // a timer running on this phone
+  support: ['votes', 'hidden', 'history'], // only for choosing well on this phone
 };
 
 export interface Collection {

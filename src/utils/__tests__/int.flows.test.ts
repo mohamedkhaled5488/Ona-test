@@ -94,6 +94,7 @@ const lookup = (): FeelingSourceLookup => ({
     return e ? e.date : undefined;
   },
   reflect: (id) => useReflectionStore.getState().sessions.find((x) => x.id === id)?.startedAt.slice(0, 10),
+  support: () => '',
 });
 
 describe('INT-FEEL: feelings from every section reach the log, the graph and Analysis', () => {

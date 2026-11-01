@@ -1,3 +1,5 @@
+// After a feeling is logged: a letter to yourself if one matches, else, for a
+// Low or Tense feeling, a quiet offer of Support for this feeling.
 // "You left yourself a note for days like this. Would you like to read it?"
 // After a feeling is logged anywhere (logFeeling tells this host), a letter
 // that matches it is offered once, with Read it now / Later / Not now. Never
@@ -19,10 +21,13 @@ import { spacing } from '../theme';
 import { themedStyles } from '../theme/runtime';
 import { lettersFor, writtenOnDate } from './delivery';
 import { onFeelingLogged } from './offerBus';
-import type { Letter } from '../types/sections';
+import type { FeelingCheckIn, Letter } from '../types/sections';
+import { useSupportStore } from '../store/useSupportStore';
+import { openSection } from '../navigation/navigationRef';
 
 // After the feeling sheet has closed, so the two sheets don't meet.
 export const OFFER_DELAY_MS = 400;
+export const SUPPORT_OFFER = { message: 'Would something help with this feeling?', action: 'See ideas' };
 
 export const writtenOnText = (l: Letter) => LETTERS.writtenOn.replace('{date}', formatDisplayDate(writtenOnDate(l)));
 
@@ -32,16 +37,32 @@ export function LetterOfferHost() {
   const { showToast } = useUi();
   const letters = useLettersStore((s) => s.letters);
 
+  // No letter for it: for a Low or Tense feeling, a quiet "See ideas" (Support
+  // for this feeling), never a sheet; the person can turn it off there.
+  const offerSupport = (feeling: FeelingCheckIn) => {
+    if (!isLive('support') || !useSupportStore.getState().offerAfterLog) return;
+    if (feeling.source?.kind === 'support' || (feeling.zone !== 'low' && feeling.zone !== 'tense')) return;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => showToast({ message: SUPPORT_OFFER.message, actionLabel: SUPPORT_OFFER.action, onAction: () => openSection('support', { feelingId: feeling.id }) }), OFFER_DELAY_MS);
+  };
+
   useEffect(
     () =>
       onFeelingLogged((feelingId) => {
-        if (!isLive('letters')) return;
+        if (!isLive('letters')) {
+          const f = useFeelingsStore.getState().entries.find((e) => e.id === feelingId);
+          if (f) offerSupport(f);
+          return;
+        }
         const store = useLettersStore.getState();
         if (store.offeredFor === feelingId) return; // one offer per feeling
         const feeling = useFeelingsStore.getState().entries.find((e) => e.id === feelingId);
         if (!feeling) return;
         const matches = lettersFor(feeling, store.letters);
-        if (!matches.length) return;
+        if (!matches.length) {
+          offerSupport(feeling);
+          return;
+        }
         store.setOfferedFor(feelingId);
         if (timer.current) clearTimeout(timer.current);
         timer.current = setTimeout(() => setOffer({ ids: matches.map((l) => l.id), index: 0, reading: false }), OFFER_DELAY_MS);

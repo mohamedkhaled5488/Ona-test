@@ -499,7 +499,9 @@ function NameCraving({ session }: { session: QuitCravingSession }) {
 // QuitHabitScreen).
 export const TOOL_VIEWS = new Set(['grounding', 'bodyScan', 'muscleRelax', 'countBreaths', 'noticeFive', 'oneObject', 'mindfulMinute', 'sounds', 'memoryMatch', 'slidePuzzle', 'gentleMath', 'doodle', 'walk', 'stretches', 'myReasons', 'delayIt', 'nameCraving', 'urgeSurfing', 'textFriend', 'sayHi']);
 
-export function ToolView({ tool, habit, session, startedAt, onDone }: { tool: ToolDef; habit: QuitHabit; session: QuitCravingSession; startedAt: string; onDone: () => void }) {
+// Also used by Support for this feeling, with no Quit habit or craving: the
+// tools that need one (My reasons, Name the craving) aren't offered there.
+export function ToolView({ tool, habit, session, startedAt, onDone }: { tool: ToolDef; habit?: QuitHabit; session?: QuitCravingSession; startedAt: string; onDone: () => void }) {
   const steps = GUIDED_STEPS[tool.id];
   return (
     <>
@@ -528,9 +530,9 @@ export function ToolView({ tool, habit, session, startedAt, onDone }: { tool: To
         <SlidePuzzle />
       ) : tool.id === 'gentleMath' ? (
         <GentleMath />
-      ) : tool.id === 'myReasons' ? (
+      ) : tool.id === 'myReasons' && habit ? (
         <MyReasons habit={habit} />
-      ) : tool.id === 'nameCraving' ? (
+      ) : tool.id === 'nameCraving' && session ? (
         <NameCraving session={session} />
       ) : null}
     </>

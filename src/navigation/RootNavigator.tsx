@@ -38,6 +38,7 @@ import { sensitiveScreen } from '../hooks/useScreenPrivacy';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { ReflectionScreen } from '../screens/ReflectionScreen';
 import { LettersScreen } from '../screens/LettersScreen';
+import { SupportScreen } from '../screens/SupportScreen';
 import { LetterOfferHost } from '../letters/LetterOfferHost';
 import { getStartScreen } from './startScreen';
 import { navigationRef } from './navigationRef';
@@ -98,6 +99,7 @@ const screenComponents = {
   quitHabit: sensitiveScreen(QuitHabitScreen, 'quitHabit'),
   reflection: sensitiveScreen(ReflectionScreen, 'reflection'),
   letters: sensitiveScreen(LettersScreen, 'letters'),
+  support: sensitiveScreen(SupportScreen, 'support'),
 } as const;
 
 // Recap owns its own stack registration ('Main' below), so it's the one

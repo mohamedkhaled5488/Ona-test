@@ -117,6 +117,8 @@ export function sourceGroupOf(source: FeelingSource | undefined): Exclude<Source
       return 'journal';
     case 'reflect':
       return 'reflect';
+    case 'support':
+      return 'standalone'; // noted while asking for support: as if on its own
     default:
       return 'other'; // reading, study sessions
   }

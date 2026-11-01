@@ -17,7 +17,7 @@ import { DEFAULT_DAY_VIEW, type DayViewPrefs } from '../utils/dayView';
 
 export type WeekStart = 0 | 1 | 6; // Sunday, Monday, Saturday (JS getDay numbering)
 export type ThemeChoice = 'system' | 'light' | 'dark';
-export type NotificationFeature = 'tasks' | 'habits' | 'studyEnd' | 'sleep' | 'weeklyStory' | 'letters';
+export type NotificationFeature = 'tasks' | 'habits' | 'studyEnd' | 'sleep' | 'weeklyStory' | 'letters' | 'support';
 export type FeatureFlagId = 'recapAreaPages' | 'recapStory' | 'lifetimeEnabled' | 'foundersEnabled' | 'redeemCodeEnabled' | 'planReviewReminders';
 
 // The first day of the week from the device locale, when the platform
@@ -150,7 +150,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   timeFormat: 'system',
   haptics: true,
 
-  notify: { tasks: true, habits: true, studyEnd: true, sleep: true, weeklyStory: false, letters: true },
+  notify: { tasks: true, habits: true, studyEnd: true, sleep: true, weeklyStory: false, letters: true, support: true },
   defaultAlarmSound: 'default',
   quietHours: { enabled: false, start: '22:00', end: '07:00', includeAlarms: false },
   weeklyStoryNotificationIds: [],

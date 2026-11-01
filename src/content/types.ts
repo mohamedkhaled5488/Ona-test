@@ -111,6 +111,18 @@ export interface ZoneSupport {
   options: SupportOption[];
 }
 
+// One feeling word's own lines (one of the 89): its acknowledgement and a
+// few options of its own, put before the zone's. `written: false` (or a heavy
+// word before review) falls back to the zone's content, never to a blank or
+// a generic line.
+export interface WordSupport {
+  feelingId: string;
+  written: boolean;
+  sensitivity: Sensitivity;
+  acknowledge: SupportLine[];
+  options: SupportOption[];
+}
+
 export interface HardModeCopy {
   lines: SupportLine[]; // "You don't have to fix this right now."
   talkTitle: string;
