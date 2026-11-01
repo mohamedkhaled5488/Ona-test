@@ -22,6 +22,9 @@ import { useSettingsStore, DEFAULT_SETTINGS } from '../../src/store/useSettingsS
 import { useEntitlementStore } from '../../src/store/useEntitlementStore';
 import { useSyncStore } from '../../src/store/useSyncStore';
 import { useJournalStore } from '../../src/store/useJournalStore';
+import { useReflectionStore } from '../../src/store/useReflectionStore';
+import { useLettersStore } from '../../src/store/useLettersStore';
+import { useSupportStore } from '../../src/store/useSupportStore';
 import { syncInFlight, syncNow, unsentChanges } from '../../src/sync/syncController';
 import { startAccountConsent, noteConsentSource } from '../../src/sync/accountConsent';
 import { chooseForAccount, signOutAndChoose, useAccountChoiceStore } from '../../src/sync/signInFlow';
@@ -183,4 +186,34 @@ test('BE-ACC-006 sign out with Remove, sign in again: the phone empties, then ev
   await signIn(u);
   await sync();
   expect(onPhone()).toEqual(['j1', 'j2']);
+});
+
+// Reflection, Letters and Support (held in the app until the owner's review)
+// on a phone shared by two accounts: B, keeping separate, sees none of A's
+// reflections, letters or Support's memory; A's account still has its own.
+test('BE-ACC-007 another account on the phone: A\'s reflections, letters and Support answers stay A\'s', async () => {
+  const a = await newUser('acc-a');
+  const b = await newUser('acc-b');
+  await freshPhone();
+  await signIn(a);
+  await sync();
+  const sid = useReflectionStore.getState().start({ mode: 'free', title: 'Mine', questions: [{ question: 'What matters?' }] });
+  useReflectionStore.getState().setAnswer(sid, useReflectionStore.getState().sessions[0].answers[0].id, 'Quiet mornings');
+  useReflectionStore.getState().finish(sid, { tags: [] });
+  const lid = useLettersStore.getState().addLetter({ kind: 'proud', zones: [], feelingIds: [], text: 'Well done, A' });
+  useSupportStore.getState().vote('tense.do.walk', 'yes');
+  await sync();
+  expect(await inAccount(a)).toEqual(expect.arrayContaining([sid, lid]));
+
+  await signOutAndChoose(true);
+  await signIn(b);
+  await sync();
+  expect(pending()).toMatchObject({ kind: 'otherAccount', otherOwner: a.id });
+  await chooseForAccount('keepSeparate');
+  await sync();
+  expect(useReflectionStore.getState().sessions).toEqual([]);
+  expect(useLettersStore.getState().letters).toEqual([]);
+  expect(useSupportStore.getState().votes).toEqual({});
+  expect(await inAccount(b)).toEqual([]);
+  expect(await inAccount(a)).toEqual(expect.arrayContaining([sid, lid]));
 });
