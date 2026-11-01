@@ -40,7 +40,7 @@ describe('habit exports', () => {
     ];
     const text = buildQuitJourneyText(habit, tracks, entries, [], '2026-09-10');
     expect(text).toContain('Why: Sleep better');
-    expect(text).toContain('1 urge resisted');
+    expect(text).toContain('1 urge ridden out in total');
     // A slip reads as "a hard day" (owner's decision 2026-10-24).
     const order = ['Track 1 started', 'A hard day', 'Track 2 started', 'Resisted an urge'].map((s) => text.indexOf(s));
     expect(order.every((i) => i >= 0)).toBe(true);

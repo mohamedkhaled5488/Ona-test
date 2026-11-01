@@ -48,6 +48,26 @@ function coveredDates(tracks: QuitTrack[], habitId: string, today: string): Set<
   return days;
 }
 
+// Clean days and hard days between two dates (inclusive, never past today):
+// a clean day is inside a chapter and not a hard day. The one definition,
+// used by the journey's numbers here and by Recap (metrics/registry.ts).
+export function quitDayCounts(tracks: QuitTrack[], slips: QuitSlip[], habitId: string, from: string, to: string, today: string): { clean: number; hard: number } {
+  const mine = tracks.filter((t) => t.quitHabitId === habitId);
+  if (!mine.length) return { clean: 0, hard: 0 };
+  const start = mine.reduce((m, t) => (t.startDate < m ? t.startDate : m), mine[0].startDate);
+  const hard = hardDayDates(mine, slips, habitId);
+  const covered = coveredDates(mine, habitId, today);
+  const first = from > start ? from : start;
+  const last = to < today ? to : today;
+  let clean = 0;
+  let hardCount = 0;
+  for (let d = first; d <= last; d = addDaysISO(d, 1)) {
+    if (hard.has(d)) hardCount++;
+    else if (covered.has(d)) clean++;
+  }
+  return { clean, hard: hardCount };
+}
+
 export function journeyCounts(tracks: QuitTrack[], slips: QuitSlip[], habitId: string, today: string): JourneyCounts {
   const mine = tracks.filter((t) => t.quitHabitId === habitId);
   if (mine.length === 0) return EMPTY_COUNTS;
@@ -55,22 +75,21 @@ export function journeyCounts(tracks: QuitTrack[], slips: QuitSlip[], habitId: s
   if (start > today) return EMPTY_COUNTS;
   const hard = hardDayDates(mine, slips, habitId);
   const covered = coveredDates(mine, habitId, today);
-  let cleanDays = 0;
   let longestRun = 0;
   let run = 0;
   for (let d = start; d <= today; d = addDaysISO(d, 1)) {
     const clean = covered.has(d) && !hard.has(d);
-    if (clean) cleanDays++;
     run = clean ? run + 1 : 0;
     longestRun = Math.max(longestRun, run);
   }
   const active = mine.find((t) => t.status === 'active');
+  const dayCounts = quitDayCounts(mine, slips, habitId, start, today, today);
   return {
     journeyDays: daysBetweenISODates(start, today) + 1,
-    cleanDays,
+    cleanDays: dayCounts.clean,
+    hardDays: dayCounts.hard,
     currentRun: active ? run : 0,
     longestRun,
-    hardDays: [...hard].filter((d) => d >= start && d <= today).length,
     running: !!active,
   };
 }
@@ -87,7 +106,8 @@ export interface JourneyHeadline {
 
 export function journeyHeadline(c: JourneyCounts, primary: QuitPrimaryNumber = 'journey'): JourneyHeadline {
   const journey = `Day ${c.journeyDays} of your journey`;
-  const clean = `${c.cleanDays} ${c.cleanDays === 1 ? 'clean day' : 'clean days'}`;
+  // "in total": the journey's whole scope (Recap says its own period).
+  const clean = `${c.cleanDays} ${c.cleanDays === 1 ? 'clean day' : 'clean days'} in total`;
   const run = `Current run: ${days(c.currentRun)}`;
   if (primary === 'clean') return { headline: clean, smaller: [journey, run] };
   if (primary === 'run') return { headline: run, smaller: [journey, clean] };

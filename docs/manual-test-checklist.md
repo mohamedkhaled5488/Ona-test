@@ -19,8 +19,8 @@ Run these on every build, even when there's no time for the full pass. Each one 
 |---|---|
 | MAN-117 | Back from a Recap area page returns to Home, not out of Ona |
 | MAN-118 | Back goes one step everywhere (a Quit sub-page, a Feelings sub-page, the tour); Home says how to close Ona |
-| MAN-119 | A journal feeling, with tags, in Analysis | Journaling → today → write a line → "How did today feel?" → Tense → under "What's behind this?" pick Work → Save. Back to Reflect → Identify the Feeling → Analysis (period "All") | "From your journal" is among the sources; the Tags card shows "Work: tagged once, with Tense." with "Based on 1 entry", without restarting or syncing. Then edit the feeling in Feelings (add Sleep): the journal entry shows "Work · Sleep" | | | |
 | MAN-119 | A journal feeling with "What's behind this?" tags is in Feelings → Analysis by tag |
+| MAN-120 | A number shown in Recap and in a section says its scope, and they agree over the same range (Quit clean days) |
 | MAN-099 | Killed by the system mid-step |
 
 ## 1. Install and first run
@@ -164,6 +164,8 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-116 | Craving toolkit: a slow phone | On the older or cheaper phone: open each tool, draw for a minute, slide the puzzle quickly, flip cards quickly | No stutter you notice; taps answer at once; nothing freezes | | | |
 | MAN-117 | Back from a Recap area page | Home → tap the Grow tile → Android Back (the button or the gesture) | Home's overview again, scrolled where it was; Ona stays open. Then Grow tile → open a section from it → Back: the Grow area page; Back again: Home | | | |
 | MAN-118 | Back, one step everywhere | Reflect → Identify the Feeling → Analysis → Back (Check In) → Back (Reflect). Quit habit → My toolkit → Back (the journey) → Back (the list). Home → Discover → Start the tour → Back (Discover). On Home: Back | Each Back goes exactly one step; on Home, "Press Back again to close Ona", and only a second Back within 2 seconds closes it. Settings → About shows "Built from" with the commit | | | |
+| MAN-119 | A journal feeling, with tags, in Analysis | Journaling → today → write a line → "How did today feel?" → Tense → under "What's behind this?" pick Work → Save. Back to Reflect → Identify the Feeling → Analysis (period "All") | "From your journal" is among the sources; the Tags card shows "Work: tagged once, with Tense." with "Based on 1 entry", without restarting or syncing. Then edit the feeling in Feelings (add Sleep): the journal entry shows "Work · Sleep" | | | |
+| MAN-120 | Recap and Quit numbers, by scope | With a Quit habit started over a week ago (and a hard day in it): Home → Grow tile, period Week; then Quit → that habit → Analysis. Switch Recap to a custom range from the habit's start to today | Recap says "Clean days this week", Quit says "N clean days in total": the week's number is never more than the total. With the range from the start, Recap's clean days equal Quit's exactly. Habits and Skills: "completions in total", "invested in total" equal Recap over the same range | | | |
 
 ## Sign-off
 

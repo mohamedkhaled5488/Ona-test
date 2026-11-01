@@ -37,14 +37,14 @@ test('QUIT-UI-001 the journey reads "Day N of your journey", with clean days and
   const id = oneHabit();
   await renderScreen('quitHabit', QuitHabitScreen, { openHabitId: id });
   expect(await screen.findByText('Day 10 of your journey')).toBeTruthy();
-  expect(screen.getByText('10 clean days · Current run: 10 days')).toBeTruthy();
+  expect(screen.getByText('10 clean days in total · Current run: 10 days')).toBeTruthy();
 });
 
 test('QUIT-UI-002 the main number follows the setting', async () => {
   useSettingsStore.setState({ quitPrimaryNumber: 'clean' });
   const id = oneHabit();
   await renderScreen('quitHabit', QuitHabitScreen, { openHabitId: id });
-  expect(await screen.findByText('10 clean days')).toBeTruthy();
+  expect(await screen.findByText('10 clean days in total')).toBeTruthy();
   expect(screen.getByText('Day 10 of your journey · Current run: 10 days')).toBeTruthy();
 });
 
@@ -117,7 +117,7 @@ test('QUIT-UI-020 "I slipped" from a craving, and "I had a hard day": marked on 
   expect(st().cravingSessions[0]).toMatchObject({ outcome: 'slipped', slipId: st().slips[0].id });
   await r.user.press(screen.getByText(SLIP_COPY.back));
   expect(await screen.findByText('Day 10 of your journey')).toBeTruthy();
-  expect(screen.getByText('9 clean days · Current run: 0 days')).toBeTruthy();
+  expect(screen.getByText('9 clean days in total · Current run: 0 days')).toBeTruthy();
   expect(st().tracks).toHaveLength(1); // the same chapter
   expect(st().tracks[0].status).toBe('active');
 });

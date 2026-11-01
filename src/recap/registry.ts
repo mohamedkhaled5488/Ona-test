@@ -13,6 +13,7 @@ import { buildSkillsTimeBreakdown } from '../utils/recap';
 import { quitJourneySeries } from '../utils/habitStats';
 import { journeyCounts, localDateOf, sessionSeconds } from '../quit/journey';
 import { allTools } from '../quit/toolkit';
+import { countIn, metricPhrase, scopeWords, type MetricScope } from '../metrics/registry';
 import { formatMoney } from '../data/currencies';
 import { sectionAccents } from '../theme';
 
@@ -21,6 +22,9 @@ export interface RecapRow {
   label: string;
   value: string;
   open?: RecapOpen;
+  // A row with a scope of its own (a budget's own period, where a plan stands
+  // now): its label isn't given Recap's period.
+  ownScope?: boolean;
 }
 export interface RecapItem {
   id: string;
@@ -44,7 +48,18 @@ export interface RecapContext {
   data: RecapData;
   stats: PeriodStats;
   today: string;
+  // The period, for the labels ("this week", "that month"). Unset: "in this
+  // range".
+  scope?: MetricScope;
 }
+
+// Every row says its period (metrics/registry.ts): "Clean days this week",
+// so a Recap number never reads like a section's "in total" one.
+function withScope(r: SectionRecap, ctx: RecapContext): SectionRecap {
+  const words = scopeWords(ctx.scope ?? { kind: 'period', period: 'custom', current: false });
+  return { ...r, rows: r.rows.map((row) => (row.ownScope ? row : { ...row, label: `${row.label} ${words}` })) };
+}
+const built = (c: RecapContributor, ctx: RecapContext) => withScope(c.build(ctx), ctx);
 export interface RecapContributor {
   section: SectionId;
   area: AreaId;
@@ -83,7 +98,7 @@ export const RECAP_CONTRIBUTORS: RecapContributor[] = [
     build: ({ data, stats }) => {
       const plans = planDetails(data, stats).plans;
       const stepsDone = plans.reduce((n, p) => n + p.done, 0);
-      return recap('planBuilder', 'Plans', plans.length > 0, plans.length ? [{ label: 'Steps done across active plans', value: String(stepsDone), open: { section: 'planBuilder' } }] : [], {
+      return recap('planBuilder', 'Plans', plans.length > 0, plans.length ? [{ label: 'Steps done across active plans', value: String(stepsDone), open: { section: 'planBuilder' }, ownScope: true }] : [], {
         items: plans.map((p) => ({ id: p.id, title: p.title, caption: `${p.done} of ${p.total} steps`, fraction: p.done / p.total, color: p.color, open: { route: 'planDetail', params: { planId: p.id } } })),
       });
     },
@@ -103,7 +118,7 @@ export const RECAP_CONTRIBUTORS: RecapContributor[] = [
       const spending = planDetails(data, stats).spending;
       return recap('budget', 'Budget', entries.length > 0, [
         { label: 'Entries logged', value: String(entries.length), open: { section: 'budget' } },
-        ...spending.map((b) => ({ label: b.name, value: `${b.mode === 'goal' ? 'Saved' : 'Spent'} ${formatMoney(b.amount, b.currency)} of ${formatMoney(b.target, b.currency)}`, open: { section: 'budget', params: { openBudgetId: b.budgetId } } as RecapOpen })),
+        ...spending.map((b) => ({ label: b.name, value: `${b.mode === 'goal' ? 'Saved' : 'Spent'} ${formatMoney(b.amount, b.currency)} of ${formatMoney(b.target, b.currency)}`, open: { section: 'budget', params: { openBudgetId: b.budgetId } } as RecapOpen, ownScope: true })),
       ]);
     },
   },
@@ -172,34 +187,33 @@ export const RECAP_CONTRIBUTORS: RecapContributor[] = [
     area: 'grow',
     title: 'Quitting',
     sensitive: true,
-    build: ({ data, stats, today }) => {
+    build: (ctx) => {
+      const { data, stats, today } = ctx;
       // The same journey the Quit section draws, cut to this period: clean
       // days, urges ridden out, hard days (never "failed"), and the time and
       // tools used to ride cravings out.
       const end = stats.range.end < today ? stats.range.end : today;
       const slips = data.quitSlips ?? [];
       const sessions = (data.quitCravingSessions ?? []).filter((c) => inRange(localDateOf(c.startedAt), stats));
+      const range = { start: stats.range.start, end: stats.range.end };
+      const words = scopeWords(ctx.scope ?? { kind: 'period', period: 'custom', current: false });
       const items: RecapItem[] = [];
-      let clean = 0;
-      let urges = 0;
-      let hard = 0;
       for (const h of data.quitHabits) {
-        const days = quitJourneySeries(data.quitTracks, data.quitFeelingEntries, h.id, end, slips).filter((d) => inRange(d.date, stats));
-        if (!days.length) continue;
-        const ownClean = days.filter((d) => !d.hardDay).length;
-        const ownUrges = days.reduce((n, d) => n + d.resistedCount, 0);
-        const ownHard = days.filter((d) => d.hardDay).length;
-        clean += ownClean;
-        urges += ownUrges;
-        hard += ownHard;
+        if (!data.quitTracks.some((t) => t.quitHabitId === h.id && t.startDate <= end)) continue;
+        const f = { quitHabitId: h.id };
+        const ownUrges = countIn('urgesRiddenOut', data, range, today, f);
+        const ownHard = countIn('hardDays', data, range, today, f);
         const counts = journeyCounts(data.quitTracks, slips, h.id, end);
         items.push({
           id: h.id,
           title: h.name,
-          caption: [`Day ${counts.journeyDays} of your journey`, ownUrges ? plural(ownUrges, 'urge ridden out', 'urges ridden out') : '', ownHard ? plural(ownHard, 'hard day', 'hard days') : ''].filter(Boolean).join(' · '),
+          caption: [`Day ${counts.journeyDays} of your journey`, ownUrges ? `${metricPhrase('urgesRiddenOut', ownUrges, ctx.scope ?? { kind: 'period', period: 'custom', current: false })}` : '', ownHard ? `${plural(ownHard, 'hard day', 'hard days')} ${words}` : ''].filter(Boolean).join(' · '),
           open: { section: 'quitHabit', params: { openHabitId: h.id } },
         });
       }
+      const clean = countIn('cleanDays', data, range, today);
+      const urges = countIn('urgesRiddenOut', data, range, today);
+      const hard = countIn('hardDays', data, range, today);
       const seconds = sessions.reduce((n, c) => n + sessionSeconds(c, Date.parse(`${end}T23:59:59`)), 0);
       // The tools used, by name, in the menu's order (the user's own after).
       const used = new Set(sessions.flatMap((c) => c.tools.map((t) => t.toolId)));
@@ -224,12 +238,14 @@ export const RECAP_CONTRIBUTORS: RecapContributor[] = [
     area: 'grow',
     title: 'Skills',
     perDay: ({ stats }, d) => stats.minutesByDay[d]?.skills ?? 0,
-    build: ({ data, stats }) => {
+    build: (ctx) => {
+      const { data, stats } = ctx;
       const t = buildSkillsTimeBreakdown(data.skills, data.skillSessions, stats.range.start, stats.range.end);
       return recap('skills', 'Skills', stats.skillSessions > 0, [
-        { label: 'Practice time', value: formatDuration(t.totalMinutes), open: { section: 'skills' } },
+        // The registry's count (the Skills section's "invested in total" rule).
+        { label: 'Practice time', value: formatDuration(stats.minutes.skills), open: { section: 'skills' } },
         { label: 'Practice sessions', value: String(stats.skillSessions) },
-        ...t.bySkill.map((s) => ({ label: s.skillName, value: formatDuration(s.minutes), open: { section: 'skills', params: { openSkillId: s.skillId } } as RecapOpen })),
+        ...t.bySkill.map((s) => ({ label: s.skillName, value: formatDuration(countIn('practiceMinutes', data, stats.range, ctx.today, { skillId: s.skillId })), open: { section: 'skills', params: { openSkillId: s.skillId } } as RecapOpen })),
       ]);
     },
   },
@@ -287,7 +303,7 @@ export function visibleContributors(hidden: SectionId[], hideSensitive: boolean)
 }
 
 export function sectionRecaps(area: AreaId, ctx: RecapContext, hidden: SectionId[], hideSensitive: boolean): SectionRecap[] {
-  return visibleContributors(hidden, hideSensitive).filter((c) => c.area === area).map((c) => c.build(ctx));
+  return visibleContributors(hidden, hideSensitive).filter((c) => c.area === area).map((c) => built(c, ctx));
 }
 
 export interface AreaTile {
@@ -303,8 +319,8 @@ export function areaTiles(ctx: RecapContext, hidden: SectionId[], hideSensitive:
   const visible = visibleContributors(hidden, hideSensitive);
   return AREA_ORDER.filter((area) => visible.some((c) => c.area === area)).map((area) => {
     const mine = visible.filter((c) => c.area === area);
-    const built = mine.map((c) => c.build(ctx));
-    const withData = built.filter((r) => r.hasData && r.rows.length > 0);
+    const recaps = mine.map((c) => built(c, ctx));
+    const withData = recaps.filter((r) => r.hasData && r.rows.length > 0);
     const daily = mine.filter((c) => c.perDay);
     return {
       area,

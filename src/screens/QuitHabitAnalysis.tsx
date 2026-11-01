@@ -24,13 +24,14 @@ import { todayISO, formatDisplayDate } from '../utils/date';
 import { daysBetweenISO, domainLabels } from '../utils/feelingsStats';
 import {
   quitAnalysisSummary,
-  quitHeaderStats,
   quitJourneyLog,
   relapseReasonCounts,
   resistedUrgeTrend,
   type QuitLogEvent,
 } from '../utils/habitStats';
 import { themedStyles } from '../theme/runtime';
+import { journeyCounts } from '../quit/journey';
+import { metricCount, TOTAL } from '../metrics/registry';
 
 // Lazy for the same reason as in MoodCheckScreen: Skia's web backend must not
 // evaluate before App.tsx has loaded CanvasKit.
@@ -85,7 +86,8 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
   const chartSlots = Math.max(7, totalDays);
 
   // --- 1. Header stats ---
-  const header = quitHeaderStats(tracks, feelingEntries, habitId, today);
+  const counts = journeyCounts(tracks, slips, habitId, today);
+  const urgesTotal = metricCount('urgesRiddenOut', { quitTracks: tracks, quitFeelingEntries: feelingEntries }, TOTAL, today, undefined, { quitHabitId: habitId });
 
   // --- 3. The journey, day by day (a slip stays part of it; nothing drops to zero) ---
   const period = patternRange(range, today, journeyStart);
@@ -115,13 +117,10 @@ export function QuitHabitAnalysisStage({ habitId, onBack }: { habitId: string; o
       <StatRow
         accent={accent}
         stats={[
-          {
-            value: header.currentDays > 0 ? String(header.currentDays) : '—',
-            label: header.currentDays === 0 ? 'no active track' : header.currentDays === 1 ? 'day on this track' : 'days on this track',
-          },
-          { value: String(header.resistedTotal), label: header.resistedTotal === 1 ? 'urge resisted' : 'urges resisted' },
-          { value: String(header.longestDays), label: header.longestDays === 1 ? 'day longest stretch' : 'days longest stretch' },
-          { value: String(header.trackCount), label: header.trackCount === 1 ? 'track so far' : 'tracks so far' },
+          { value: String(counts.journeyDays), label: 'day of your journey' },
+          { value: String(counts.cleanDays), label: `${counts.cleanDays === 1 ? 'clean day' : 'clean days'} in total` },
+          { value: String(urgesTotal), label: `${urgesTotal === 1 ? 'urge ridden out' : 'urges ridden out'} in total` },
+          { value: String(counts.longestRun), label: counts.longestRun === 1 ? 'day longest run' : 'days longest run' },
         ]}
       />
 

@@ -3,7 +3,9 @@ import type { FeelingCheckIn, Habit, HabitCheckIn, PersonalFeeling, QuitFeelingE
 import { findFeeling, zoneMeta } from '../data/feelingsWheel';
 import { formatDisplayDate } from './date';
 import { frequencyLabel } from './habitFrequency';
-import { longestHabitStreak, quitHeaderStats, quitJourneyLog, type QuitLogEvent } from './habitStats';
+import { longestHabitStreak, quitJourneyLog, type QuitLogEvent } from './habitStats';
+import { journeyCounts } from '../quit/journey';
+import { metricCount, metricPhrase, TOTAL } from '../metrics/registry';
 
 // Same shape as skillExport.ts / bookExport.ts: a plain-text version for the
 // share sheet, and an HTML version rendered to PDF on native.
@@ -123,9 +125,11 @@ function feelingName(id: string | undefined, personal: PersonalFeeling[]): strin
   return findFeeling(id)?.name ?? personal.find((p) => p.id === id)?.name ?? 'Feeling';
 }
 
-function quitStatsLine(tracks: QuitTrack[], entries: QuitFeelingEntry[], habitId: string, today: string): string {
-  const s = quitHeaderStats(tracks, entries, habitId, today);
-  return `${s.trackCount} track${s.trackCount === 1 ? '' : 's'} · longest stretch ${s.longestDays} days · ${s.resistedTotal} urge${s.resistedTotal === 1 ? '' : 's'} resisted`;
+// The journey's numbers, as Quit and Recap count them (metrics/registry.ts).
+function quitStatsLine(tracks: QuitTrack[], entries: QuitFeelingEntry[], habitId: string, today: string, slips: QuitSlip[]): string {
+  const c = journeyCounts(tracks, slips, habitId, today);
+  const urges = metricCount('urgesRiddenOut', { quitTracks: tracks, quitFeelingEntries: entries }, TOTAL, today, undefined, { quitHabitId: habitId });
+  return `Day ${c.journeyDays} of the journey · ${metricPhrase('cleanDays', c.cleanDays, TOTAL)} · longest run ${c.longestRun} day${c.longestRun === 1 ? '' : 's'} · ${metricPhrase('urgesRiddenOut', urges, TOTAL)}`;
 }
 
 function describeEvent(e: QuitLogEvent, personal: PersonalFeeling[]): { cls: string; title: string; lines: string[]; note?: string } {
@@ -161,7 +165,7 @@ function chronological(tracks: QuitTrack[], entries: QuitFeelingEntry[], habitId
 }
 
 export function buildQuitJourneyText(habit: QuitHabit, tracks: QuitTrack[], entries: QuitFeelingEntry[], personal: PersonalFeeling[], today: string, slips: QuitSlip[] = []): string {
-  const header = [`${habit.name} — the journey since ${formatDisplayDate(habit.createdAt)}`, habit.why ? `Why: ${habit.why}` : '', quitStatsLine(tracks, entries, habit.id, today)].filter(Boolean);
+  const header = [`${habit.name} — the journey since ${formatDisplayDate(habit.createdAt)}`, habit.why ? `Why: ${habit.why}` : '', quitStatsLine(tracks, entries, habit.id, today, slips)].filter(Boolean);
   const body = chronological(tracks, entries, habit.id, slips)
     .map((e) => {
       const d = describeEvent(e, personal);
@@ -193,7 +197,7 @@ export function buildQuitJourneyHtml(habit: QuitHabit, tracks: QuitTrack[], entr
         <h1>${escapeHtml(habit.name)}</h1>
         <h2>The journey since ${escapeHtml(formatDisplayDate(habit.createdAt))}</h2>
         ${habit.why ? `<p class="note">${escapeHtml(habit.why)}</p>` : ''}
-        <p class="stats">${escapeHtml(quitStatsLine(tracks, entries, habit.id, today))}</p>
+        <p class="stats">${escapeHtml(quitStatsLine(tracks, entries, habit.id, today, slips))}</p>
         ${rows}
       </body>
     </html>`;

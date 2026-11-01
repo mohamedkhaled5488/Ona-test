@@ -188,7 +188,7 @@ function OverviewStage({ onOpenSkill }: { onOpenSkill: (skillId: string, setUp?:
           <View style={styles.skillCardBody}>
             <Body>{skill.name}</Body>
             <Caption>
-              {formatHours(totalMinutesFor(sessions, skill.id))} invested{level ? ` · ${LEVEL_LABELS[level]}` : ''}
+              {formatHours(totalMinutesFor(sessions, skill.id))} invested in total{level ? ` · ${LEVEL_LABELS[level]}` : ''}
             </Caption>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.inkSoft} />
@@ -695,7 +695,7 @@ function FolderStage({
       <StatRow
         accent={color}
         stats={[
-          { value: formatHours(minutes), label: 'invested' },
+          { value: formatHours(minutes), label: 'invested in total' },
           { value: String(mine.length), label: mine.length === 1 ? 'session' : 'sessions' },
         ]}
       />

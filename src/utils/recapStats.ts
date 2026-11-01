@@ -25,6 +25,7 @@ import { bookProgress, describeProgress } from './bookProgress';
 import { computePlanProgress, flattenSteps } from '../store/usePlanStore';
 import { addDaysISO } from './date';
 import { localDateOf } from '../quit/journey';
+import { METRICS, type MetricDef, type MetricId } from '../metrics/registry';
 
 // The app's zone order, used wherever Recap lists feelings (never sorted by count).
 const RECAP_ZONE_ORDER: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay'];
@@ -139,6 +140,8 @@ export interface PeriodStats {
 const emptyMinutes = (): Record<EffortKind, number> => ({ study: 0, skills: 0, reading: 0, habits: 0 });
 
 export function periodStats(data: RecapData, range: DateRange): PeriodStats {
+  // The counts every screen shares, defined once (metrics/registry.ts).
+  const count = (id: MetricId) => (METRICS[id] as MetricDef).count(data, range, range.end);
   const dates = datesInRange(range.start, range.end);
   const minutesByDay: Record<string, Record<EffortKind, number>> = {};
   for (const d of dates) minutesByDay[d] = emptyMinutes();
@@ -206,26 +209,26 @@ export function periodStats(data: RecapData, range: DateRange): PeriodStats {
     tasksPlanned,
     tasksCompleted,
     tasksByDay,
-    mealsPlanned: data.meals.filter((m) => inRange(m.date, range)).length,
-    journalEntries: journal.length,
+    mealsPlanned: count('mealsPlanned'),
+    journalEntries: count('journalEntries'),
     journalWords: journal.reduce((sum, e) => sum + (e.text.trim() ? e.text.trim().split(/\s+/).length : 0), 0),
-    feelingsLogged: feelingsIn.length,
+    feelingsLogged: count('feelingsNamed'),
     zoneMix,
     topFeelings,
-    sleepLogs: sleepIn.length,
+    sleepLogs: count('nightsLogged'),
     restedNights: sleepIn.filter((l) => l.quality >= 4).length,
-    habitCompletions: data.habitCheckIns.filter((c) => c.done && inRange(c.date, range)).length,
-    resistedUrges: data.quitFeelingEntries.filter((e) => e.isResistedUrge && inRange(localDateOf(e.createdAt), range)).length,
-    skillSessions: data.skillSessions.filter((s) => inRange(s.date, range)).length,
-    studySessions: data.studySessions.filter((s) => inRange(s.date, range)).length,
+    habitCompletions: count('habitCheckIns'),
+    resistedUrges: count('urgesRiddenOut'),
+    skillSessions: count('practiceSessions'),
+    studySessions: count('studySessions'),
     readingSessions: readingIn.length,
-    pagesRead: readingIn.reduce((sum, s) => sum + (s.pagesRead ?? 0), 0),
+    pagesRead: count('pagesRead'),
     pagesByDay,
-    quotesSaved: data.quotes.filter((q) => inRange(q.createdAt.slice(0, 10), range)).length,
+    quotesSaved: count('quotesSaved'),
     // Approximate: a finished book's last update is when it was marked finished.
-    booksFinished: data.readingEntries.filter((e) => e.status === 'finished' && inRange(e.updatedAt.slice(0, 10), range)),
-    thoughtsCaught: data.thoughts.filter((t) => inRange(t.createdAt.slice(0, 10), range)).length,
-    gamesPlayed: data.gameResults.filter((g) => inRange(g.playedAt.slice(0, 10), range)).length,
+    booksFinished: data.readingEntries.filter((e) => e.status === 'finished' && inRange(localDateOf(e.updatedAt), range)),
+    thoughtsCaught: count('thoughtsCaught'),
+    gamesPlayed: count('gamesPlayed'),
     activeDates: [...active].filter((d) => inRange(d, range)).sort(),
   };
 }

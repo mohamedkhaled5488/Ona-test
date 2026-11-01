@@ -16,6 +16,8 @@ import { addDaysISO, formatDisplayDate } from './date';
 import { daysBetweenISO, mostCommonZone } from './feelingsStats';
 import { weekStart } from './habitFrequency';
 import { SKILL_ANALYSIS } from '../config/skillAnalysis';
+import { metricCount, TOTAL } from '../metrics/registry';
+import { todayISO } from './date';
 
 type Config = typeof SKILL_ANALYSIS;
 
@@ -59,7 +61,8 @@ export function skillSessionsChrono(sessions: PracticeSession[], skillId: string
 }
 
 export function totalMinutesFor(sessions: PracticeSession[], skillId: string): number {
-  return sessions.filter((s) => s.skillId === skillId).reduce((sum, s) => sum + s.minutes, 0);
+  // The one definition of practice time (metrics/registry.ts), as Recap counts it.
+  return metricCount('practiceMinutes', { skillSessions: sessions }, TOTAL, todayISO(), undefined, { skillId });
 }
 
 // A record of effort, nothing more — "38 h", "1.5 h", "45 min".

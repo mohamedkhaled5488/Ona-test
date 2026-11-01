@@ -51,6 +51,7 @@ import { LevelDots } from './SkillSetupSheet';
 import { SessionDetails } from './SkillParts';
 import type { SessionDifficulty } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
+import { metricCount, TOTAL } from '../metrics/registry';
 
 // Lazy for the same reason as in MoodCheckScreen: Skia's web backend must not
 // evaluate before App.tsx has loaded CanvasKit.
@@ -111,7 +112,7 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
   const color = skill.color;
   const today = todayISO();
   const start = sessions[0] && sessions[0].date < skill.startDate ? sessions[0].date : skill.startDate;
-  const totalMinutes = sessions.reduce((sum, s) => sum + s.minutes, 0);
+  const totalMinutes = metricCount('practiceMinutes', { skillSessions: sessions }, TOTAL, today, undefined, { skillId });
   const milestonesReached = skill.milestones.filter((m) => m.achieved).length;
   const dayIndex = (date: string) => daysBetweenISO(start, date);
   const daySlots = Math.max(7, dayIndex(today) + 1);
@@ -233,7 +234,7 @@ export function SkillAnalysisStage({ skillId, onBack, onOpenSession }: { skillId
       <StatRow
         accent={color}
         stats={[
-          { value: formatHours(totalMinutes), label: 'invested' },
+          { value: formatHours(totalMinutes), label: 'invested in total' },
           { value: String(sessions.length), label: sessions.length === 1 ? 'session' : 'sessions' },
           { value: learningDuration(start, today), label: 'learning so far' },
           { value: String(milestonesReached), label: milestonesReached === 1 ? 'milestone reached' : 'milestones reached' },

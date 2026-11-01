@@ -110,12 +110,12 @@ describe('QUIT-J: the counts', () => {
 describe('QUIT-J: the headline', () => {
   const c = { journeyDays: 12, cleanDays: 10, currentRun: 1, longestRun: 6, hardDays: 2, running: true };
   test('QUIT-J-020 by default "Day N of your journey", with clean days and the current run smaller', () => {
-    expect(journeyHeadline(c)).toEqual({ headline: 'Day 12 of your journey', smaller: ['10 clean days', 'Current run: 1 day'] });
+    expect(journeyHeadline(c)).toEqual({ headline: 'Day 12 of your journey', smaller: ['10 clean days in total', 'Current run: 1 day'] });
   });
   test('QUIT-J-021 the setting picks the main number; the others stay, smaller', () => {
-    expect(journeyHeadline(c, 'clean')).toEqual({ headline: '10 clean days', smaller: ['Day 12 of your journey', 'Current run: 1 day'] });
-    expect(journeyHeadline(c, 'run')).toEqual({ headline: 'Current run: 1 day', smaller: ['Day 12 of your journey', '10 clean days'] });
-    expect(journeyHeadline({ ...c, cleanDays: 1 }).smaller[0]).toBe('1 clean day');
+    expect(journeyHeadline(c, 'clean')).toEqual({ headline: '10 clean days in total', smaller: ['Day 12 of your journey', 'Current run: 1 day'] });
+    expect(journeyHeadline(c, 'run')).toEqual({ headline: 'Current run: 1 day', smaller: ['Day 12 of your journey', '10 clean days in total'] });
+    expect(journeyHeadline({ ...c, cleanDays: 1 }).smaller[0]).toBe('1 clean day in total');
   });
 });
 

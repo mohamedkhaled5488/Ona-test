@@ -32,6 +32,7 @@ import {
 } from '../utils/habitStats';
 import { themedStyles } from '../theme/runtime';
 import { basedOn, itemFeelingInsight } from '../utils/feelingsInsights';
+import { metricCount, TOTAL } from '../metrics/registry';
 
 // Lazy for the same reason as in MoodCheckScreen: Skia's web backend must not
 // evaluate before App.tsx has loaded CanvasKit.
@@ -85,7 +86,7 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
 
   // --- 1. Header stats ---
   const { current: currentStreak, unit } = habitStreak(checkIns, habitId, today, habit.frequency);
-  const totalCompletions = habitCheckIns.filter((c) => c.done).length;
+  const totalCompletions = metricCount('habitCheckIns', { habitCheckIns: checkIns }, TOTAL, today, undefined, { habitId });
   // Success = share of what the schedule planned since the start, not of
   // every calendar day — a Mon/Wed/Fri habit done every Mon/Wed/Fri is 100%.
   const successRate = completionRate(checkIns, habitId, habit.frequency, habit.createdAt, today) ?? 0;
@@ -127,7 +128,7 @@ export function BuildHabitAnalysisStage({ habitId, onBack, onOpenLog }: { habitI
         accent={accent}
         stats={[
           { value: String(currentStreak), label: `${unitWord(currentStreak)} current streak` },
-          { value: String(totalCompletions), label: totalCompletions === 1 ? 'completion' : 'total completions' },
+          { value: String(totalCompletions), label: totalCompletions === 1 ? 'completion in total' : 'completions in total' },
           { value: `${successRate}%`, label: `success rate · ${planned} planned` },
           { value: String(longest), label: `${unitWord(longest)} longest streak` },
         ]}

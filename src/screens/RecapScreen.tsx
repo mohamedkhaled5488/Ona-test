@@ -93,6 +93,7 @@ import type { RootStackParamList } from '../navigation/types';
 import type { SectionId } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
 import { openSection } from '../navigation/navigationRef';
+import type { MetricScope } from '../metrics/registry';
 
 // Recap is rendered directly as the Home tab, not pushed as its own stack
 // route — but it still needs to navigate to every other section, which all
@@ -365,11 +366,12 @@ function RecapHome({ navigation, data, hidden, period, stats, previous, granular
   const plus = usePlus();
   const hideSensitiveTop = useSettingsStore((s) => s.hideSensitiveOnHome);
   const summary = useMemo(() => effortSummary(stats, comparison ? previous : undefined, period, isCurrent, hideSensitiveTop ? SENSITIVE_SECTIONS : []), [stats, previous, comparison, period, isCurrent, hideSensitiveTop]);
-  const sentence = useMemo(() => recapSentence({ data, stats, today: todayISO() }, period, isCurrent, hidden, hideSensitiveTop), [data, stats, period, isCurrent, hidden, hideSensitiveTop]);
+  const scope: MetricScope = useMemo(() => ({ kind: 'period', period, current: isCurrent }), [period, isCurrent]);
+  const sentence = useMemo(() => recapSentence({ data, stats, today: todayISO(), scope }, period, isCurrent, hidden, hideSensitiveTop), [data, stats, period, isCurrent, hidden, hideSensitiveTop, scope]);
   const highlights = useMemo(() => buildHighlights(data, stats), [data, stats]);
   const hideSensitive = useSettingsStore((s) => s.hideSensitiveOnHome);
   // Every area tile comes from the Recap registry (src/recap/registry.ts).
-  const areas = useMemo(() => areaTiles({ data, stats, today: todayISO() }, hidden, hideSensitive), [data, stats, hidden, hideSensitive]);
+  const areas = useMemo(() => areaTiles({ data, stats, today: todayISO(), scope }, hidden, hideSensitive), [data, stats, hidden, hideSensitive, scope]);
   const events = useMemo(() => collectRecapEvents(data), [data]);
   const counts = useMemo(() => buildActivityCounts(events), [events]);
   const observations = useMemo(() => {
@@ -565,6 +567,7 @@ function AreaPage({
   navigation,
   data,
   stats,
+  scope,
   periodLabel,
   hidden,
   onBack,
@@ -573,6 +576,7 @@ function AreaPage({
   navigation: Nav;
   data: RecapData;
   stats: PeriodStats;
+  scope: MetricScope;
   periodLabel: string;
   hidden: SectionId[];
   onBack: () => void;
@@ -580,7 +584,7 @@ function AreaPage({
   const color = AREA_ACCENT[area];
   const hideSensitive = useSettingsStore((s) => s.hideSensitiveOnHome);
   // Every card comes from the Recap registry: one per section in this area.
-  const recaps = useMemo(() => sectionRecaps(area, { data, stats, today: todayISO() }, hidden, hideSensitive).filter((r) => r.hasData), [area, data, stats, hidden, hideSensitive]);
+  const recaps = useMemo(() => sectionRecaps(area, { data, stats, today: todayISO(), scope }, hidden, hideSensitive).filter((r) => r.hasData), [area, data, stats, hidden, hideSensitive, scope]);
   const open = (target?: RecapOpen) => {
     if (!target) return undefined;
     return () => ('route' in target ? openSection('planDetail', target.params) : openSection(target.section, target.params));
@@ -805,7 +809,7 @@ export function RecapScreen({ navigation }: Props) {
   const isCurrent = today >= range.start && today <= range.end;
   const label = describePeriod(period, range.start, range.end);
 
-  const story = useMemo(() => buildStory(data, stats, buildHighlights(data, stats), period, isCurrent, today, recapSentence({ data, stats, today }, period, isCurrent, hidden, true)), [data, stats, period, isCurrent, today, hidden]);
+  const story = useMemo(() => buildStory(data, stats, buildHighlights(data, stats), period, isCurrent, today, recapSentence({ data, stats, today, scope: { kind: 'period', period, current: isCurrent } }, period, isCurrent, hidden, true)), [data, stats, period, isCurrent, today, hidden]);
 
   const openDay = (date: string) => {
     setPeriod('today');
@@ -874,7 +878,7 @@ export function RecapScreen({ navigation }: Props) {
       )}
 
       {stage.kind === 'area' && (
-        <AreaPage area={stage.area} navigation={navigation} data={data} stats={stats} periodLabel={label} hidden={hidden} onBack={stepBack} />
+        <AreaPage area={stage.area} navigation={navigation} data={data} stats={stats} scope={{ kind: 'period', period, current: isCurrent }} periodLabel={label} hidden={hidden} onBack={stepBack} />
       )}
 
 

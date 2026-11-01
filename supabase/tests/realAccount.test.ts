@@ -34,7 +34,10 @@ import { startEntitlementSync } from '../../src/utils/entitlementBootstrap';
 import { computeEntitlement } from '../../src/utils/entitlement';
 import { SEED_REFERENCE_DATE, seededSections as seedFor } from '../../src/test-utils/realSeed';
 import { RECAP_CONTRIBUTORS } from '../../src/recap/registry';
-import { periodStats } from '../../src/utils/recapStats';
+import { periodStats, type RecapData } from '../../src/utils/recapStats';
+import { METRICS, TOTAL, countIn, metricCount, type MetricId } from '../../src/metrics/registry';
+import { journeyCounts } from '../../src/quit/journey';
+import { totalMinutesFor } from '../../src/utils/skillProgress';
 import { addDaysISO } from '../../src/utils/date';
 import { tagInsight } from '../../src/utils/feelingsInsights';
 import { logFeeling } from '../../src/feelings/logFeeling';
@@ -109,6 +112,18 @@ function phoneRecords(): Record<string, Map<string, unknown>> {
   return Object.fromEntries(syncedCollections().map((c) => [c.key, toRecords(c.key, (LOCAL_DATA[c.section].store.getState() as Record<string, unknown>)[c.field])]));
 }
 
+// What Recap reads, from this phone's stores.
+function phoneData(): RecapData {
+  const s = (section: string) => LOCAL_DATA[section].store.getState() as Record<string, unknown>;
+  return {
+    tasks: s('dailyPlanning').tasks, journalEntries: s('journaling').entries, thoughts: s('catchAThought').thoughts, studySessions: s('studySession').sessions, meals: s('dietPlanning').plannedMeals,
+    songs: s('songwriting').songs, gameResults: s('mindGames').results, feelingCheckIns: s('feelings').entries, sleepLogs: s('sleep').logs, readingEntries: s('book').entries, readingSessions: s('book').sessions,
+    quotes: s('book').quotes, plans: s('planBuilder').plans, skills: s('skills').skills, skillSessions: s('skills').sessions, habits: s('habits').habits, habitCheckIns: s('habits').checkIns,
+    budgets: s('budget').budgets, budgetEntries: s('budget').entries, quitHabits: s('quitHabit').habits, quitTracks: s('quitHabit').tracks, quitFeelingEntries: s('quitHabit').feelingEntries,
+    quitSlips: s('quitHabit').slips, quitCravingSessions: s('quitHabit').cravingSessions, bestMoments: [],
+  } as never;
+}
+
 afterEach(() => {
   stops.forEach((s) => s());
   stops = [];
@@ -157,14 +172,7 @@ test('BE-REAL-002 on the restored phone, Recap has every section that has data, 
   await freshPhone();
   await signIn(u);
   await sync();
-  const s = (section: string) => LOCAL_DATA[section].store.getState() as Record<string, unknown>;
-  const data = {
-    tasks: s('dailyPlanning').tasks, journalEntries: s('journaling').entries, thoughts: s('catchAThought').thoughts, studySessions: s('studySession').sessions, meals: s('dietPlanning').plannedMeals,
-    songs: s('songwriting').songs, gameResults: s('mindGames').results, feelingCheckIns: s('feelings').entries, sleepLogs: s('sleep').logs, readingEntries: s('book').entries, readingSessions: s('book').sessions,
-    quotes: s('book').quotes, plans: s('planBuilder').plans, skills: s('skills').skills, skillSessions: s('skills').sessions, habits: s('habits').habits, habitCheckIns: s('habits').checkIns,
-    budgets: s('budget').budgets, budgetEntries: s('budget').entries, quitHabits: s('quitHabit').habits, quitTracks: s('quitHabit').tracks, quitFeelingEntries: s('quitHabit').feelingEntries,
-    quitSlips: s('quitHabit').slips, quitCravingSessions: s('quitHabit').cravingSessions, bestMoments: [],
-  } as never;
+  const data = phoneData();
   const range = { start: addDaysISO(TODAY, -56), end: TODAY };
   const ctx = { data, stats: periodStats(data, range as never), today: TODAY };
   const empty = RECAP_CONTRIBUTORS.filter((c) => !c.build(ctx).hasData).map((c) => c.section);
@@ -408,3 +416,29 @@ test('BE-REAL-010 a journal feeling with a tag reaches a fresh phone and its Ana
   expect(tagInsight(entries, 'Work')).toMatchObject({ n: 1 });
 });
 
+// Problem 2 from a phone (2026-10-29): Recap said 5 clean days, Quit said 8.
+// Through a real account: on a fresh phone every number is the same as on the
+// phone that wrote it, and the sections' "in total" numbers equal Recap's
+// over the whole history (metrics/registry.ts, one definition each).
+test('BE-REAL-011 every number shown in both Recap and a section matches by scope, before and after a restore', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  loadIntoPhone(seededSections());
+  const ids = Object.keys(METRICS) as MetricId[];
+  const counts = (d: RecapData) => Object.fromEntries(ids.map((id) => [id, metricCount(id, d, TOTAL, TODAY)]));
+  const before = counts(phoneData());
+  await sync();
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  const data = phoneData();
+  expect(counts(data)).toEqual(before);
+  const start = [...data.quitTracks.map((t) => t.startDate), ...data.habitCheckIns.map((c) => c.date), ...data.skillSessions.map((x) => x.date)].reduce((m, d) => (d < m ? d : m), TODAY);
+  const stats = periodStats(data, { start, end: TODAY });
+  const clean = data.quitHabits.reduce((n, h) => n + journeyCounts(data.quitTracks, data.quitSlips ?? [], h.id, TODAY).cleanDays, 0);
+  expect(countIn('cleanDays', data, { start, end: TODAY }, TODAY)).toBe(clean);
+  expect(stats.habitCompletions).toBe(data.habits.reduce((n, h) => n + metricCount('habitCheckIns', data, TOTAL, TODAY, undefined, { habitId: h.id }), 0));
+  expect(stats.minutes.skills).toBe(data.skills.reduce((n, k) => n + totalMinutesFor(data.skillSessions, k.id), 0));
+});
