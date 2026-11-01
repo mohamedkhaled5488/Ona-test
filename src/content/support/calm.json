@@ -1,0 +1,22 @@
+{
+  "zone": "calm",
+  "acknowledge": [
+    { "id": "calm.ack.01", "intensity": [1, 3], "text": "A quiet moment. Those are worth having.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.ack.02", "intensity": [1, 3], "text": "Things feel settled right now. Nothing needs to happen.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.ack.03", "intensity": [4, 5], "text": "Deeply calm. Let yourself stay here a while.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.ack.04", "intensity": [4, 5], "text": "This is a good, still place to be.", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "understand": [
+    { "id": "calm.und.01", "intensity": [1, 5], "text": "Calm often goes unnoticed, because nothing is asking for attention. Noticing it can help you find your way back on busier days.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.und.02", "intensity": [1, 5], "text": "Many people find calm easier to return to once they know what it feels like in their body.", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "options": [
+    { "id": "calm.body.where", "kind": "body", "intensity": [1, 5], "title": "Notice where it lives", "text": "Where do you feel this calm? Your shoulders, your breath, your hands? Just notice.", "why": "Knowing how calm feels in your body can give you something to look for later.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.mind.how", "kind": "mind", "intensity": [1, 5], "title": "What got you here?", "text": "What helped you arrive at this feeling today?", "why": "Knowing what brings you calm can make it easier to find on a busier day.", "prompt": "What helped me feel calm today:", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.write.forTense", "kind": "write", "intensity": [1, 5], "title": "A note for a tense day", "text": "Write to yourself for a day when things feel tight: what does calm feel like, and what helped?", "why": "On a tense day, a reminder from a calm you can be easier to trust.", "letter": "feeling", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.do.slow", "kind": "do", "intensity": [1, 5], "title": "Do one thing slowly", "text": "Make a drink, water a plant, tidy one shelf. Slowly, because you can.", "why": "Doing something slowly on purpose can help calm last a little longer.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.connect.kind", "kind": "connect", "intensity": [1, 5], "title": "A gentle hello", "text": "Send a kind message to someone you haven't heard from in a while.", "why": "Calm moments are often good ones for reaching out without pressure.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.do.listen", "kind": "do", "intensity": [1, 5], "title": "Just listen", "text": "Put on a calm sound and do nothing else for a little while.", "why": "Giving yourself permission to do nothing is a way of resting properly.", "tool": "sounds", "reviewed": false, "sensitivity": "standard" },
+    { "id": "calm.write.matters", "kind": "write", "intensity": [1, 5], "title": "A question for a quiet moment", "text": "What matters to you that's easy to forget on busy days?", "why": "Quiet moments are often when the important things are easiest to hear.", "prompt": "What matters to me that's easy to forget on busy days:", "reviewed": false, "sensitivity": "standard" }
+  ]
+}

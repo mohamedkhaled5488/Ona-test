@@ -1,0 +1,110 @@
+[
+  {
+    "id": "where-i-am",
+    "title": "Where I am right now",
+    "line": "A look at today, without fixing anything",
+    "opening": "No need to sum anything up. Just notice where you are today.",
+    "closing": "That's where you are, for now. It doesn't have to be anywhere else.",
+    "written": true,
+    "reviewed": false
+  },
+  {
+    "id": "know-myself",
+    "title": "Know myself",
+    "line": "Questions about you, from you",
+    "opening": "Questions about you, from you. There are no wrong answers here, only your own.",
+    "closing": "You know yourself a little better than you did a few questions ago. That counts.",
+    "written": true,
+    "reviewed": false
+  },
+  {
+    "id": "values",
+    "title": "Values and what matters",
+    "line": "What you care about, when it's quiet",
+    "opening": "Under the busy days there are a few things you care about. Let's find them.",
+    "closing": "Those are yours. You can come back to them whenever a choice feels hard.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "decision",
+    "title": "A decision I'm facing",
+    "line": "Think a choice through, slowly",
+    "opening": "You don't have to decide anything today. Just look at it from a few sides.",
+    "closing": "Whatever you choose, you thought it through. That's worth something.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "relationships",
+    "title": "Relationships",
+    "line": "The people in your life, and you with them",
+    "opening": "The people around us shape our days. Let's think about yours.",
+    "closing": "Relationships keep changing, and so do we. Thank you for looking at yours honestly.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "work",
+    "title": "Work and purpose",
+    "line": "What you do, and what it means to you",
+    "opening": "Work takes up a lot of life. Let's see what it's giving you, and what it's taking.",
+    "closing": "Purpose doesn't have to be grand. It can be in how you spend an ordinary day.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "fears",
+    "title": "Fears and worries",
+    "line": "Look at a worry from a safe distance",
+    "opening": "Worries are often easier to look at when they're written down. Go at your own pace.",
+    "closing": "You looked at something hard. You can put it down again now.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "letting-go",
+    "title": "Letting go",
+    "line": "Something you're ready to set down",
+    "opening": "Some things are heavy to keep carrying. Let's see which ones.",
+    "closing": "Letting go is usually slow. Today you took a step.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "gratitude",
+    "title": "Gratitude and what's working",
+    "line": "Notice what's going right",
+    "opening": "Hard things tend to get our attention first. Let's give the good things a turn.",
+    "closing": "Those good things were there all along. Now you've written them down.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "review",
+    "title": "A month or year in review",
+    "line": "Look back over a stretch of time",
+    "opening": "Let's look back over a stretch of time, gently, and see what it held.",
+    "closing": "That was a stretch of your life. You lived it, and now you've looked at it.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "avoiding",
+    "title": "Something I'm avoiding",
+    "line": "A thing you keep putting off",
+    "opening": "We all put some things off. Let's look at one, without judging it.",
+    "closing": "Now you know a bit more about why it's been waiting. That often makes the next step easier.",
+    "written": false,
+    "reviewed": false
+  },
+  {
+    "id": "becoming",
+    "title": "Who I want to become",
+    "line": "A gentle look ahead",
+    "opening": "Let's imagine a little ahead: not who you ought to be, just who you'd like to be.",
+    "closing": "You don't have to get there all at once. Knowing the direction is a start.",
+    "written": false,
+    "reviewed": false
+  }
+]

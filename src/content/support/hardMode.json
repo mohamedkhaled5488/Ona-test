@@ -1,0 +1,13 @@
+{
+  "lines": [
+    { "id": "hard.line.01", "intensity": [1, 5], "text": "You don't have to fix this right now.", "reviewed": false, "sensitivity": "heavy" },
+    { "id": "hard.line.02", "intensity": [1, 5], "text": "Let's just get through the next little while, gently.", "reviewed": false, "sensitivity": "heavy" },
+    { "id": "hard.line.03", "intensity": [1, 5], "text": "Breathing comes first. Everything else can wait.", "reviewed": false, "sensitivity": "heavy" }
+  ],
+  "talkTitle": "Talk to someone",
+  "talkLine": "People who can listen, any time, for where you are.",
+  "dangerTitle": "You deserve support right now",
+  "dangerLine": "If you're thinking about hurting yourself, or you're not safe, please reach out now. Call your local emergency number, or one of the lines below.",
+  "helped": { "question": "Did this help?", "yes": "Yes", "aLittle": "A little", "notReally": "Not really" },
+  "checkInLater": "Check in with me in an hour"
+}

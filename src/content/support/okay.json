@@ -1,0 +1,20 @@
+{
+  "zone": "okay",
+  "acknowledge": [
+    { "id": "okay.ack.01", "intensity": [1, 5], "text": "Somewhere in the middle. That's a real place to be.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.ack.02", "intensity": [1, 5], "text": "Okay is okay. Not every day needs a big feeling.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.ack.03", "intensity": [1, 5], "text": "Not up, not down. A steady sort of day, perhaps.", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "understand": [
+    { "id": "okay.und.01", "intensity": [1, 5], "text": "Okay can mean steady, or it can mean a bit flat or unsure. Many people find it's worth a moment to check which it is today.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.und.02", "intensity": [1, 5], "text": "Middle-of-the-road days are a lot of life. They can be a good time for small, easy things.", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "options": [
+    { "id": "okay.mind.which", "kind": "mind", "intensity": [1, 5], "title": "Which kind of okay?", "text": "Is it a steady okay, or a flat okay? Is anything sitting underneath?", "why": "A closer look can tell you whether today needs rest, a lift, or nothing at all.", "prompt": "What kind of okay is today?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.do.oneGood", "kind": "do", "intensity": [1, 5], "title": "Add one good thing", "text": "Plan one small thing you'd enjoy later today.", "why": "Something to look forward to, even small, can lift an ordinary day.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.body.stretch", "kind": "body", "intensity": [1, 5], "title": "A gentle stretch", "text": "Reach up, roll your shoulders, turn your head slowly side to side.", "why": "A little movement often wakes up a flat feeling.", "tool": "stretches", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.do.scene", "kind": "do", "intensity": [1, 5], "title": "Change the scene", "text": "Step outside, or move to a different room for a bit.", "why": "A new view can shift how a day feels.", "tool": "walk", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.connect.ask", "kind": "connect", "intensity": [1, 5], "title": "Ask someone how they are", "text": "And really listen to the answer.", "why": "Turning towards someone else is often good for both of you.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "okay.write.better", "kind": "write", "intensity": [1, 5], "title": "A little better than okay", "text": "What would make today a bit better than okay?", "why": "Knowing what lifts an ordinary day can make it easier to choose.", "prompt": "What would make today a bit better than okay:", "reviewed": false, "sensitivity": "standard" }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "zone": "lively",
+  "acknowledge": [
+    { "id": "lively.ack.01", "intensity": [1, 3], "text": "There's some spark in you right now. That's worth noticing.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.ack.02", "intensity": [1, 3], "text": "Something's lifting today. Let it.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.ack.03", "intensity": [4, 5], "text": "A lot of energy in you right now. That's a good thing to have.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.ack.04", "intensity": [4, 5], "text": "You're buzzing. Enjoy it, and maybe point some of it somewhere you care about.", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "understand": [
+    { "id": "lively.und.01", "intensity": [1, 5], "text": "Good moments often fade faster than hard ones. Many people find it helps to pause on them on purpose.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.und.02", "intensity": [1, 5], "text": "This kind of feeling often follows progress, connection or something to look forward to. Knowing what brought it on makes it easier to find again.", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "options": [
+    { "id": "lively.mind.source", "kind": "mind", "intensity": [1, 5], "title": "What brought it on?", "text": "In a line: what happened just before you felt like this?", "why": "Knowing what lifts you can make it easier to find again.", "prompt": "What happened just before I felt like this:", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.write.save", "kind": "write", "intensity": [1, 5], "title": "Save it for a harder day", "text": "Write to yourself for a low day: what's true right now that you might forget then?", "why": "Your own words, from a good moment, can be easier to believe later.", "letter": "hardDay", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.do.momentum", "kind": "do", "intensity": [1, 4], "title": "Use the momentum", "text": "Pick one small thing you've been putting off and give it a few minutes while the energy's here.", "why": "Energy that gets used tends to feel good, rather than restless.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.connect.share", "kind": "connect", "intensity": [1, 5], "title": "Share it", "text": "Tell someone about the good thing, not to impress anyone, just so it's heard.", "why": "Many people find that telling someone makes a good moment last a little longer.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.body.move", "kind": "body", "intensity": [2, 5], "title": "Let it move", "text": "Put on a song you love and move however you like, for the length of it.", "why": "Moving with good energy is a way of enjoying it fully.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.body.pause", "kind": "body", "intensity": [4, 5], "title": "Catch your breath", "text": "If it feels like a lot, take three slow breaths before the next thing.", "why": "A short pause can help very high energy stay yours, rather than scattered.", "tool": "countBreaths", "reviewed": false, "sensitivity": "standard" },
+    { "id": "lively.write.good", "kind": "write", "intensity": [1, 5], "title": "Write down what's good", "text": "Three small things that are going right at the moment.", "why": "Writing good things down tends to help you notice more of them.", "prompt": "Three things going right at the moment:", "reviewed": false, "sensitivity": "standard" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "followUps": [
+    { "id": "follow.any.01", "themes": [], "text": "What would you say to a friend who wrote this?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.any.02", "themes": [], "text": "What's the smallest honest next step?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.any.03", "themes": [], "text": "Is there something you're not saying here?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.any.04", "themes": [], "text": "Where do you notice this in your body?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.any.05", "themes": [], "text": "Is there something underneath this answer?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.any.06", "themes": [], "text": "What would help with this, even a little?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.any.07", "themes": [], "text": "If this answer were a letter to you, what would you write back?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.any.08", "themes": [], "text": "Which part of what you wrote feels most true?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.where-i-am.01", "themes": ["where-i-am"], "text": "Is this new, or has it been here a while?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.where-i-am.02", "themes": ["where-i-am"], "text": "What would make this a bit lighter this week?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.where-i-am.03", "themes": ["where-i-am"], "text": "How would you like this to look a month from now?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.know-myself.01", "themes": ["know-myself"], "text": "When did you first notice this about yourself?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.know-myself.02", "themes": ["know-myself"], "text": "Does this feel like you, or like what you were taught to be?", "reviewed": false, "sensitivity": "standard" },
+    { "id": "follow.know-myself.03", "themes": ["know-myself"], "text": "Who in your life sees this side of you?", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "closing": {
+    "takeaway": "What do I take away?",
+    "takeawayHint": "One sentence, if you like. Or nothing at all.",
+    "deepNote": "This one goes deeper. Skip it any time.",
+    "saved": "Saved",
+    "letterOffer": "Turn one of today's answers into a letter to yourself"
+  }
+}

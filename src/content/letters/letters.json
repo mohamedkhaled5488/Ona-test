@@ -1,0 +1,68 @@
+{
+  "kinds": [
+    {
+      "kind": "feeling",
+      "title": "To me, when I feel…",
+      "line": "Shown after you log one of these feelings, if you'd like to read it",
+      "starters": { "id": "letters.feeling", "reviewed": false, "sensitivity": "standard", "texts": [
+        "Remind yourself what has helped before.",
+        "What would you want to hear right now?",
+        "What do you know that's easy to forget when you feel this way?"
+      ] }
+    },
+    {
+      "kind": "doubt",
+      "title": "To me, when I doubt myself",
+      "line": "For the days you're not sure you can",
+      "starters": { "id": "letters.doubt", "reviewed": false, "sensitivity": "standard", "texts": [
+        "Something you got through that once felt like too much.",
+        "What do the people who know you well see in you?",
+        "A time you did it anyway."
+      ] }
+    },
+    {
+      "kind": "proud",
+      "title": "To me, when I'm proud",
+      "line": "To make a good moment last",
+      "starters": { "id": "letters.proud", "reviewed": false, "sensitivity": "standard", "texts": [
+        "What did it take to get here?",
+        "Who helped along the way?",
+        "What do you want to remember about how this feels?"
+      ] }
+    },
+    {
+      "kind": "hardDay",
+      "title": "To me, on a hard day",
+      "line": "For whatever kind of hard day comes",
+      "starters": { "id": "letters.hardDay", "reviewed": false, "sensitivity": "standard", "texts": [
+        "You don't have to fix today. Here's what I'd like you to know:",
+        "Small things that have helped before.",
+        "Someone you could call, and what you might say."
+      ] }
+    },
+    {
+      "kind": "date",
+      "title": "To me, on a day in the future",
+      "line": "A letter that waits until the date you choose",
+      "starters": { "id": "letters.date", "reviewed": false, "sensitivity": "standard", "texts": [
+        "Where are you now, and where do you hope you'll be?",
+        "What's worrying you at the moment that might look different by then?",
+        "Something you hope you're still doing."
+      ] }
+    }
+  ],
+  "generalStarters": [
+    "Remind yourself what has helped before.",
+    "What would you want to hear?",
+    "What do you know that you forget when things are hard?"
+  ],
+  "writeTip": "Your own words, in your own voice. Only you will see this.",
+  "hardFeelingTip": "Write to the you who is struggling, as someone who cares about them.",
+  "offer": "You left yourself a note for days like this. Would you like to read it?",
+  "offerRead": "Read it now",
+  "offerLater": "Later",
+  "offerNotNow": "Not now",
+  "writtenOn": "You wrote this on {date}.",
+  "hideForNow": "Hide this letter for now",
+  "dontShowWhenIntense": "Don't show this when the feeling is very strong"
+}

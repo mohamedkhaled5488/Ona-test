@@ -1,0 +1,26 @@
+{
+  "zone": "low",
+  "acknowledge": [
+    { "id": "low.ack.01", "intensity": [1, 3], "text": "It's a heavier day. You don't have to pretend otherwise.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.ack.02", "intensity": [1, 3], "text": "Things feel low right now. Noticing it is already a small kindness to yourself.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.ack.03", "intensity": [1, 3], "text": "Low days are hard. Let's keep whatever comes next small and gentle.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.ack.04", "intensity": [4, 5], "text": "This is a really heavy moment. You don't have to do anything with it right now.", "reviewed": false, "sensitivity": "heavy" },
+    { "id": "low.ack.05", "intensity": [4, 5], "text": "That's a lot of weight to feel. Let's take things one small step at a time.", "reviewed": false, "sensitivity": "heavy" }
+  ],
+  "understand": [
+    { "id": "low.und.01", "intensity": [1, 5], "text": "Low feelings often come with less energy, so even small things can feel big. Many people find tiny, gentle steps help more than big plans.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.und.02", "intensity": [1, 5], "text": "Feeling low is often a sign that something needs rest, comfort or company. It says nothing about what you're worth.", "reviewed": false, "sensitivity": "standard" }
+  ],
+  "options": [
+    { "id": "low.body.basics", "kind": "body", "intensity": [1, 5], "title": "Look after the basics", "text": "Have you had some water, something to eat, a bit of daylight today? Pick just one.", "why": "When energy is low, looking after the body's basics often makes the biggest small difference.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.body.breathe", "kind": "body", "intensity": [1, 5], "title": "A few slow breaths", "text": "Breathe in gently and out slowly, following the circle. Nothing else for now.", "why": "Slow breathing can give your body a moment of steadiness, without asking much of you.", "tool": "breathing", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.body.notice", "kind": "body", "intensity": [1, 5], "title": "Notice five things", "text": "Look around slowly and notice five things you can see, one at a time.", "why": "Gentle attention to what's around you can give heavy thoughts a short rest.", "tool": "noticeFive", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.do.tiny", "kind": "do", "intensity": [1, 3], "title": "One tiny thing", "text": "Choose something that takes a moment: open a window, wash one cup, step outside the door and back.", "why": "A small action can make a little momentum without asking much of you.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.do.comfort", "kind": "do", "intensity": [1, 5], "title": "Comfort, on purpose", "text": "A blanket, a warm drink, a familiar song or show. Something that has felt comforting before.", "why": "Choosing comfort on purpose is a way of being on your own side.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.connect.near", "kind": "connect", "intensity": [1, 4], "title": "Be near someone", "text": "Send a short message to someone you trust. It can be as simple as \"thinking of you\".", "why": "Low feelings often make us want to pull away, even though a little connection tends to help.", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.mind.friend", "kind": "mind", "intensity": [1, 3], "title": "Talk to yourself like a friend", "text": "What would you say to a friend who felt exactly like this? See if you can say it to yourself.", "why": "Many people are much gentler with others than with themselves. This borrows a little of that gentleness.", "prompt": "What I'd say to a friend feeling like this:", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.write.weight", "kind": "write", "intensity": [1, 3], "title": "Write it down", "text": "What's weighing on you most? A few words is enough.", "why": "Naming what's heavy can make it a little easier to hold.", "prompt": "What's weighing on me most right now:", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.write.letter", "kind": "write", "intensity": [1, 2], "title": "A note for later", "text": "If there's a bit of energy, write a short letter to yourself for a day like this, about what helps.", "why": "Your own words can be a comfort when you find them again.", "letter": "hardDay", "reviewed": false, "sensitivity": "standard" },
+    { "id": "low.connect.support", "kind": "connect", "intensity": [3, 5], "title": "Talk to someone now", "text": "If things feel too heavy to hold on your own, there are people you can talk to, any time.", "why": "You deserve support, and you don't have to earn it.", "support": true, "reviewed": false, "sensitivity": "standard" }
+  ]
+}
