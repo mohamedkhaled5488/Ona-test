@@ -31,7 +31,7 @@ Failures found by testing against real systems instead of mocks: the Android emu
 | BE-REAL-008 | A restore failing on the second page | Pass: nothing written as complete; the retry restores all 588, nothing twice |
 | BE-REAL-009 | About a year of data (3,425 items) | Pass: uploaded, then restored on a fresh phone in ~0.3-0.6 s, heap +3 to +19 MB |
 | BE-REAL-010 | A journal feeling with a tag on a fresh phone | Pass (CI on 088a729) |
-| BE-REAL-011 | Every number in Recap and the sections, before and after a restore | Added (CI pending) |
+| BE-REAL-011 | Every number in Recap and the sections, before and after a restore | Pass (CI on c776610) |
 | Bundle scan (E2E) | No server key in the APK's JavaScript bundle | Added |
 
 ## Harness mistakes (the tests were wrong, not Ona)
