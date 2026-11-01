@@ -124,6 +124,43 @@ const ALL_CONTRIBUTORS: RecapContributor[] = [
     },
   },
 
+  // --- Reflect: Reflection and Letters (private: hidden with "Hide sensitive
+  // areas", never on a shared story; counts only, never words or themes) ---
+  {
+    section: 'reflection',
+    area: 'reflect',
+    title: 'Reflection',
+    sensitive: true,
+    build: (ctx) => {
+      const { data, stats, today } = ctx;
+      const range = { start: stats.range.start, end: stats.range.end };
+      const sessions = countIn('reflectionSessions', data, range, today);
+      const minutes = countIn('reflectionMinutes', data, range, today);
+      const themes = new Set((data.reflectionSessions ?? []).filter((s) => s.status === 'done' && s.theme && inRange(localDateOf(s.startedAt), stats)).map((s) => s.theme)).size;
+      return recap('reflection', 'Reflection', sessions > 0, [
+        { label: 'Reflections', value: String(sessions), open: { section: 'reflection' } },
+        ...(minutes ? [{ label: 'Time reflecting', value: formatDuration(minutes) }] : []),
+        ...(themes ? [{ label: 'Themes explored', value: String(themes) }] : []),
+      ]);
+    },
+  },
+  {
+    section: 'letters',
+    area: 'reflect',
+    title: 'Letters to Myself',
+    sensitive: true,
+    build: (ctx) => {
+      const { data, stats, today } = ctx;
+      const range = { start: stats.range.start, end: stats.range.end };
+      const written = countIn('lettersWritten', data, range, today);
+      const read = countIn('lettersRead', data, range, today);
+      return recap('letters', 'Letters to Myself', written + read > 0, [
+        { label: 'Letters written', value: String(written), open: { section: 'letters' } },
+        { label: 'Letters read', value: String(read) },
+      ]);
+    },
+  },
+
   // --- Reflect ---
   {
     section: 'journaling',

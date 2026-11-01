@@ -7,6 +7,8 @@
 // IDs: docs/test-cases/integration.md (REFLECT-UI-*)
 jest.mock('../../utils/notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 jest.setTimeout(60_000);
+let mockPlus = true;
+jest.mock('../../plans/access', () => ({ ...jest.requireActual('../../plans/access'), usePlus: () => mockPlus, isPlusNow: () => mockPlus }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, screen } from '@testing-library/react-native';
@@ -21,10 +23,12 @@ import { SUPPORT_CARD_COPY } from '../../reflect/revisit';
 import { setDataSpace } from '../../utils/dataSpace';
 import { __flushForTests, __resetForTests, startAppData } from '../../utils/dataSpaceController';
 import type { ReflectSession } from '../../types/sections';
+import { PLUS_FEATURES } from '../../config/plans';
 
 const storage = AsyncStorage as unknown as { clear: () => Promise<void> };
 beforeEach(async () => {
   await resetAll();
+  mockPlus = true;
   useClock('2026-11-01T19:00');
 });
 afterEach(() => restoreClock());
@@ -191,6 +195,20 @@ test('REFLECT-UI-007 "Answer this again": a new answer, with the old one beside 
   await r.user.type(screen.getByTestId('reflect-answer'), 'Calm, now');
   const again = st().sessions.find((s) => s.id !== 'old')!;
   expect(again.answers[0]).toMatchObject({ questionId: 'know-myself.light.03', againOf: 'oa1', answer: 'Calm, now' });
+});
+
+test('REFLECT-UI-014 in Essentials mode, "Answer this again" is free, and the earlier answer beside it is Plus (a lock card, nothing removed)', async () => {
+  mockPlus = false;
+  useReflectionStore.setState({ sessions: [savedSession()] });
+  const r = await open({ openSessionId: 'old' });
+  await r.user.press(await screen.findByTestId('reflect-again-oa1'));
+  await r.user.press(await screen.findByTestId('feeling-sheet-skip'));
+  await r.user.press(screen.getByTestId('reflect-past'));
+  expect(screen.getByText(PLUS_FEATURES.reflectAnswerAgain.title)).toBeTruthy();
+  expect(screen.queryByText('Advice, mostly')).toBeNull();
+  await r.user.type(screen.getByTestId('reflect-answer'), 'Still writing');
+  expect(st().sessions.find((s) => s.id !== 'old')!.answers[0].answer).toBe('Still writing');
+  expect(st().sessions.find((s) => s.id === 'old')!.answers[0].answer).toBe('Advice, mostly');
 });
 
 test('REFLECT-UI-008 a year ago: a gentle prompt with the date and title only; the answers open when the person taps', async () => {

@@ -32,6 +32,7 @@ import { themedStyles } from '../../theme/runtime';
 import { DANGER, Group, NavRow, Notice } from './SettingsParts';
 import { useDataSpace } from '../../hooks/useDataSpace';
 import { DEMO_PURCHASE_MESSAGE } from '../../billing/purchaseFlow';
+import { useLettersStore } from '../../store/useLettersStore';
 
 function openManage() {
   void Linking.openURL(PLAY_SUBSCRIPTIONS_URL);
@@ -189,7 +190,8 @@ function Usage() {
   const readingEntries = useReadingListStore((s) => s.entries);
   const budgets = useBudgetStore((s) => s.budgets);
   const taskTemplates = useDailyPlanningStore((s) => s.taskTemplates);
-  const usage = capUsage({ plans, habits, skills, readingEntries, budgets, taskTemplates });
+  const letters = useLettersStore((s) => s.letters);
+  const usage = capUsage({ plans, habits, skills, readingEntries, budgets, taskTemplates, letters });
   const unlimited = entitlement.syncAccess;
   return (
     <Group title={unlimited ? 'Usage' : `${ESSENTIALS_NAME} usage`} footer="Archived and finished items don't count, and you can still open them any time. Quit habits never count. If you're above a number here, everything you have keeps working.">

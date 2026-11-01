@@ -44,6 +44,7 @@ import { addDaysISO, weekdayOfISO } from '../utils/date';
 import { normalizeTask } from '../utils/taskMigration';
 import { songTypes } from '../data/songTypes';
 import { isLive } from '../data/sectionsMeta';
+import type { Letter, ReflectSession } from '../types/sections';
 
 export const DEMO_SEED = 'ona-demo-1';
 export const DEMO_DAYS = 56; // about eight weeks of history
@@ -794,6 +795,36 @@ export function generateDemoData(opts: GenerateOptions): DemoSections {
   // Sorted the way the stores keep them (newest first where they do).
   feelingEntries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
+  // ===== Reflection and Letters ======================================================
+  // Fixed text (no random draws), so every other section's sample stays the same.
+  const reflectionSessions: ReflectSession[] = [
+    {
+      id: id('reflection'), mode: 'guided', theme: 'know-myself', depth: 'light', length: 'short', title: 'Know myself', status: 'done',
+      startedAt: at(ago(12), 20, 10), updatedAt: at(ago(12), 20, 24), endedAt: at(ago(12), 20, 24), seconds: 840, position: 3, tags: ['me'],
+      takeaway: 'Mornings are when I feel most like me.',
+      answers: [
+        { id: id('ranswer'), questionId: 'know-myself.light.02', question: 'Which time of day do you feel most like yourself?', stage: 'arrive', depth: 'light', answer: 'Early, before anyone needs anything. Coffee, the window, quiet.' },
+        { id: id('ranswer'), questionId: 'know-myself.light.03', question: 'What do people tend to come to you for?', stage: 'explore', depth: 'light', answer: 'Calm advice. I listen before I fix.' },
+        { id: id('ranswer'), questionId: 'know-myself.light.11', question: "What's one thing you like about the way you are?", stage: 'close', depth: 'light', answer: 'I keep going, gently.' },
+      ],
+    },
+    {
+      id: id('reflection'), mode: 'guided', theme: 'where-i-am', depth: 'medium', length: 'short', title: 'Where I am right now', status: 'done',
+      startedAt: at(ago(4), 21, 0), updatedAt: at(ago(4), 21, 18), endedAt: at(ago(4), 21, 18), seconds: 1080, position: 3, tags: ['work'],
+      answers: [
+        { id: id('ranswer'), questionId: 'where-i-am.medium.02', question: "What's been asking for your attention that you haven't given it yet?", stage: 'arrive', depth: 'medium', answer: 'The 10K plan. I keep moving the long run.' },
+        { id: id('ranswer'), questionId: 'where-i-am.medium.05', question: 'Where do you feel most stretched right now, and where do you have room?', stage: 'explore', depth: 'medium', answer: 'Stretched at work this week. Room at weekends.',
+          followUp: { id: 'follow.any.02', question: "What's the smallest honest next step?", answer: 'Move the long run to Saturday morning.' } },
+        { id: id('ranswer'), questionId: 'where-i-am.medium.12', question: "What's one honest sentence about where you are, without trying to fix anything?", stage: 'close', depth: 'medium', answer: 'Busy, a bit tired, still on track.' },
+      ],
+    },
+  ];
+  const letters: Letter[] = [
+    { id: id('letter'), kind: 'feeling', zones: ['tense'], feelingIds: [], text: 'You have been here before and it passed. Breathe out slowly, then do one small thing.', createdAt: at(ago(30), 19), updatedAt: at(ago(30), 19), timesShown: 1, lastShownAt: at(ago(9), 18), readOn: [ago(9)] },
+    { id: id('letter'), kind: 'hardDay', zones: [], feelingIds: [], text: "You don't have to fix today. Text Sam, make tea, go to bed early.", createdAt: at(ago(26), 20), updatedAt: at(ago(26), 20), timesShown: 0 },
+    { id: id('letter'), kind: 'date', zones: [], feelingIds: [], deliverOn: ahead(20), text: 'Did you run the 10K? Either way, look how far you came.', createdAt: at(ago(14), 21), updatedAt: at(ago(14), 21), timesShown: 0 },
+  ];
+
   return {
     planBuilder: { plans, personalTemplates: [] },
     dailyPlanning: { tasks, tags, taskTemplates, hiddenStarterTemplates: [], dayTemplates: [], dayReflections, dayOrder: {} },
@@ -805,6 +836,8 @@ export function generateDemoData(opts: GenerateOptions): DemoSections {
     // only what this release has. Made above anyway, so the rest stays the same.
     ...(isLive('songwriting') ? { songwriting: { songs } } : {}),
     ...(isLive('mindGames') ? { mindGames: { results: gameResults } } : {}),
+    ...(isLive('reflection') ? { reflection: { sessions: reflectionSessions } } : {}),
+    ...(isLive('letters') ? { letters: { letters } } : {}),
     feelings: { entries: feelingEntries, personalFeelings, bookmarks: ['peaceful-content', 'calm-rested'], guidanceVotes: {}, customReasonTags: ['Exercise'] },
     sleep: { logs: sleepLogs.reverse(), mix: sleepMix },
     book: { entries: [reading, finished], quotes, sessions: bookSessions.reverse() },

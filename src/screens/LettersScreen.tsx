@@ -28,6 +28,7 @@ import { writtenOnText } from '../letters/LetterOfferHost';
 import { addDaysISO, formatDisplayDate, todayISO } from '../utils/date';
 import type { RootStackParamList } from '../navigation/types';
 import type { FeelingZone, Letter, LetterKind } from '../types/sections';
+import { useCapGuard } from '../components/PlusGate';
 
 const accent = sectionAccents.letters;
 
@@ -114,6 +115,7 @@ function LetterRow({ letter, onPress }: { letter: Letter; onPress: () => void })
 }
 
 function HomePage({ onWrite, onOpen }: { onWrite: () => void; onOpen: (id: string) => void }) {
+  const guard = useCapGuard(); // Essentials mode: active letters (config/plans.ts)
   const letters = useLettersStore((s) => s.letters);
   const later = useLettersStore((s) => s.later);
   const due = lettersDue(letters, todayISO());
@@ -123,7 +125,7 @@ function HomePage({ onWrite, onOpen }: { onWrite: () => void; onOpen: (id: strin
     <View style={styles.gap}>
       <ScreenTitle>{LETTERS_COPY.title}</ScreenTitle>
       <Caption>{LETTERS_COPY.line}</Caption>
-      <PrimaryButton label={LETTERS_COPY.write} onPress={onWrite} testID="letters-write" />
+      <PrimaryButton label={LETTERS_COPY.write} onPress={() => guard('activeLetters', onWrite)} testID="letters-write" />
       {due.length + saved.length > 0 && <SectionHeading>{LETTERS_COPY.waiting}</SectionHeading>}
       {due.map((l) => (
         <LetterRow key={`due-${l.id}`} letter={l} onPress={() => onOpen(l.id)} />
@@ -240,6 +242,7 @@ function ReadPage({ letterId, onEdit, onDeleted }: { letterId: string; onEdit: (
   const letter = useLettersStore((s) => s.letters.find((l) => l.id === letterId));
   const store = useLettersStore();
   const { requestDelete } = useUi();
+  const guard = useCapGuard();
   // A dated letter, its day come: opened now.
   React.useEffect(() => {
     if (letter && letter.kind === 'date' && letter.deliverOn && letter.deliverOn <= todayISO() && !letter.deliveredAt) store.markDelivered(letter.id);
@@ -260,8 +263,12 @@ function ReadPage({ letterId, onEdit, onDeleted }: { letterId: string; onEdit: (
           variant="outline"
           style={styles.flex}
           onPress={() => {
-            store.setPaused(letter.id, !letter.paused);
-            void syncLetterReminder(useLettersStore.getState().letters.find((l) => l.id === letter.id)!);
+            const toggle = () => {
+              store.setPaused(letter.id, !letter.paused);
+              void syncLetterReminder(useLettersStore.getState().letters.find((l) => l.id === letter.id)!);
+            };
+            if (letter.paused) guard('activeLetters', toggle);
+            else toggle();
           }}
         />
       </View>

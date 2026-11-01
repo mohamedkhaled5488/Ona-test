@@ -17,7 +17,7 @@ import { DEFAULT_DAY_VIEW, type DayViewPrefs } from '../utils/dayView';
 
 export type WeekStart = 0 | 1 | 6; // Sunday, Monday, Saturday (JS getDay numbering)
 export type ThemeChoice = 'system' | 'light' | 'dark';
-export type NotificationFeature = 'tasks' | 'habits' | 'studyEnd' | 'sleep' | 'weeklyStory' | 'letters' | 'support';
+export type NotificationFeature = 'tasks' | 'habits' | 'studyEnd' | 'sleep' | 'weeklyStory' | 'letters' | 'support' | 'reflection';
 export type FeatureFlagId = 'recapAreaPages' | 'recapStory' | 'lifetimeEnabled' | 'foundersEnabled' | 'redeemCodeEnabled' | 'planReviewReminders';
 
 // The first day of the week from the device locale, when the platform
@@ -129,6 +129,13 @@ export interface SettingsData {
   journalPrompts: boolean;
   journalOnThisDay: boolean;
   bookFeelingAfterSession: boolean; // Book
+  // Reflection: an optional weekly "Reflection time" (off until chosen).
+  reflectionReminder: { enabled: boolean; weekday: number; time: string };
+  reflectionReminderIds: string[];
+  // Reflection and Letters behind the Journaling PIN (off until chosen;
+  // offered once, on Reflection's first page).
+  privateLock: boolean;
+  privateLockOffered: boolean;
   bookShowEstimate: boolean; // Book
   hiddenRecapSections: SectionId[]; // hidden everywhere in Recap, including shared images
   shareSensitiveInRecap: boolean; // shared story cards leave out Feelings and Quit unless on
@@ -150,7 +157,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   timeFormat: 'system',
   haptics: true,
 
-  notify: { tasks: true, habits: true, studyEnd: true, sleep: true, weeklyStory: false, letters: true, support: true },
+  notify: { tasks: true, habits: true, studyEnd: true, sleep: true, weeklyStory: false, letters: true, support: true, reflection: true },
   defaultAlarmSound: 'default',
   quietHours: { enabled: false, start: '22:00', end: '07:00', includeAlarms: false },
   weeklyStoryNotificationIds: [],
@@ -203,6 +210,10 @@ export const DEFAULT_SETTINGS: SettingsData = {
   journalPrompts: true,
   journalOnThisDay: true,
   bookFeelingAfterSession: true,
+  reflectionReminder: { enabled: false, weekday: 0, time: '19:00' },
+  reflectionReminderIds: [],
+  privateLock: false,
+  privateLockOffered: false,
   bookShowEstimate: true,
   hiddenRecapSections: [],
   shareSensitiveInRecap: false,

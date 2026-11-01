@@ -6,7 +6,7 @@
 // IDs: docs/test-cases/plans.md (PLAN-CFG-*)
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 
-import { FREE_CAPS, PLAN_COMPARISON, PLUS_FEATURES, planDescriptionText, TRIAL_DAYS, type PlusFeatureId } from '../../config/plans';
+import { ALL_PLAN_ROWS, FREE_CAPS, PLAN_COMPARISON, PLUS_FEATURES, planDescriptionText, TRIAL_DAYS, type PlusFeatureId } from '../../config/plans';
 import { canCreate, canPlanMealOn, isPlusNow, lastPlannableDate, usedNow } from '../../plans/access';
 import { usePlanStore } from '../../store/usePlanStore';
 import { useHabitsStore } from '../../store/useHabitsStore';
@@ -53,15 +53,15 @@ describe('PLAN-CFG: the config and the code agree', () => {
     }
   });
 
-  test('PLAN-CFG-003 the comparison covers every Plus feature and every cap, and names only real ones', () => {
-    const plus = new Set(PLAN_COMPARISON.flatMap((r) => r.enforces.plus ?? []));
-    const caps = new Set(PLAN_COMPARISON.map((r) => r.enforces.cap).filter(Boolean));
+  test('PLAN-CFG-003 the comparison covers every Plus feature and every cap, and names only real ones (held sections\' rows included; shown once live)', () => {
+    const plus = new Set(ALL_PLAN_ROWS.flatMap((r) => r.enforces.plus ?? []));
+    const caps = new Set(ALL_PLAN_ROWS.map((r) => r.enforces.cap).filter(Boolean));
     expect([...plus].sort()).toEqual(Object.keys(PLUS_FEATURES).sort());
     expect([...caps].sort()).toEqual(Object.keys(FREE_CAPS).sort());
   });
 
   test('PLAN-CFG-004 the numbers in the comparison are the caps', () => {
-    for (const r of PLAN_COMPARISON) {
+    for (const r of ALL_PLAN_ROWS) {
       const cap = r.enforces.cap;
       if (cap && cap !== 'dietWeeksAhead') expect({ feature: r.feature, says: r.free.includes(String(FREE_CAPS[cap])) }).toEqual({ feature: r.feature, says: true });
     }

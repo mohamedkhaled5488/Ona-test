@@ -15,6 +15,8 @@ import { isDemo } from './dataSpace';
 import { isLive } from '../data/sectionsMeta';
 import type { SectionId } from '../types/sections';
 import { resyncLetterReminders } from '../letters/reminders';
+import { todayISO } from './date';
+import { scheduleReminder } from './notifications';
 
 export async function syncWeeklyStoryReminder(): Promise<void> {
   const { weeklyStoryNotificationIds, notify, weekStartsOn, set } = useSettingsStore.getState();
@@ -32,8 +34,25 @@ export const NOTIFICATION_SECTION: Record<NotificationFeature, SectionId> = {
   weeklyStory: 'recap',
   letters: 'letters',
   support: 'support',
+  reflection: 'reflection',
 };
 export const liveNotificationFeatures = (): NotificationFeature[] => (Object.keys(NOTIFICATION_SECTION) as NotificationFeature[]).filter((f) => isLive(NOTIFICATION_SECTION[f]));
+
+// Reflection's weekly "Reflection time": the chosen weekday and time, words
+// that say nothing of any reflection.
+export const REFLECTION_REMINDER_TITLE = 'Reflection time, if you would like it';
+export function nextWeekday(today: string, weekday: number): string {
+  const d = new Date(`${today}T12:00:00`);
+  const diff = (weekday - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+export async function syncReflectionReminder(): Promise<void> {
+  const { reflectionReminder: r, reflectionReminderIds: old, set } = useSettingsStore.getState();
+  await cancelReminders(old);
+  const ids = isLive('reflection') && r.enabled ? await scheduleReminder({ feature: 'reflection', title: REFLECTION_REMINDER_TITLE, date: nextWeekday(todayISO(), r.weekday), scheduledTime: r.time, minutesBefore: 0, repeat: 'weekly' }) : [];
+  set('reflectionReminderIds', ids);
+}
 
 export async function resyncFeature(feature: NotificationFeature): Promise<void> {
   if (!isLive(NOTIFICATION_SECTION[feature])) return;
@@ -67,6 +86,9 @@ export async function resyncFeature(feature: NotificationFeature): Promise<void>
       return;
     case 'support':
       return; // a one-off check-in, scheduled when asked
+    case 'reflection':
+      await syncReflectionReminder();
+      return;
   }
 }
 

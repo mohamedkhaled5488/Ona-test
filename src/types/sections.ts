@@ -922,6 +922,7 @@ export interface Letter {
   showWhenIntense?: boolean;
   timesShown: number;
   lastShownAt?: string;
+  readOn?: string[]; // the local days it was read (Recap counts them)
   deliveredAt?: string; // a 'date' letter, opened
   fromReflection?: string; // written from a reflection's answer (session id)
   conflictCopyOf?: string; // set by sync: the other phone's version (sync/engine.ts)

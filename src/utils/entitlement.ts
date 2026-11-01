@@ -8,6 +8,7 @@
 // every plan, in every state.
 import { FREE_CAPS, type CapId } from '../config/plans';
 import type { Habit, Plan, QuitTrack, Skill } from '../types/sections';
+import { isLive } from '../data/sectionsMeta';
 
 const DAY_MS = 86_400_000;
 
@@ -169,6 +170,7 @@ export interface UsageInput {
   budgets?: unknown[];
   taskTemplates?: unknown[];
   quitTracks?: QuitTrack[]; // accepted, never counted
+  letters?: { paused?: boolean; conflictCopyOf?: string }[];
 }
 
 export type CountCapId = Exclude<CapId, 'dietWeeksAhead'>;
@@ -179,7 +181,8 @@ export interface CapUsage {
 }
 
 // Archived items never count; a Build habit marked "formed" is finished, not active; a finished book isn't "at a time".
-export function capUsage({ plans, habits, skills, readingEntries = [], budgets = [], taskTemplates = [] }: UsageInput): CapUsage[] {
+// A cap of a held section isn't shown (data/sectionsMeta.ts).
+export function capUsage({ plans, habits, skills, readingEntries = [], budgets = [], taskTemplates = [], letters = [] }: UsageInput): CapUsage[] {
   const used: Record<CountCapId, number> = {
     activePlans: plans.filter((p) => p.status === 'active').length,
     buildHabits: habits.filter((h) => !h.archivedAt && h.graduationChoice !== 'formed').length,
@@ -187,6 +190,7 @@ export function capUsage({ plans, habits, skills, readingEntries = [], budgets =
     activeBooks: readingEntries.filter((e) => e.status !== 'finished').length,
     budgets: budgets.length,
     taskTemplates: taskTemplates.length,
+    activeLetters: letters.filter((l) => !l.paused && !l.conflictCopyOf).length,
   };
-  return (Object.keys(used) as CountCapId[]).map((id) => ({ id, used: used[id], cap: FREE_CAPS[id] }));
+  return (Object.keys(used) as CountCapId[]).filter((id) => id !== 'activeLetters' || isLive('letters')).map((id) => ({ id, used: used[id], cap: FREE_CAPS[id] }));
 }

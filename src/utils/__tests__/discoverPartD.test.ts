@@ -4,7 +4,7 @@
 // needs an account, a network or the server.
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []) }));
 
-import { ALL_SLIDES, EXPLORE_GROUPS, STRINGS, TOUR, TRANSLATIONS, slideIndexOfKey, slideIndexOfSection, startIndex, t } from '../../discover/content';
+import { ALL_SLIDES, EXPLORE_GROUPS, STRINGS, TOUR, TOUR_INCLUDING_HELD, TRANSLATIONS, slideIndexOfKey, slideIndexOfSection, startIndex, t } from '../../discover/content';
 import { tryItDestination } from '../../discover/tryItRule';
 import { ALLOWED_EVENTS, setAnalyticsTransport, track } from '../analytics';
 import { DEFAULT_SETTINGS, useSettingsStore } from '../../store/useSettingsStore';
@@ -60,12 +60,18 @@ const EVIDENCE: Record<string, [string, RegExp][]> = {
   recapShare: [['src/store/useSettingsStore.ts', /shareSensitiveInRecap: false/], ['src/screens/RecapScreen.tsx', /Share/]],
   dataControl: [['src/screens/settings/PrivacyPages.tsx', /Export my data/], ['src/screens/settings/PrivacyPages.tsx', /[Dd]elete/], ['src/screens/settings/AccountPages.tsx', /trial/i]],
   finish: [['src/screens/WelcomeScreen.tsx', /Explore with sample data/]],
+  reflectSessions: [['src/screens/ReflectionScreen.tsx', /startAsk/], ['src/screens/ReflectionSession.tsx', /REFLECT_COPY\.progress/], ['src/store/useReflectionStore.ts', /status: 'draft'/]],
+  reflectRevisit: [['src/screens/ReflectionScreen.tsx', /answerAgain/], ['src/reflect/revisit.ts', /export function pastAnswers/]],
+  letters: [['src/letters/LetterOfferHost.tsx', /LETTERS\.offerRead/], ['src/letters/delivery.ts', /export function lettersFor/]],
+  supportIdeas: [['src/support/engine.ts', /export function planSupport/], ['src/screens/SupportScreen.tsx', /<SupportLink \/>/]],
 };
+// Held sections' slides too: they're checked now, and shown once live.
+const EVERY_SLIDE = TOUR_INCLUDING_HELD.flatMap((s) => s.slides);
 
 describe('D4. Every slide describes something that exists', () => {
   test('each slide maps to a feature, and the app has it', () => {
     const problems: string[] = [];
-    for (const s of ALL_SLIDES) {
+    for (const s of EVERY_SLIDE) {
       const proofs = EVIDENCE[s.feature];
       if (!proofs) problems.push(`Slide "${s.key}" describes "${s.feature}", which has no evidence listed`);
       for (const [file, re] of proofs ?? []) {
@@ -76,13 +82,13 @@ describe('D4. Every slide describes something that exists', () => {
   });
 
   test('no evidence entry is left without a slide', () => {
-    const used = new Set(ALL_SLIDES.map((s) => s.feature));
+    const used = new Set(EVERY_SLIDE.map((s) => s.feature));
     expect(Object.keys(EVIDENCE).filter((f) => !used.has(f))).toEqual([]);
   });
 
   test('no banned claims anywhere in the tour or the Discover words', () => {
     const BANNED = /end-to-end|diagnos|\bcure|\btreat|\bcauses?\b|clinical|encrypt|photo sync|therap/i;
-    const text = [...ALL_SLIDES.flatMap((s) => [s.title, s.body]), ...TOUR.map((s) => s.title), ...Object.values(STRINGS)];
+    const text = [...EVERY_SLIDE.flatMap((s) => [s.title, s.body]), ...TOUR_INCLUDING_HELD.map((s) => s.title), ...Object.values(STRINGS)];
     for (const line of text) expect(line).not.toMatch(BANNED);
   });
 

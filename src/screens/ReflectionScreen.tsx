@@ -22,7 +22,7 @@ import { sectionAccents } from '../theme/accents';
 import { useReflectionStore } from '../store/useReflectionStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { REFLECT_CLOSING } from '../content';
-import { asPlanned, defaultTitle, offerQuestion, questionById, themeById, writtenThemes } from '../reflect/questions';
+import { asPlanned, defaultTitle, offerQuestion, questionById, themeById, themesFor, writtenThemes } from '../reflect/questions';
 import { allTags, pastAnswers, questionKey, searchSessions, showSupportCard, SUPPORT_CARD_COPY, yearAgo, type LibraryFilter } from '../reflect/revisit';
 import { formatDisplayDate, todayISO } from '../utils/date';
 import { formatDuration } from '../utils/recapStats';
@@ -31,6 +31,8 @@ import { openSection } from '../navigation/navigationRef';
 import type { RootStackParamList } from '../navigation/types';
 import type { ReflectAnswer, ReflectSession } from '../types/sections';
 import { ClosingStage, REFLECT_COPY, SessionStage, SetupStage, draftLine } from './ReflectionSession';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { isPlusNow } from '../plans/access';
 
 const accent = sectionAccents.reflection;
 
@@ -54,6 +56,10 @@ export const REFLECTION_HOME_COPY = {
   deleteConfirm: 'Delete this reflection? Its answers go too.',
   again: 'Answer this again',
   rename: 'Title',
+  lockTitle: 'Keep your reflections private?',
+  lockLine: 'Reflection and Letters can sit behind your Journaling PIN. Off unless you turn it on.',
+  lockYes: 'Set it up',
+  lockNo: 'No thanks',
   minutes: (m: number) => (m < 1 ? 'under a minute' : formatDuration(m)),
 };
 
@@ -122,6 +128,9 @@ function HomePage({ onPush, onStart }: { onPush: (p: Page) => void; onStart: (se
   const supportShownAt = useReflectionStore((s) => s.supportCardShownAt);
   const setSupportShown = useReflectionStore((s) => s.setSupportCardShown);
   const feelings = useFeelingsStore((s) => s.entries);
+  const settings = useSettingsStore();
+  // Offered once, after the first session is saved: keep these behind a lock.
+  const lockOffer = !settings.privateLockOffered && !settings.privateLock && sessions.some((s) => s.status === 'done');
   const today = todayISO();
   const drafts = sessions.filter((s) => s.status === 'draft' && !s.conflictCopyOf).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   const recent = searchSessions(sessions.filter((s) => s.status === 'done'), {}).slice(0, 3);
@@ -134,7 +143,7 @@ function HomePage({ onPush, onStart }: { onPush: (p: Page) => void; onStart: (se
   }, [support, today, setSupportShown]);
 
   const startAsk = () => {
-    const q = offerQuestion({ depth: 'light', exclude: [] }, sessions);
+    const q = offerQuestion({ depth: 'light', exclude: [], themes: themesFor(isPlusNow()).map((t) => t.id) }, sessions);
     onStart(start({ mode: 'ask', depth: 'light', title: defaultTitle('ask'), questions: q ? [q] : [] }));
   };
   const startFree = () => onStart(start({ mode: 'free', title: defaultTitle('free'), questions: [] }));
@@ -143,6 +152,17 @@ function HomePage({ onPush, onStart }: { onPush: (p: Page) => void; onStart: (se
     <View style={styles.gap}>
       <ScreenTitle>{REFLECTION_HOME_COPY.title}</ScreenTitle>
       <Caption>{REFLECTION_HOME_COPY.line}</Caption>
+
+      {lockOffer && (
+        <Card style={styles.card} testID="reflect-lock-offer">
+          <Body style={styles.bold}>{REFLECTION_HOME_COPY.lockTitle}</Body>
+          <Caption>{REFLECTION_HOME_COPY.lockLine}</Caption>
+          <View style={styles.row}>
+            <PrimaryButton label={REFLECTION_HOME_COPY.lockYes} onPress={() => (settings.set('privateLockOffered', true), openSection('settings', { page: 'section', section: 'reflection' }))} style={styles.flex} />
+            <PrimaryButton label={REFLECTION_HOME_COPY.lockNo} variant="outline" onPress={() => settings.set('privateLockOffered', true)} style={styles.flex} />
+          </View>
+        </Card>
+      )}
 
       {supportOpen && (
         <Card style={styles.card}>

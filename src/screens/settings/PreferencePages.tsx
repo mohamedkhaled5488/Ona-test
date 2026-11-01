@@ -29,6 +29,9 @@ import { backgroundThemes, fontFamilies, templateOptions, textSizes } from '../J
 import type { LockScope } from '../../utils/pinLock';
 import type { JournalBackground, JournalFont, JournalPageTemplate, JournalTextSize } from '../../types/sections';
 import type { SectionId } from '../../types/sections';
+import { useSupportStore } from '../../store/useSupportStore';
+import { syncReflectionReminder } from '../../utils/reminders';
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const WEEK_LABEL: Record<WeekStart, string> = { 6: 'Saturday', 0: 'Sunday', 1: 'Monday' };
 
@@ -231,6 +234,7 @@ export function SectionSettingsPage({
   const customTags = useFeelingsStore((f) => f.customReasonTags);
   const removeTag = useFeelingsStore((f) => f.removeCustomReasonTag);
   const { requestDelete } = useUi();
+  const supportOffer = useSupportStore((x) => x.offerAfterLog);
 
   switch (section) {
     case 'dailyPlanning':
@@ -531,6 +535,29 @@ export function SectionSettingsPage({
             value={s.bookFeelingAfterSession}
             onChange={(on) => s.set('bookFeelingAfterSession', on)}
           />
+        </Group>
+      );
+    case 'reflection':
+      return (
+        <>
+          <Group title="Reflection time" footer="A weekly reminder, if you'd like one. It never says what you wrote.">
+            <ToggleRow label="Weekly reminder" explain="Off unless you turn it on" value={s.reflectionReminder.enabled} onChange={(on) => (s.set('reflectionReminder', { ...s.reflectionReminder, enabled: on }), void syncReflectionReminder())} />
+            {s.reflectionReminder.enabled && (
+              <>
+                <ChoiceRow<number> label="Day" explain="" options={WEEKDAYS.map((label, id) => ({ id, label }))} value={s.reflectionReminder.weekday} onChange={(weekday) => (s.set('reflectionReminder', { ...s.reflectionReminder, weekday }), void syncReflectionReminder())} />
+                <ChoiceRow<string> label="Time" explain="" options={['08:00', '12:30', '19:00', '21:00'].map((id) => ({ id, label: id }))} value={s.reflectionReminder.time} onChange={(time) => (s.set('reflectionReminder', { ...s.reflectionReminder, time }), void syncReflectionReminder())} />
+              </>
+            )}
+          </Group>
+          <Group title="Privacy" footer={s.journalLock ? 'Uses your Journaling PIN. Letters to Myself is locked with it too.' : 'Turn on the Journaling lock first (Privacy, Security & Data), then lock these with the same PIN.'}>
+            <ToggleRow label="Lock Reflection and Letters" explain="With your Journaling PIN" value={s.privateLock} disabled={!s.journalLock} onChange={(on) => s.set('privateLock', on)} />
+          </Group>
+        </>
+      );
+    case 'support':
+      return (
+        <Group footer="A quiet offer, never a pop-up you have to answer. Support and the support lines are always one tap away.">
+          <ToggleRow label="Offer ideas after a Low or Tense feeling" explain="After you note one, if no letter to yourself is waiting" value={supportOffer} onChange={(on) => useSupportStore.getState().setOfferAfterLog(on)} />
         </Group>
       );
     case 'recap':

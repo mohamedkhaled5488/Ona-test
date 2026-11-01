@@ -170,8 +170,10 @@ export function LockScreen({ scope }: { scope: LockScope }) {
 }
 
 // Renders the lock instead of `children` while this scope is locked.
-export function LockGate({ scope, children }: { scope: LockScope; children: React.ReactNode }) {
-  const enabled = useSettingsStore((s) => (scope === 'app' ? s.appLock : s.journalLock));
+// `also`: a section that shares this lock when its own switch is on
+// (Reflection and Letters use the Journaling PIN with "privateLock").
+export function LockGate({ scope, children, also }: { scope: LockScope; children: React.ReactNode; also?: 'privateLock' }) {
+  const enabled = useSettingsStore((s) => (scope === 'app' ? s.appLock : s.journalLock && (!also || s[also])));
   const unlocked = useLockStore((s) => s.unlocked[scope]);
   if (!enabled || unlocked) return <>{children}</>;
   return <LockScreen scope={scope} />;

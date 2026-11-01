@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Letter } from '../types/sections';
 import { genId } from '../utils/id';
+import { localDateOf } from '../quit/journey';
 
 export type LetterInput = Pick<Letter, 'kind' | 'zones' | 'feelingIds' | 'text'> & Partial<Pick<Letter, 'deliverOn' | 'remind' | 'showWhenIntense' | 'fromReflection'>>;
 
@@ -94,6 +95,8 @@ export const useLettersStore = create<LettersState>()(
           (l) => {
             l.timesShown += 1;
             l.lastShownAt = now();
+            const day = localDateOf(l.lastShownAt);
+            if (!(l.readOn ?? []).includes(day)) l.readOn = [...(l.readOn ?? []), day];
           },
           false
         ),

@@ -97,8 +97,8 @@ const screenComponents = {
   habitBuilder: HabitBuilderScreen,
   budget: BudgetScreen,
   quitHabit: sensitiveScreen(QuitHabitScreen, 'quitHabit'),
-  reflection: sensitiveScreen(ReflectionScreen, 'reflection'),
-  letters: sensitiveScreen(LettersScreen, 'letters'),
+  reflection: sensitiveScreen(ReflectionScreen, 'reflection', 'private'),
+  letters: sensitiveScreen(LettersScreen, 'letters', 'private'),
   support: sensitiveScreen(SupportScreen, 'support'),
 } as const;
 

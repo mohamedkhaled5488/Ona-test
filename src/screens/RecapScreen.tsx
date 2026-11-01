@@ -94,6 +94,8 @@ import type { SectionId } from '../types/sections';
 import { themedStyles } from '../theme/runtime';
 import { openSection } from '../navigation/navigationRef';
 import type { MetricScope } from '../metrics/registry';
+import { useReflectionStore } from '../store/useReflectionStore';
+import { useLettersStore } from '../store/useLettersStore';
 
 // Recap is rendered directly as the Home tab, not pushed as its own stack
 // route — but it still needs to navigate to every other section, which all
@@ -153,17 +155,19 @@ function useRecapData(): RecapData {
   const quitSlips = useQuitHabitsStore((s) => s.slips);
   const quitCravingSessions = useQuitHabitsStore((s) => s.cravingSessions);
   const bestMoments = useRecapStore((s) => s.bestMoments);
+  const reflectionSessions = useReflectionStore((s) => s.sessions);
+  const letters = useLettersStore((s) => s.letters);
 
   return useMemo(
     () => ({
       tasks, journalEntries, thoughts, studySessions, meals, songs, gameResults, feelingCheckIns, sleepLogs,
       readingEntries, readingSessions, quotes, plans, skills, skillSessions, habits, habitCheckIns, budgets,
-      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, quitSlips, quitCravingSessions, bestMoments,
+      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, quitSlips, quitCravingSessions, bestMoments, reflectionSessions, letters,
     }),
     [
       tasks, journalEntries, thoughts, studySessions, meals, songs, gameResults, feelingCheckIns, sleepLogs,
       readingEntries, readingSessions, quotes, plans, skills, skillSessions, habits, habitCheckIns, budgets,
-      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, quitSlips, quitCravingSessions, bestMoments,
+      budgetEntries, quitHabits, quitTracks, quitFeelingEntries, quitSlips, quitCravingSessions, bestMoments, reflectionSessions, letters,
     ]
   );
 }

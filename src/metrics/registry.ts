@@ -82,6 +82,11 @@ export const METRICS = {
   thoughtsCaught: { noun: ['thought caught', 'thoughts caught'], count: (d, r) => (d.thoughts ?? []).filter((t) => inRange(localDateOf(t.createdAt), r)).length },
   gamesPlayed: { noun: ['game played', 'games played'], count: (d, r) => (d.gameResults ?? []).filter((g) => inRange(localDateOf(g.playedAt), r)).length },
   quotesSaved: { noun: ['quote saved', 'quotes saved'], count: (d, r) => (d.quotes ?? []).filter((q) => inRange(localDateOf(q.createdAt), r)).length },
+  // Reflection and Letters: counts only, never words or themes' names.
+  reflectionSessions: { noun: ['reflection', 'reflections'], count: (d, r) => (d.reflectionSessions ?? []).filter((s) => s.status === 'done' && !s.conflictCopyOf && inRange(localDateOf(s.startedAt), r)).length },
+  reflectionMinutes: { noun: ['time reflecting', 'time reflecting'], minutes: true, count: (d, r) => Math.round((d.reflectionSessions ?? []).filter((s) => s.status === 'done' && !s.conflictCopyOf && inRange(localDateOf(s.startedAt), r)).reduce((n, s) => n + s.seconds, 0) / 60) },
+  lettersWritten: { noun: ['letter written', 'letters written'], count: (d, r) => (d.letters ?? []).filter((l) => !l.conflictCopyOf && inRange(localDateOf(l.createdAt), r)).length },
+  lettersRead: { noun: ['letter read', 'letters read'], count: (d, r) => (d.letters ?? []).reduce((n, l) => n + (l.readOn ?? []).filter((day) => inRange(day, r)).length, 0) },
   mealsPlanned: { noun: ['meal planned', 'meals planned'], ahead: true, count: (d, r) => (d.meals ?? []).filter((m) => inRange(m.date, r)).length },
 } satisfies Record<string, MetricDef>;
 export type MetricId = keyof typeof METRICS;

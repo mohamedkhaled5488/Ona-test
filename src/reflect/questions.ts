@@ -9,6 +9,7 @@ import { FOLLOW_UPS, REFLECT_QUESTIONS, REFLECT_THEMES } from '../content';
 import type { ReflectQuestion, Stage } from '../content/types';
 import type { PlannedQuestion } from '../store/useReflectionStore';
 import type { ReflectDepth, ReflectLength, ReflectMode, ReflectSession } from '../types/sections';
+import { FREE_REFLECT_THEMES } from '../config/plans';
 
 // About 5, 15 and 30 minutes.
 export const SESSION_SHAPE: Record<ReflectLength, Stage[]> = {
@@ -32,6 +33,8 @@ export const DEPTH_LABEL: Record<ReflectDepth, { title: string; line: string }> 
 export type Rand = () => number;
 
 export const writtenThemes = () => REFLECT_THEMES.filter((t) => t.written);
+// The themes this plan opens (config/plans.ts): every written one with Plus.
+export const themesFor = (plus: boolean) => writtenThemes().filter((t) => plus || FREE_REFLECT_THEMES.includes(t.id));
 export const themeById = (id: string | undefined) => REFLECT_THEMES.find((t) => t.id === id);
 export const questionById = (id: string | undefined) => REFLECT_QUESTIONS.find((q) => q.id === id);
 
@@ -99,8 +102,8 @@ export function swapFor(session: ReflectSession, answerId: string, sessions: Ref
 // "Ask me anything": one question at a time, from a chosen theme or any
 // written one, at a depth. Not one already in this session; never asked
 // first; among those, themes the person has chosen before come first.
-export function offerQuestion(opts: { theme?: string; depth: ReflectDepth; exclude: string[] }, sessions: ReflectSession[], rand: Rand = Math.random): PlannedQuestion | undefined {
-  const themes = opts.theme ? [opts.theme] : writtenThemes().map((t) => t.id);
+export function offerQuestion(opts: { theme?: string; depth: ReflectDepth; exclude: string[]; themes?: string[] }, sessions: ReflectSession[], rand: Rand = Math.random): PlannedQuestion | undefined {
+  const themes = opts.theme ? [opts.theme] : writtenThemes().map((t) => t.id).filter((id) => !opts.themes || opts.themes.includes(id));
   const pool = REFLECT_QUESTIONS.filter((q) => themes.includes(q.theme) && q.depth === opts.depth && q.stage !== 'close' && !opts.exclude.includes(q.id));
   if (!pool.length) return undefined;
   const asked = lastAsked(sessions);

@@ -33,7 +33,7 @@ export const STATE_COPY = {
 };
 
 // --- Caps: how many you can create in Essentials mode -------------------------
-export type CapId = 'activePlans' | 'buildHabits' | 'skills' | 'activeBooks' | 'budgets' | 'taskTemplates' | 'dietWeeksAhead';
+export type CapId = 'activePlans' | 'buildHabits' | 'skills' | 'activeBooks' | 'budgets' | 'taskTemplates' | 'dietWeeksAhead' | 'activeLetters';
 
 export const FREE_CAPS: Record<CapId, number> = {
   activePlans: 3,
@@ -43,6 +43,7 @@ export const FREE_CAPS: Record<CapId, number> = {
   budgets: 1,
   taskTemplates: 3,
   dietWeeksAhead: 1, // plan up to next week; past weeks stay visible and editable
+  activeLetters: 5, // letters to yourself not paused (paused ones stay, and can be read)
 };
 
 export const CAP_LABELS: Record<CapId, string> = {
@@ -53,6 +54,7 @@ export const CAP_LABELS: Record<CapId, string> = {
   budgets: 'Budgets',
   taskTemplates: 'Task templates',
   dietWeeksAhead: 'Meal planning',
+  activeLetters: 'Active letters to yourself',
 };
 
 // --- Plus features: going deeper (everything else is in Essentials mode) ----
@@ -71,7 +73,9 @@ export type PlusFeatureId =
   | 'skillJourney'
   | 'pdfExports'
   | 'sleepAllSounds'
-  | 'bookResurfacing';
+  | 'bookResurfacing'
+  | 'reflectAllThemes'
+  | 'reflectAnswerAgain';
 
 export interface PlusFeature {
   id: PlusFeatureId;
@@ -95,7 +99,13 @@ export const PLUS_FEATURES: Record<PlusFeatureId, PlusFeature> = {
   pdfExports: { id: 'pdfExports', title: 'PDF exports', line: `Habits, skills, books and budgets as PDFs. Your data export is in ${ESSENTIALS_NAME} too.` },
   sleepAllSounds: { id: 'sleepAllSounds', title: 'All sleep sounds', line: `Every sound and mix. ${ESSENTIALS_NAME} has the first three.` },
   bookResurfacing: { id: 'bookResurfacing', title: 'Quote resurfacing', line: 'Your saved quotes, brought back now and then.' },
+  reflectAllThemes: { id: 'reflectAllThemes', title: 'Every reflection theme', line: `${ESSENTIALS_NAME} has five themes, with as many sessions as you like.` },
+  reflectAnswerAgain: { id: 'reflectAnswerAgain', title: 'Your answers side by side', line: 'An earlier answer beside the new one, across time.' },
 };
+
+// Reflection themes in Essentials mode: unlimited sessions in each (the
+// others with Plus). Content ids (src/content/reflect/themes.json).
+export const FREE_REFLECT_THEMES = ['where-i-am', 'know-myself', 'gratitude', 'values', 'letting-go'];
 
 // Sleep sounds on Free: the first N of data/sleepSounds.ts.
 export const FREE_SLEEP_SOUNDS = 3;
@@ -131,8 +141,13 @@ const ALL_ROWS: ComparisonRow[] = [
   { feature: 'Diet', free: 'Plan up to next week (past weeks stay)', plus: 'Plan further ahead', enforces: { cap: 'dietWeeksAhead' }, sections: ['dietPlanning'] },
   { feature: 'Export', free: 'Your data (JSON/CSV), always', plus: 'PDF exports', enforces: { plus: ['pdfExports'] } },
   { feature: onlyLive(UNLIMITED_SECTIONS.map(([id]) => id)).map((id) => UNLIMITED_SECTIONS.find(([x]) => x === id)![1]).join(', '), free: 'Everything', plus: 'Everything', enforces: {}, sections: UNLIMITED_SECTIONS.map(([id]) => id) },
+  { feature: 'Reflection', free: 'As many sessions as you like, 5 themes', plus: 'Every theme, earlier answers side by side', enforces: { plus: ['reflectAllThemes', 'reflectAnswerAgain'] }, sections: ['reflection'] },
+  { feature: 'Letters to Myself', free: `Up to ${FREE_CAPS.activeLetters} active letters (paused ones stay)`, plus: 'Unlimited', enforces: { cap: 'activeLetters' }, sections: ['letters'] },
+  { feature: 'Support for this feeling', free: 'Everything, always', plus: 'Everything, always', enforces: {}, sections: ['support'] },
   { feature: 'Support and crisis resources', free: 'Always', plus: 'Always', enforces: {} },
 ];
+// Every row, held sections' included (the plans contract test checks them all).
+export const ALL_PLAN_ROWS = ALL_ROWS;
 
 // Held sections (data/sectionsMeta.ts) aren't in the table or the store text.
 export const PLAN_COMPARISON: ComparisonRow[] = ALL_ROWS.filter((r) => !r.sections || r.sections.some(isLive));

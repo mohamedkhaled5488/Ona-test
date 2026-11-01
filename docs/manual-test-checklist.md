@@ -21,6 +21,9 @@ Run these on every build, even when there's no time for the full pass. Each one 
 | MAN-118 | Back goes one step everywhere (a Quit sub-page, a Feelings sub-page, the tour); Home says how to close Ona |
 | MAN-119 | A journal feeling with "What's behind this?" tags is in Feelings → Analysis by tag |
 | MAN-120 | A number shown in Recap and in a section says its scope, and they agree over the same range (Quit clean days) |
+| MAN-122 | A letter to yourself is offered after a matching feeling, and opens only when chosen (once Letters is live) |
+| MAN-123 | A reflection is saved, and reopens with every answer, also after Ona is closed mid-session (once Reflection is live) |
+| MAN-124 | Support for a Low feeling: grounding or breathing first, and the support lines one tap away (once Support is live) |
 | MAN-099 | Killed by the system mid-step |
 
 ## 1. Install and first run
@@ -132,6 +135,9 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-084 | Quit in Recap (FIX-19) | Start a Quit journey; ride out one urge; open Home → Recap → this week | Quit shows days on the journey and urges ridden out; a slip reads "a new chapter" | | | |
 | MAN-085 | Every section in Recap (FIX-19) | Add one thing in Budget and Catch a Thought; open Recap | Each appears with its own tile; no "best", "most" or "busiest" anywhere | | | |
 | MAN-121 | Held sections are nowhere | Go through Home's four folders, Discover and the tour, every Settings page (Sections → each, Recap's list, Notifications, Plan & usage), Demo mode's Recap, and an export file | No "Mind Games" or "Songwriting" anywhere | | | |
+| MAN-122 | A letter, received after a matching feeling (once Letters is live) | Letters to Myself → Write a letter → "To me, when I feel…" → Low → write two lines → Save. Then log a Low feeling anywhere (Journaling, Quit, Identify the Feeling) | "You left yourself a note for days like this. Would you like to read it?" appears after the feeling sheet closes; nothing opens until Read it now; the letter says when it was written; log Low again: offered again only for a new feeling, "See another" if two match | | | |
+| MAN-123 | A reflection saved and reopened (once Reflection is live) | Reflection → Guided → Know myself → Short → Light → answer, skip one, Finish → a take-away → Save. Close Ona from recent apps; open it again → Reflection | The session is in "Your reflections" with its answers; mid-session, closing Ona keeps the draft with every word typed | | | |
+| MAN-124 | Support for a Low feeling (once Support is live) | Support for this feeling → Low → a word → strength 5 → Show me some ideas | Breathing or grounding first; "Talk to someone" in view; Support lines open the list for your region; no diagnosis words anywhere. Try the breathing → Done → "Did it help?" | | | |
 | MAN-086 | Hide sensitive areas (FIX-19) | Settings → Hide sensitive areas on Home; then share a Recap story | Feelings and Quit are off Home and out of the story; still in their own sections | | | |
 | MAN-087 | Feelings from every section (FIX-20) | Log a feeling from a task, a habit, a skill session, Quit, a journal entry and Identify the Feeling | All six show in the feelings log, the graph, Analysis and Recap, with where they came from | | | |
 | MAN-088 | Feelings survive a reinstall (FIX-17, FIX-20) | Signed in: do MAN-087, close Ona, wait 10 s, uninstall, reinstall, sign in | All six feelings come back without tapping Sync now | | | |

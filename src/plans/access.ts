@@ -18,6 +18,7 @@ import { addDaysISO, todayISO } from '../utils/date';
 import { weekStartFor } from '../utils/feelingsStats';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { FREE_CAPS, type CapId } from '../config/plans';
+import { useLettersStore } from '../store/useLettersStore';
 
 // The demo shows everything Ona can do (buying stays off there).
 export function usePlus(): boolean {
@@ -50,6 +51,8 @@ export function usedNow(cap: CountCap): number {
       return useBudgetStore.getState().budgets.length;
     case 'taskTemplates':
       return useDailyPlanningStore.getState().taskTemplates.length;
+    case 'activeLetters':
+      return useLettersStore.getState().letters.filter((l) => !l.paused && !l.conflictCopyOf).length;
   }
 }
 

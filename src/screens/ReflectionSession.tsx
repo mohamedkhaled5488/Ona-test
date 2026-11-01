@@ -15,12 +15,14 @@ import { sectionAccents } from '../theme/accents';
 import { useReflectionStore } from '../store/useReflectionStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import { REFLECT_CLOSING } from '../content';
-import { DEPTH_LABEL, LENGTH_LABEL, defaultTitle, followUpFor, laterAnswers, offerQuestion, planSession, swapFor, themeById, writtenThemes } from '../reflect/questions';
+import { DEPTH_LABEL, LENGTH_LABEL, defaultTitle, followUpFor, laterAnswers, offerQuestion, planSession, swapFor, themeById, themesFor, writtenThemes } from '../reflect/questions';
 import { pastAnswers, questionKey } from '../reflect/revisit';
 import { formatDisplayDate } from '../utils/date';
 import { isLive } from '../data/sectionsMeta';
 import { openSection } from '../navigation/navigationRef';
 import type { ReflectDepth, ReflectLength, ReflectSession } from '../types/sections';
+import { PlusGate } from '../components/PlusGate';
+import { isPlusNow, usePlus } from '../plans/access';
 
 const accent = sectionAccents.reflection;
 
@@ -76,7 +78,9 @@ function Chip({ label, selected, onPress, testID }: { label: string; selected?: 
 export function SetupStage({ onStart }: { onStart: (sessionId: string) => void }) {
   const sessions = useReflectionStore((s) => s.sessions);
   const start = useReflectionStore((s) => s.start);
-  const themes = writtenThemes();
+  const plus = usePlus();
+  const themes = themesFor(plus);
+  const locked = writtenThemes().filter((t) => !themes.includes(t));
   const [theme, setTheme] = useState(themes[0]?.id);
   const [length, setLength] = useState<ReflectLength>('short');
   const [depth, setDepth] = useState<ReflectDepth>('light');
@@ -97,6 +101,11 @@ export function SetupStage({ onStart }: { onStart: (sessionId: string) => void }
           </Card>
         </Pressable>
       ))}
+      {locked.length > 0 && (
+        <PlusGate feature="reflectAllThemes">
+          <></>
+        </PlusGate>
+      )}
       <SectionHeading>Length</SectionHeading>
       <View style={styles.chipRow}>
         {(Object.keys(LENGTH_LABEL) as ReflectLength[]).map((l) => (
@@ -167,7 +176,7 @@ export function SessionStage({ sessionId, onClose, onLeave }: { sessionId: strin
   const next = () => {
     if (session.mode === 'ask' && session.position === n - 1) {
       // Ask me anything: another question, unless they finish.
-      const q = offerQuestion({ theme: session.theme, depth: session.depth ?? 'light', exclude: session.answers.map((a) => a.questionId!).filter(Boolean) }, sessions);
+      const q = offerQuestion({ theme: session.theme, depth: session.depth ?? 'light', exclude: session.answers.map((a) => a.questionId!).filter(Boolean), themes: themesFor(isPlusNow()).map((t) => t.id) }, sessions);
       if (q) store.addQuestion(sessionId, q);
     }
     goTo(session.position + 1);
@@ -217,6 +226,7 @@ export function SessionStage({ sessionId, onClose, onLeave }: { sessionId: strin
           />
           {past.length > 0 &&
             (showPast ? (
+              <PlusGate feature="reflectAnswerAgain">
               <Card style={styles.past}>
                 {past.map((p) => (
                   <View key={p.answerId} style={styles.pastItem}>
@@ -228,6 +238,7 @@ export function SessionStage({ sessionId, onClose, onLeave }: { sessionId: strin
                   <Caption>{REFLECT_COPY.pastHide}</Caption>
                 </Pressable>
               </Card>
+              </PlusGate>
             ) : (
               <Pressable onPress={() => setShowPast(true)} accessibilityRole="button" style={styles.link} testID="reflect-past">
                 <Caption>{REFLECT_COPY.pastPrompt(past.length)}</Caption>

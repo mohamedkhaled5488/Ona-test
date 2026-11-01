@@ -43,6 +43,9 @@ import { tagInsight } from '../../src/utils/feelingsInsights';
 import { logFeeling } from '../../src/feelings/logFeeling';
 import { useFeelingsStore } from '../../src/store/useFeelingsStore';
 import { useJournalStore } from '../../src/store/useJournalStore';
+import { useLettersStore } from '../../src/store/useLettersStore';
+import { useReflectionStore } from '../../src/store/useReflectionStore';
+import { useSupportStore } from '../../src/store/useSupportStore';
 import { admin, newUser, setTrial, setSubscription, DAY, fromNow, type TestUser } from './local';
 
 const storage = AsyncStorage as unknown as { clear: () => Promise<void> };
@@ -441,4 +444,41 @@ test('BE-REAL-011 every number shown in both Recap and a section matches by scop
   expect(countIn('cleanDays', data, { start, end: TODAY }, TODAY)).toBe(clean);
   expect(stats.habitCompletions).toBe(data.habits.reduce((n, h) => n + metricCount('habitCheckIns', data, TOTAL, TODAY, undefined, { habitId: h.id }), 0));
   expect(stats.minutes.skills).toBe(data.skills.reduce((n, k) => n + totalMinutesFor(data.skillSessions, k.id), 0));
+});
+
+// Reflection, Letters to Myself and Support for this feeling (held in the app
+// until the owner's review, synced already): through a real account, sessions
+// and letters reach a fresh phone the same, a reminder id never leaves the
+// phone, Support's memory never does, and another account sees none of it.
+test('BE-REAL-012 reflections and letters reach a fresh phone; Support\'s memory and reminder ids stay on the phone; another account sees nothing', async () => {
+  const u = await newUser('real');
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  const sid = useReflectionStore.getState().start({ mode: 'free', title: 'Mine', questions: [{ question: 'What matters?' }] });
+  useReflectionStore.getState().setAnswer(sid, useReflectionStore.getState().sessions[0].answers[0].id, 'Quiet mornings');
+  useReflectionStore.getState().finish(sid, { takeaway: 'Protect mornings', tags: ['me'] });
+  const lid = useLettersStore.getState().addLetter({ kind: 'date', zones: [], feelingIds: [], text: 'Hello, future me', deliverOn: '2027-01-01', remind: true });
+  useLettersStore.getState().setNotificationIds(lid, ['phone-only-1']);
+  useSupportStore.getState().vote('tense.do.walk', 'yes');
+  await sync();
+  const { data: rows } = await admin().from('sync_records').select('collection, data').eq('user_id', u.id);
+  const collections = (rows ?? []).map((r) => r.collection as string);
+  expect(collections).toEqual(expect.arrayContaining(['reflection.sessions', 'letters.letters']));
+  expect(collections.filter((c) => c.startsWith('support.'))).toEqual([]);
+  expect(JSON.stringify(rows)).not.toContain('phone-only-1');
+
+  await freshPhone();
+  await signIn(u);
+  await sync();
+  expect(useReflectionStore.getState().sessions.find((s) => s.id === sid)).toMatchObject({ status: 'done', takeaway: 'Protect mornings' });
+  expect(useReflectionStore.getState().sessions.find((s) => s.id === sid)!.answers[0].answer).toBe('Quiet mornings');
+  expect(useLettersStore.getState().letters.find((l) => l.id === lid)).toMatchObject({ text: 'Hello, future me', deliverOn: '2027-01-01' });
+  expect(useLettersStore.getState().letters.find((l) => l.id === lid)!.notificationIds).toBeUndefined();
+  expect(useSupportStore.getState().votes).toEqual({});
+
+  // Another account: nothing of these is visible to it (row-level security).
+  const other = await newUser('real-other');
+  const { data: theirs } = await other.db.from('sync_records').select('record_id').in('collection', ['reflection.sessions', 'letters.letters']);
+  expect(theirs ?? []).toEqual([]);
 });

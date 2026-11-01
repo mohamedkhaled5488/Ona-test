@@ -56,10 +56,13 @@ export function useRelockOnBackground() {
 
 // Wraps a sensitive screen: screenshots blocked (when on), and optionally
 // behind the Journaling lock.
-export function sensitiveScreen<P extends object>(Component: React.ComponentType<P>, key: string, journalLock = false): React.ComponentType<P> {
+// lock: true, always behind the Journaling lock; 'private', behind it when the
+// person chose to lock Reflection and Letters too.
+export function sensitiveScreen<P extends object>(Component: React.ComponentType<P>, key: string, journalLock: boolean | 'private' = false): React.ComponentType<P> {
   function Sensitive(props: P) {
     useBlockScreenshots(key);
     const content = React.createElement(Component, props);
+    if (journalLock === 'private') return React.createElement(LockGate, { scope: 'journal', also: 'privateLock', children: content });
     return journalLock ? React.createElement(LockGate, { scope: 'journal', children: content }) : content;
   }
   Sensitive.displayName = `Sensitive(${Component.displayName ?? Component.name ?? key})`;

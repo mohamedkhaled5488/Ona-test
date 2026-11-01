@@ -168,6 +168,31 @@ const ALL_TOUR: TourSection[] = [
       { key: 'sl-3', title: 'Gentle mornings', body: 'Note how you slept, and get a gentle reminder in the morning.', feature: 'sleepLog', mock: 'sleep', tryIt: { route: 'sleep' } },
     ],
   },
+  {
+    id: 'reflection',
+    group: 'reflect',
+    title: 'Reflection',
+    slides: [
+      { key: 'rf-1', title: 'A space to think', body: 'Ask yourself real questions, one at a time: a guided theme, a question Ona offers, or your own. Each session is kept, privately.', feature: 'reflectSessions', mock: 'journal' },
+      { key: 'rf-2', title: 'Come back to it', body: 'Answer a question again later and see how your thinking has moved.', feature: 'reflectRevisit', mock: 'journal', tryIt: { route: 'reflection' } },
+    ],
+  },
+  {
+    id: 'letters',
+    group: 'reflect',
+    title: 'Letters to Myself',
+    slides: [
+      { key: 'lt-1', title: 'Words for later', body: 'Write to yourself when things feel steadier. After you note a feeling a letter was written for, Ona offers it, and opens it only if you choose.', feature: 'letters', mock: 'journal', tryIt: { route: 'letters' } },
+    ],
+  },
+  {
+    id: 'support',
+    group: 'reflect',
+    title: 'Support for this feeling',
+    slides: [
+      { key: 'sp-1', title: 'A few ideas, when you want them', body: 'Pick how you feel and get a few hand-written ideas: for your body, your mind, or reaching someone. Support lines are always one tap away.', feature: 'supportIdeas', mock: 'zones', tryIt: { route: 'support' } },
+    ],
+  },
 
   // --- Grow ---
   {
@@ -286,6 +311,8 @@ const ALL_TOUR: TourSection[] = [
   },
 ];
 
+// Every slide, held sections' too (the tour's own test checks them all).
+export const TOUR_INCLUDING_HELD = ALL_TOUR;
 // A held section (data/sectionsMeta.ts) has no slides.
 export const TOUR: TourSection[] = ALL_TOUR.filter((s) => !sectionsMeta.some((m) => m.id === s.id) || isLive(s.id as SectionId));
 

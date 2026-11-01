@@ -30,7 +30,7 @@ describe('settings store', () => {
     const s = store.getState();
     expect(s.theme).toBe('system');
     expect(s.textSize).toBe('system');
-    expect(s.notify).toEqual({ tasks: true, habits: true, studyEnd: true, sleep: true, weeklyStory: false, letters: true, support: true });
+    expect(s.notify).toEqual({ tasks: true, habits: true, studyEnd: true, sleep: true, weeklyStory: false, letters: true, support: true, reflection: true });
     expect(s.quietHours.enabled).toBe(false);
     expect(s.quietHours.includeAlarms).toBe(false);
     // Consent is never pre-given.

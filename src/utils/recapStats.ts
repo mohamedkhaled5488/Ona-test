@@ -27,11 +27,15 @@ import { addDaysISO } from './date';
 import { localDateOf } from '../quit/journey';
 import { METRICS, type MetricDef, type MetricId } from '../metrics/registry';
 import { heldSectionIds, onlyLive } from '../data/sectionsMeta';
+import type { Letter, ReflectSession } from '../types/sections';
 
 // The app's zone order, used wherever Recap lists feelings (never sorted by count).
 const RECAP_ZONE_ORDER: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay'];
 
 export interface RecapData extends RecapSourceData {
+  // Reflection and Letters (private: never on a shared story).
+  reflectionSessions?: ReflectSession[];
+  letters?: Letter[];
   readingSessions: ReadingSession[];
   quotes: Quote[];
   bestMoments: BestMoment[];
@@ -45,7 +49,7 @@ export type EffortKind = 'study' | 'skills' | 'reading' | 'habits';
 // its area pages or "Choose what Recap shows".
 export const AREA_SECTIONS: Record<AreaId, SectionId[]> = {
   plan: onlyLive<SectionId>(['planBuilder', 'dailyPlanning', 'dietPlanning', 'budget']),
-  reflect: onlyLive<SectionId>(['journaling', 'moodCheck', 'sleep', 'catchAThought']),
+  reflect: onlyLive<SectionId>(['journaling', 'moodCheck', 'sleep', 'catchAThought', 'reflection', 'letters']),
   grow: onlyLive<SectionId>(['habitBuilder', 'quitHabit', 'skills']),
   learn: onlyLive<SectionId>(['book', 'studySession', 'songwriting', 'mindGames']),
 };
@@ -56,7 +60,7 @@ export const EFFORT_SECTION: Record<EffortKind, SectionId> = { study: 'studySess
 export const EFFORT_LABEL: Record<EffortKind, string> = { study: 'Study', skills: 'Skills', reading: 'Reading', habits: 'Habit sessions' };
 
 // Left out of shared story cards unless the user opts in.
-export const SENSITIVE_SECTIONS: SectionId[] = ['moodCheck', 'quitHabit'];
+export const SENSITIVE_SECTIONS: SectionId[] = ['moodCheck', 'quitHabit', 'reflection', 'letters'];
 
 // Every section Recap can show — the "Choose what Recap shows" list.
 export const RECAP_SECTIONS: SectionId[] = [...AREA_SECTIONS.plan, ...AREA_SECTIONS.reflect, ...AREA_SECTIONS.grow, ...AREA_SECTIONS.learn];
@@ -86,6 +90,8 @@ export function withoutHidden(data: RecapData, chosen: SectionId[]): RecapData {
     studySessions: keep('studySession', data.studySessions),
     meals: keep('dietPlanning', data.meals),
     songs: keep('songwriting', data.songs),
+    reflectionSessions: keep('reflection', data.reflectionSessions ?? []),
+    letters: keep('letters', data.letters ?? []),
     gameResults: keep('mindGames', data.gameResults),
     feelingCheckIns: keep('moodCheck', data.feelingCheckIns),
     sleepLogs: keep('sleep', data.sleepLogs),
