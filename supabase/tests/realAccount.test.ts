@@ -262,7 +262,7 @@ test('BE-REAL-005 two phones: edits and deletes in every section on one reach th
   // Exact, from the seed on its fixed reference date (BE-REAL-SEED-002 keeps
   // the seed the same whatever the calendar says). A change to the Demo
   // generator can change these; then update them here.
-  expect(edited).toBe(15);
+  expect(edited).toBe(14); // 15 before held sections (Songwriting, Mind Games) left the seed
   expect(deleted).toBe(24);
   await sync();
   const onB = phoneRecords();

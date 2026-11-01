@@ -22,6 +22,8 @@ function build() {
     '',
     'For the owner (tone) and a clinician or psychologist (safety) before release. ☐ = not yet reviewed. **[heavy]** = about loss, the past, or the heaviest feelings: heavy Support pieces are not shown until reviewed (breathing, grounding and the support lines always are).',
     '',
+    '**For the clinician, most of all:** the hard-feeling mode lines, the danger card and the phrases that bring it (`src/support/engine.ts`, `DANGER`), every **[heavy]** piece, the Low and Tense zones, the heaviest words (Depressed, Miserable, Helpless, Numb, Ashamed, Insignificant, Rage, Hateful), and the Deep reflection questions. Once a piece is approved, set its `reviewed` to true in its JSON file and run this script again.',
+    '',
     'Intensity is the feeling sheet\'s 1 (a little) to 5 (very).',
     '',
   );
@@ -82,6 +84,25 @@ function build() {
   add('### Hard-feeling mode', '', 'Low, or Tense at high intensity: fewer words, breathing and grounding first, "Talk to someone" in view.', '');
   hard.lines.forEach((l) => add(`- ${mark(l)}${l.text}`));
   add(`- talkTitle: ${hard.talkTitle}`, `- talkLine: ${hard.talkLine}`, `- dangerTitle: ${hard.dangerTitle}`, `- dangerLine: ${hard.dangerLine}`, `- helped: ${Object.values(hard.helped).join(' / ')}`, `- checkInLater: ${hard.checkInLater}`, '');
+
+  // Each of the 89 feeling words: its own acknowledgement and options, shown
+  // before the zone's. Heavy words show only breathing, grounding and the
+  // support lines until reviewed.
+  const wheel = fs.readFileSync(path.join(root, 'src/data/feelingsWheel.ts'), 'utf8');
+  const nameOf = (id) => (wheel.match(new RegExp(`id: '${id}', name: '([^']+)'`)) || [])[1] || id;
+  add('### Each feeling word', '', "Its own lines come first; the zone's fill in. **[heavy]** words: only the options marked safe (breathing, grounding, support lines) are shown until review.", '');
+  for (const zone of ['lively', 'calm', 'okay', 'tense', 'low']) {
+    add(`#### ${zone[0].toUpperCase()}${zone.slice(1)}`, '');
+    for (const w of read(`support/words/${zone}.json`)) {
+      add(`**${nameOf(w.feelingId)}**${w.sensitivity === 'heavy' ? ' **[heavy]**' : ''}${w.written ? '' : ' (not written: falls back to the zone)'}`, '');
+      w.acknowledge.forEach((a) => add(`- ${mark(a)}${a.text}`));
+      for (const o of w.options) {
+        const to = o.tool ? `tool: ${o.tool}` : o.letter ? `letter: ${o.letter}` : o.support ? 'support lines' : o.prompt ? `write: "${o.prompt}"` : '';
+        add(`- ${mark(o)}${kindTitle[o.kind]}: **${o.title}**. ${o.text} _Why: ${o.why}_${to ? ` (${to})` : ''}`);
+      }
+      add('');
+    }
+  }
   return out.join('\n');
 }
 
