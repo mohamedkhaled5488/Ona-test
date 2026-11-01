@@ -5,7 +5,7 @@
 // lines one tap away on every page; in hard-feeling mode "Talk to someone" is
 // in view. All of it is free. Held until the owner's final review.
 import React, { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { Body, Caption, ScreenTitle, SectionHeading } from '../components/Typography';
@@ -34,6 +34,8 @@ import { cancelReminders, scheduleAt } from '../utils/notifications';
 import { PacedBreathing, ToolView } from './QuitTools';
 import type { RootStackParamList } from '../navigation/types';
 import type { FeelingZone } from '../types/sections';
+import { Tappable } from '../components/Tappable';
+import { useUi } from '../components/UiProvider';
 
 const accent = sectionAccents.support;
 
@@ -55,6 +57,8 @@ export const SUPPORT_COPY = {
   hide: 'Not for me',
   didItHelp: (title: string) => `Did "${title}" help?`,
   thanks: "Thanks. Ona will remember, on this phone only.",
+  helpedReply: { yes: "Glad it helped. It'll come first next time.", aLittle: 'A little counts. Ona will remember it.', notReally: "Thanks for saying. Ona will try something else next time." } as Record<Helped, string>,
+  hiddenToast: "Okay, Ona won't suggest that one.",
   done: 'Done',
   offerAfterLog: 'Offer ideas after I note a Low or Tense feeling',
   noFix: "You don't have to fix this right now.",
@@ -91,9 +95,9 @@ export function SupportScreen({ route }: Props) {
 
 function Chip({ label, on, onPress, testID }: { label: string; on: boolean; onPress: () => void; testID?: string }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, on && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="radio" accessibilityState={{ selected: on }} testID={testID}>
+    <Tappable onPress={onPress} style={[styles.chip, on && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="radio" accessibilityState={{ selected: on }} testID={testID}>
       <Caption style={on ? styles.chipTextActive : undefined}>{label}</Caption>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -161,6 +165,7 @@ function ResultPage({ feeling, feelingId, plan, onTool }: { feeling: SupportFeel
   const hidden = useSupportStore((s) => s.hidden);
   const [asked, setAsked] = useState<Record<string, Helped>>({});
   const checkIn = useSupportStore((s) => s.checkInIds.length > 0);
+  const { showToast } = useUi();
   useEffect(() => {
     if (recorded.has(plan)) return;
     recorded.add(plan);
@@ -219,7 +224,7 @@ function ResultPage({ feeling, feelingId, plan, onTool }: { feeling: SupportFeel
           insight={plan.insights[o.id]}
           action={label(o)}
           onAct={() => act(o)}
-          onHide={o.support ? undefined : () => useSupportStore.getState().hide(o.id)}
+          onHide={o.support ? undefined : () => (useSupportStore.getState().hide(o.id), showToast({ message: SUPPORT_COPY.hiddenToast, actionLabel: 'Undo', onAction: () => useSupportStore.getState().unhide(o.id) }))}
           helped={used.includes(o.id) && !o.support ? asked[o.id] ?? null : undefined}
           onHelped={(h) => (useSupportStore.getState().vote(o.id, h), setAsked((a) => ({ ...a, [o.id]: h })))}
         />
@@ -237,9 +242,9 @@ function OptionCard({ option, insight, action, onAct, onHide, helped, onHelped }
       <Body style={styles.bold}>{option.title}</Body>
       <Body>{option.text}</Body>
       {insight && <Caption style={{ color: accent }}>{insight}</Caption>}
-      <Pressable onPress={() => setWhy((w) => !w)} accessibilityRole="button" accessibilityState={{ expanded: why }} style={styles.link}>
+      <Tappable onPress={() => setWhy((w) => !w)} accessibilityRole="button" accessibilityState={{ expanded: why }} style={styles.link}>
         <Caption>{SUPPORT_COPY.why}</Caption>
-      </Pressable>
+      </Tappable>
       {why && <Caption>{option.why}</Caption>}
       <View style={styles.row}>
         {action && <PrimaryButton label={action} onPress={onAct} style={styles.flex} />}
@@ -261,7 +266,7 @@ function OptionCard({ option, insight, action, onAct, onHide, helped, onHelped }
           </View>
         </View>
       )}
-      {helped && <Caption>{SUPPORT_COPY.thanks}</Caption>}
+      {helped && <Caption>{SUPPORT_COPY.helpedReply[helped]}</Caption>}
     </Card>
   );
 }

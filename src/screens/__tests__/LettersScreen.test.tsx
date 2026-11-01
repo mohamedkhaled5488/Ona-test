@@ -68,6 +68,7 @@ test('LETTER-UI-001 writing a letter for Low: the gentle tip, a starter if wante
   expect(st().letters[0].text).toContain('A walk, and Sam.');
   expect(st().letters[0].showWhenIntense).toBeUndefined(); // "Don't show when very strong" starts on
   expect(await screen.findByText(writtenOn('2026-11-01'))).toBeTruthy();
+  expect(screen.getByText(LETTERS_COPY.waitsForDay)).toBeTruthy();
 });
 
 test('LETTER-UI-002 a matching feeling from another section: offered once, opened only by choice; "See another"; read counts', async () => {

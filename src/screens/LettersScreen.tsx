@@ -3,7 +3,7 @@
 // or waits for a date you choose. Edit, pause, hide or delete any time.
 // Private; held until the owner's final review (data/sectionsMeta.ts).
 import React, { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
 import { Body, Caption, ScreenTitle, SectionHeading } from '../components/Typography';
@@ -29,6 +29,7 @@ import { addDaysISO, formatDisplayDate, todayISO } from '../utils/date';
 import type { RootStackParamList } from '../navigation/types';
 import type { FeelingZone, Letter, LetterKind } from '../types/sections';
 import { useCapGuard } from '../components/PlusGate';
+import { Tappable } from '../components/Tappable';
 
 const accent = sectionAccents.letters;
 
@@ -39,9 +40,13 @@ export const LETTERS_COPY = {
   waiting: 'Waiting for you',
   savedForLater: 'Saved for later',
   yours: 'Your letters',
-  empty: 'No letters yet.',
+  empty: 'No letters yet. Write one on a steadier day, for a harder one.',
+  saved: 'Saved',
+  waitsForDay: "It will wait quietly for a day like that, and Ona will ask before opening it.",
+  waitsUntil: (date: string) => `It will wait until ${date}.`,
   paused: 'Paused',
   hidden: 'Hidden for now',
+  hiddenToast: 'Hidden for now. It stays here.',
   kind: 'Who is it for?',
   zones: 'When I feel',
   words: 'Or a specific feeling (optional)',
@@ -66,7 +71,7 @@ export const LETTERS_COPY = {
         : LETTERS.kinds.find((k) => k.kind === l.kind)!.title.replace(/^To me, /, '').replace(/^w/, 'W').replace(/^o/, 'O'),
 };
 
-type Page = { kind: 'home' } | { kind: 'write'; letterId?: string; write?: LetterKind; draftText?: string; fromReflection?: string } | { kind: 'read'; letterId: string };
+type Page = { kind: 'home' } | { kind: 'write'; letterId?: string; write?: LetterKind; draftText?: string; fromReflection?: string } | { kind: 'read'; letterId: string; justSaved?: boolean };
 type Props = NativeStackScreenProps<RootStackParamList, 'letters'>;
 
 export function LettersScreen({ route }: Props) {
@@ -92,11 +97,11 @@ export function LettersScreen({ route }: Props) {
           saveRef={saveRef}
           onSaved={(id) => {
             setDirty(false);
-            setStack([{ kind: 'home' }, { kind: 'read', letterId: id }]);
+            setStack([{ kind: 'home' }, { kind: 'read', letterId: id, justSaved: true }]);
           }}
         />
       )}
-      {current.kind === 'read' && <ReadPage letterId={current.letterId} onEdit={() => push({ kind: 'write', letterId: current.letterId })} onDeleted={() => setStack([{ kind: 'home' }])} />}
+      {current.kind === 'read' && <ReadPage letterId={current.letterId} justSaved={current.justSaved} onEdit={() => push({ kind: 'write', letterId: current.letterId })} onDeleted={() => setStack([{ kind: 'home' }])} />}
     </Screen>
   );
 }
@@ -105,12 +110,12 @@ function LetterRow({ letter, onPress }: { letter: Letter; onPress: () => void })
   const state = letter.hidden ? LETTERS_COPY.hidden : letter.paused ? LETTERS_COPY.paused : '';
   const label = [LETTERS_COPY.forFeeling(letter), state].filter(Boolean).join(' · ');
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} testID={`letter-${letter.id}`}>
+    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} testID={`letter-${letter.id}`}>
       <Card style={styles.card}>
         <Body style={styles.bold}>{LETTERS_COPY.forFeeling(letter)}</Body>
         <Caption>{[formatDisplayDate(letter.createdAt.slice(0, 10)), state].filter(Boolean).join(' · ')}</Caption>
       </Card>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -143,9 +148,9 @@ function HomePage({ onWrite, onOpen }: { onWrite: () => void; onOpen: (id: strin
 
 function Chip({ label, on, onPress, testID }: { label: string; on: boolean; onPress: () => void; testID?: string }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, on && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="checkbox" accessibilityState={{ checked: on }} testID={testID}>
+    <Tappable onPress={onPress} style={[styles.chip, on && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="checkbox" accessibilityState={{ checked: on }} testID={testID}>
       <Caption style={on ? styles.chipTextActive : undefined}>{label}</Caption>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -238,10 +243,10 @@ function WritePage({ page, onDirty, saveRef, onSaved }: { page: Extract<Page, { 
   );
 }
 
-function ReadPage({ letterId, onEdit, onDeleted }: { letterId: string; onEdit: () => void; onDeleted: () => void }) {
+function ReadPage({ letterId, justSaved, onEdit, onDeleted }: { letterId: string; justSaved?: boolean; onEdit: () => void; onDeleted: () => void }) {
   const letter = useLettersStore((s) => s.letters.find((l) => l.id === letterId));
   const store = useLettersStore();
-  const { requestDelete } = useUi();
+  const { requestDelete, showToast } = useUi();
   const guard = useCapGuard();
   // A dated letter, its day come: opened now.
   React.useEffect(() => {
@@ -251,6 +256,12 @@ function ReadPage({ letterId, onEdit, onDeleted }: { letterId: string; onEdit: (
   if (!letter) return <Caption>{LETTERS_COPY.empty}</Caption>;
   return (
     <View style={styles.gap}>
+      {justSaved && (
+        <Card style={styles.card} testID="letter-saved">
+          <Body style={styles.bold}>{LETTERS_COPY.saved}</Body>
+          <Caption>{letter.kind === 'date' && letter.deliverOn ? LETTERS_COPY.waitsUntil(formatDisplayDate(letter.deliverOn)) : LETTERS_COPY.waitsForDay}</Caption>
+        </Card>
+      )}
       <SectionHeading>{LETTERS_COPY.forFeeling(letter)}</SectionHeading>
       <Caption>{writtenOnText(letter)}</Caption>
       <Card>
@@ -276,11 +287,13 @@ function ReadPage({ letterId, onEdit, onDeleted }: { letterId: string; onEdit: (
         label={letter.hidden ? LETTERS_COPY.show : LETTERS.hideForNow}
         variant="outline"
         onPress={() => {
-          store.setHidden(letter.id, !letter.hidden);
+          const hide = !letter.hidden;
+          store.setHidden(letter.id, hide);
           void syncLetterReminder(useLettersStore.getState().letters.find((l) => l.id === letter.id)!);
+          if (hide) showToast({ message: LETTERS_COPY.hiddenToast, actionLabel: 'Undo', onAction: () => store.setHidden(letter.id, false) });
         }}
       />
-      <Pressable
+      <Tappable
         onPress={() => {
           const copy = letter;
           requestDelete({
@@ -301,7 +314,7 @@ function ReadPage({ letterId, onEdit, onDeleted }: { letterId: string; onEdit: (
         testID="letter-delete"
       >
         <Caption>{LETTERS_COPY.delete}</Caption>
-      </Pressable>
+      </Tappable>
       <SupportLink />
     </View>
   );

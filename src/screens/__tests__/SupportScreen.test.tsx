@@ -60,7 +60,7 @@ test('SUP-UI-001 Low, felt strongly: hard-feeling mode, breathing first and "Tal
   await app.user.press(await screen.findByTestId('support-tool-done'));
   await app.user.press(await screen.findByTestId('support-helped-yes'));
   expect(sup().votes[first]).toEqual({ yes: 1, aLittle: 0, notReally: 0 });
-  expect(screen.getByText(SUPPORT_COPY.thanks)).toBeTruthy();
+  expect(screen.getByText(SUPPORT_COPY.helpedReply.yes)).toBeTruthy();
 });
 
 test('SUP-UI-002 an everyday Tense: the acknowledgement, "Why this can help" when asked, "Not for me" hides it (and remembers)', async () => {
@@ -75,6 +75,10 @@ test('SUP-UI-002 an everyday Tense: the acknowledgement, "Why this can help" whe
   await app.user.press(screen.getAllByText(SUPPORT_COPY.hide)[0]);
   expect(sup().hidden).toEqual([firstId]);
   expect(screen.queryByTestId(`support-option-${firstId}`)).toBeNull();
+  // Forgiving: one tap brings it back.
+  await app.user.press(await screen.findByText('Undo'));
+  expect(sup().hidden).toEqual([]);
+  expect(screen.getByTestId(`support-option-${firstId}`)).toBeTruthy();
 });
 
 test('SUP-UI-003 danger in the person\'s own note: the support card and a caring line, nothing else', async () => {

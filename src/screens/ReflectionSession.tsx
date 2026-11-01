@@ -2,7 +2,7 @@
 // a time), and its closing. Everything is saved as it's typed: a session is a
 // draft until it's closed, so leaving, or Ona being killed, loses nothing.
 import React, { useEffect, useMemo, useState } from 'react';
-import { AppState, Pressable, View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { Body, Caption, Eyebrow, ScreenTitle, SectionHeading } from '../components/Typography';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -23,6 +23,7 @@ import { openSection } from '../navigation/navigationRef';
 import type { ReflectDepth, ReflectLength, ReflectSession } from '../types/sections';
 import { PlusGate } from '../components/PlusGate';
 import { isPlusNow, usePlus } from '../plans/access';
+import { Tappable } from '../components/Tappable';
 
 const accent = sectionAccents.reflection;
 
@@ -68,9 +69,9 @@ export const REFLECT_COPY = {
 
 function Chip({ label, selected, onPress, testID }: { label: string; selected?: boolean; onPress: () => void; testID?: string }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, selected && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="radio" accessibilityState={{ selected: !!selected }} testID={testID}>
+    <Tappable onPress={onPress} style={[styles.chip, selected && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="radio" accessibilityState={{ selected: !!selected }} testID={testID}>
       <Body style={selected ? styles.chipTextActive : undefined}>{label}</Body>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -94,12 +95,12 @@ export function SetupStage({ onStart }: { onStart: (sessionId: string) => void }
       <ScreenTitle>{REFLECT_COPY.guided}</ScreenTitle>
       <SectionHeading>Theme</SectionHeading>
       {themes.map((t) => (
-        <Pressable key={t.id} onPress={() => setTheme(t.id)} accessibilityRole="radio" accessibilityState={{ selected: theme === t.id }} testID={`reflect-theme-${t.id}`}>
+        <Tappable key={t.id} onPress={() => setTheme(t.id)} accessibilityRole="radio" accessibilityState={{ selected: theme === t.id }} testID={`reflect-theme-${t.id}`}>
           <Card style={[styles.option, theme === t.id && { borderColor: accent }]}>
             <Body style={styles.bold}>{t.title}</Body>
             <Caption>{t.line}</Caption>
           </Card>
-        </Pressable>
+        </Tappable>
       ))}
       {locked.length > 0 && (
         <PlusGate feature="reflectAllThemes">
@@ -234,15 +235,15 @@ export function SessionStage({ sessionId, onClose, onLeave }: { sessionId: strin
                     <Body>{p.answer}</Body>
                   </View>
                 ))}
-                <Pressable onPress={() => setShowPast(false)} accessibilityRole="button" style={styles.link}>
+                <Tappable onPress={() => setShowPast(false)} accessibilityRole="button" style={styles.link}>
                   <Caption>{REFLECT_COPY.pastHide}</Caption>
-                </Pressable>
+                </Tappable>
               </Card>
               </PlusGate>
             ) : (
-              <Pressable onPress={() => setShowPast(true)} accessibilityRole="button" style={styles.link} testID="reflect-past">
+              <Tappable onPress={() => setShowPast(true)} accessibilityRole="button" style={styles.link} testID="reflect-past">
                 <Caption>{REFLECT_COPY.pastPrompt(past.length)}</Caption>
-              </Pressable>
+              </Tappable>
             ))}
 
           {answer.followUp ? (
@@ -259,17 +260,17 @@ export function SessionStage({ sessionId, onClose, onLeave }: { sessionId: strin
                 accessibilityLabel={`Your answer to: ${answer.followUp.question}`}
               />
               {!answer.followUp.answer.trim() && (
-                <Pressable onPress={() => store.setFollowUp(sessionId, answer.id, null)} accessibilityRole="button" style={styles.link}>
+                <Tappable onPress={() => store.setFollowUp(sessionId, answer.id, null)} accessibilityRole="button" style={styles.link}>
                   <Caption>{REFLECT_COPY.followUpNo}</Caption>
-                </Pressable>
+                </Tappable>
               )}
             </Card>
           ) : (
             written &&
             !answer.followUpDeclined && (
-              <Pressable onPress={offerFollowUp} accessibilityRole="button" style={styles.link} testID="reflect-follow-up">
+              <Tappable onPress={offerFollowUp} accessibilityRole="button" style={styles.link} testID="reflect-follow-up">
                 <Caption>{REFLECT_COPY.followUpIntro}…</Caption>
-              </Pressable>
+              </Tappable>
             )
           )}
 
@@ -303,9 +304,9 @@ export function SessionStage({ sessionId, onClose, onLeave }: { sessionId: strin
           </View>
           <PrimaryButton label={session.position < n - 1 || session.mode === 'ask' ? REFLECT_COPY.next : REFLECT_COPY.finish} onPress={next} testID="reflect-next" />
           {session.mode === 'ask' && (
-            <Pressable onPress={() => goTo(n)} accessibilityRole="button" style={styles.link}>
+            <Tappable onPress={() => goTo(n)} accessibilityRole="button" style={styles.link}>
               <Caption>{REFLECT_COPY.finish}</Caption>
-            </Pressable>
+            </Tappable>
           )}
         </>
       )}
@@ -328,9 +329,9 @@ export function SessionStage({ sessionId, onClose, onLeave }: { sessionId: strin
         </Card>
       )}
       {atEnd && <PrimaryButton label={REFLECT_COPY.finish} onPress={onClose} testID="reflect-finish" />}
-      <Pressable onPress={onLeave} accessibilityRole="button" style={styles.link} testID="reflect-leave">
+      <Tappable onPress={onLeave} accessibilityRole="button" style={styles.link} testID="reflect-leave">
         <Caption>{REFLECT_COPY.leaveForNow}</Caption>
-      </Pressable>
+      </Tappable>
       <SupportLink />
     </View>
   );
@@ -375,9 +376,9 @@ export function ClosingStage({ sessionId, onSaved, onGoTo }: { sessionId: string
           <Body style={styles.bold}>{REFLECT_COPY.laterTitle(later.length)}</Body>
           <Caption>{REFLECT_COPY.laterLine}</Caption>
           {later.map((a) => (
-            <Pressable key={a.id} onPress={() => onGoTo(session.answers.indexOf(a))} accessibilityRole="button" style={styles.link}>
+            <Tappable key={a.id} onPress={() => onGoTo(session.answers.indexOf(a))} accessibilityRole="button" style={styles.link}>
               <Caption>{a.question}</Caption>
-            </Pressable>
+            </Tappable>
           ))}
         </Card>
       )}
@@ -400,14 +401,14 @@ function LetterFromAnswer({ session }: { session: ReflectSession }) {
   const answered = session.answers.filter((a) => a.answer.trim());
   return (
     <View style={styles.follow}>
-      <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.link} testID="reflect-to-letter">
+      <Tappable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.link} testID="reflect-to-letter">
         <Caption style={{ color: accent }}>{REFLECT_CLOSING.letterOffer}</Caption>
-      </Pressable>
+      </Tappable>
       {open &&
         answered.map((a) => (
-          <Pressable key={a.id} onPress={() => openSection('letters', { draftText: a.answer.trim(), fromReflection: session.id })} accessibilityRole="button" style={styles.link}>
+          <Tappable key={a.id} onPress={() => openSection('letters', { draftText: a.answer.trim(), fromReflection: session.id })} accessibilityRole="button" style={styles.link}>
             <Caption numberOfLines={2}>{a.answer.trim()}</Caption>
-          </Pressable>
+          </Tappable>
         ))}
     </View>
   );

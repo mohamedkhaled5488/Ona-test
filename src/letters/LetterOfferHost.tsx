@@ -111,7 +111,7 @@ export function LetterOfferHost() {
             onPress={() => {
               store.setHidden(letter.id, true);
               close();
-              showToast({ message: 'Hidden. You can show it again in Letters to Myself.' });
+              showToast({ message: 'Hidden for now. It stays in Letters to Myself.', actionLabel: 'Undo', onAction: () => useLettersStore.getState().setHidden(letter.id, false) });
             }}
           />
           <PrimaryButton label="Close" onPress={close} />

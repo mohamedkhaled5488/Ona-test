@@ -4,7 +4,7 @@
 // (reflect/questions.ts). Private by default; support lines one tap away on
 // every page. Held until the owner's final review (data/sectionsMeta.ts).
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '../components/Screen';
@@ -33,6 +33,7 @@ import type { ReflectAnswer, ReflectSession } from '../types/sections';
 import { ClosingStage, REFLECT_COPY, SessionStage, SetupStage, draftLine } from './ReflectionSession';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { isPlusNow } from '../plans/access';
+import { Tappable } from '../components/Tappable';
 
 const accent = sectionAccents.reflection;
 
@@ -41,7 +42,10 @@ export const REFLECTION_HOME_COPY = {
   line: 'A space to think with yourself. Not therapy, and nothing is judged.',
   continue: 'Pick up where you left off',
   library: 'Your reflections',
-  libraryEmpty: 'Your saved sessions will be here.',
+  libraryEmpty: 'Nothing here yet. When you finish a session, it waits here for you to come back to.',
+  saved: 'Saved',
+  savedLine: 'Kept here, just for you. Come back to it whenever you like.',
+  milestone: (n: number) => (n === 1 ? 'Your first reflection.' : `Your ${n}th reflection.`) + ' Time well spent with yourself.',
   seeAll: 'See all',
   search: 'Search your reflections',
   favorites: 'Favourites',
@@ -69,7 +73,7 @@ type Page =
   | { kind: 'session'; sessionId: string }
   | { kind: 'closing'; sessionId: string }
   | { kind: 'library' }
-  | { kind: 'read'; sessionId: string };
+  | { kind: 'read'; sessionId: string; justSaved?: boolean };
 
 type Props = NativeStackScreenProps<RootStackParamList, 'reflection'>;
 
@@ -104,7 +108,7 @@ export function ReflectionScreen({ route }: Props) {
           }}
           onSaved={() => {
             showToast({ message: REFLECT_CLOSING.saved });
-            setStack([{ kind: 'home' }, { kind: 'read', sessionId: current.sessionId }]);
+            setStack([{ kind: 'home' }, { kind: 'read', sessionId: current.sessionId, justSaved: true }]);
           }}
         />
       )}
@@ -112,6 +116,7 @@ export function ReflectionScreen({ route }: Props) {
       {current.kind === 'read' && (
         <ReadPage
           sessionId={current.sessionId}
+          justSaved={current.justSaved}
           onEdit={(id) => push({ kind: 'session', sessionId: id })}
           onStart={startSession}
           onDeleted={() => (stepBack ? stepBack() : setStack([{ kind: 'home' }]))}
@@ -191,18 +196,18 @@ function HomePage({ onPush, onStart }: { onPush: (p: Page) => void; onStart: (se
       {ago && (
         <Card style={styles.card}>
           <Caption>{REFLECTION_HOME_COPY.yearAgo(ago.title)}</Caption>
-          <Pressable onPress={() => onPush({ kind: 'read', sessionId: ago.id })} accessibilityRole="button" style={styles.link}>
+          <Tappable onPress={() => onPush({ kind: 'read', sessionId: ago.id })} accessibilityRole="button" style={styles.link}>
             <Body style={{ color: accent }}>{REFLECTION_HOME_COPY.yearAgoOpen}</Body>
-          </Pressable>
+          </Tappable>
         </Card>
       )}
 
       <View style={styles.headerRow}>
         <SectionHeading>{REFLECTION_HOME_COPY.library}</SectionHeading>
         {recent.length > 0 && (
-          <Pressable onPress={() => onPush({ kind: 'library' })} accessibilityRole="button" hitSlop={8} testID="reflect-library">
+          <Tappable onPress={() => onPush({ kind: 'library' })} accessibilityRole="button" hitSlop={8} testID="reflect-library">
             <Caption style={{ color: accent }}>{REFLECTION_HOME_COPY.seeAll}</Caption>
-          </Pressable>
+          </Tappable>
         )}
       </View>
       {recent.length === 0 ? <Caption>{REFLECTION_HOME_COPY.libraryEmpty}</Caption> : recent.map((s) => <SessionRow key={s.id} session={s} onPress={() => onPush({ kind: 'read', sessionId: s.id })} />)}
@@ -213,7 +218,7 @@ function HomePage({ onPush, onStart }: { onPush: (p: Page) => void; onStart: (se
 
 function StartCard({ icon, title, line, onPress, testID }: { icon: keyof typeof Ionicons.glyphMap; title: string; line: string; onPress: () => void; testID: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${line}`} testID={testID}>
+    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${line}`} testID={testID}>
       <Card style={styles.startCard}>
         <Ionicons name={icon} size={22} color={accent} />
         <View style={styles.flex}>
@@ -221,7 +226,7 @@ function StartCard({ icon, title, line, onPress, testID }: { icon: keyof typeof 
           <Caption>{line}</Caption>
         </View>
       </Card>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -229,7 +234,7 @@ function SessionRow({ session, line, onPress }: { session: ReflectSession; line?
   const theme = themeById(session.theme);
   const sub = line ?? [formatDisplayDate(localDateOf(session.startedAt)), theme && theme.title !== session.title ? theme.title : '', session.status === 'draft' ? REFLECTION_HOME_COPY.draft : ''].filter(Boolean).join(' · ');
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${session.title}, ${sub}`}>
+    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${session.title}, ${sub}`}>
       <Card style={styles.card}>
         <View style={styles.headerRow}>
           <Body style={[styles.bold, styles.flex]}>{session.title}</Body>
@@ -238,7 +243,7 @@ function SessionRow({ session, line, onPress }: { session: ReflectSession; line?
         <Caption>{sub}</Caption>
         {session.takeaway ? <Caption numberOfLines={1}>{session.takeaway}</Caption> : null}
       </Card>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -250,9 +255,9 @@ function LibraryPage({ onOpen }: { onOpen: (sessionId: string) => void }) {
   const tags = allTags(sessions);
   const themesUsed = writtenThemes().filter((t) => sessions.some((s) => s.theme === t.id));
   const chip = (label: string, on: boolean, toggle: () => void) => (
-    <Pressable key={label} onPress={toggle} style={[styles.chip, on && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="checkbox" accessibilityState={{ checked: on }}>
+    <Tappable key={label} onPress={toggle} style={[styles.chip, on && { backgroundColor: accent, borderColor: accent }]} accessibilityRole="checkbox" accessibilityState={{ checked: on }}>
       <Caption style={on ? styles.chipTextActive : undefined}>{label}</Caption>
-    </Pressable>
+    </Tappable>
   );
   return (
     <View style={styles.gap}>
@@ -275,7 +280,7 @@ function LibraryPage({ onOpen }: { onOpen: (sessionId: string) => void }) {
 }
 
 // --- Read mode -------------------------------------------------------------------
-function ReadPage({ sessionId, onEdit, onStart, onDeleted }: { sessionId: string; onEdit: (id: string) => void; onStart: (id: string) => void; onDeleted: () => void }) {
+function ReadPage({ sessionId, justSaved, onEdit, onStart, onDeleted }: { sessionId: string; justSaved?: boolean; onEdit: (id: string) => void; onStart: (id: string) => void; onDeleted: () => void }) {
   const session = useReflectionStore((s) => s.sessions.find((x) => x.id === sessionId));
   const sessions = useReflectionStore((s) => s.sessions);
   const store = useReflectionStore();
@@ -284,6 +289,8 @@ function ReadPage({ sessionId, onEdit, onStart, onDeleted }: { sessionId: string
   if (!session) return <Caption>{REFLECTION_HOME_COPY.libraryEmpty}</Caption>;
   const theme = themeById(session.theme);
   const minutes = Math.round(session.seconds / 60);
+  const finished = sessions.filter((s) => s.status === 'done' && !s.conflictCopyOf).length;
+  const milestone = justSaved && isMilestone(finished);
 
   const answerAgain = (a: ReflectAnswer) => {
     const q = questionById(a.questionId);
@@ -304,6 +311,12 @@ function ReadPage({ sessionId, onEdit, onStart, onDeleted }: { sessionId: string
 
   return (
     <View style={styles.gap}>
+      {justSaved && (
+        <Card style={styles.card} testID="reflect-saved">
+          <Body style={milestone ? styles.milestone : styles.bold}>{milestone ? REFLECTION_HOME_COPY.milestone(finished) : REFLECTION_HOME_COPY.saved}</Body>
+          <Caption>{REFLECTION_HOME_COPY.savedLine}</Caption>
+        </Card>
+      )}
       <TextInput value={title} onChangeText={setTitle} onBlur={() => store.rename(sessionId, title)} accessibilityLabel={REFLECTION_HOME_COPY.rename} style={styles.titleInput} testID="reflect-title" />
       <Caption>
         {[formatDisplayDate(localDateOf(session.startedAt)), theme?.title, REFLECTION_HOME_COPY.minutes(minutes), session.status === 'draft' ? REFLECTION_HOME_COPY.draft : ''].filter(Boolean).join(' · ')}
@@ -322,9 +335,9 @@ function ReadPage({ sessionId, onEdit, onStart, onDeleted }: { sessionId: string
             <View key={a.id} style={styles.qa}>
               <View style={styles.headerRow}>
                 <Body style={[styles.bold, styles.flex]}>{a.question}</Body>
-                <Pressable onPress={() => store.toggleFavorite(sessionId, a.id)} hitSlop={8} accessibilityRole="button" accessibilityLabel={a.favorite ? 'Remove from favourites' : 'Add to favourites'}>
+                <Tappable onPress={() => store.toggleFavorite(sessionId, a.id)} hitSlop={8} accessibilityRole="button" accessibilityLabel={a.favorite ? 'Remove from favourites' : 'Add to favourites'}>
                   <Ionicons name={a.favorite ? 'star' : 'star-outline'} size={18} color={a.favorite ? accent : colors.inkSoft} />
-                </Pressable>
+                </Tappable>
               </View>
               <Body>{a.answer.trim() || '—'}</Body>
               {a.followUp?.answer.trim() ? (
@@ -333,12 +346,12 @@ function ReadPage({ sessionId, onEdit, onStart, onDeleted }: { sessionId: string
                   <Body>{a.followUp.answer}</Body>
                 </>
               ) : null}
-              <Pressable onPress={() => answerAgain(a)} accessibilityRole="button" style={styles.link} testID={`reflect-again-${a.id}`}>
+              <Tappable onPress={() => answerAgain(a)} accessibilityRole="button" style={styles.link} testID={`reflect-again-${a.id}`}>
                 <Caption style={{ color: accent }}>
                   {REFLECTION_HOME_COPY.again}
                   {before ? ` (${before + 1} answers so far)` : ''}
                 </Caption>
-              </Pressable>
+              </Tappable>
             </View>
           );
         })}
@@ -354,7 +367,7 @@ function ReadPage({ sessionId, onEdit, onStart, onDeleted }: { sessionId: string
         />
         <PrimaryButton label={REFLECTION_HOME_COPY.redo} variant="outline" onPress={redo} style={styles.flex} />
       </View>
-      <Pressable
+      <Tappable
         onPress={() => {
           const copy = session;
           requestDelete({
@@ -371,7 +384,7 @@ function ReadPage({ sessionId, onEdit, onStart, onDeleted }: { sessionId: string
         testID="reflect-delete"
       >
         <Caption>{REFLECTION_HOME_COPY.delete}</Caption>
-      </Pressable>
+      </Tappable>
       <SupportLink />
     </View>
   );
@@ -391,4 +404,8 @@ const styles = themedStyles(() => ({
   qa: { gap: spacing.xs, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.line },
   titleInput: { fontSize: 22, fontWeight: '600' as const },
   link: { minHeight: 40, justifyContent: 'center' as const },
+  milestone: { fontWeight: '600' as const, color: colors.amber },
 }));
+
+// The few counts worth marking (amber stays rare).
+export const isMilestone = (n: number) => [1, 5, 10, 25, 50, 100, 200, 365, 500].includes(n);

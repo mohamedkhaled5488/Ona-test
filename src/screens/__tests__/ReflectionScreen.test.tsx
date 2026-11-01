@@ -67,6 +67,8 @@ test('REFLECT-UI-001 a guided session, start to "Saved": one question at a time,
   const s = st().sessions[0];
   expect(s).toMatchObject({ status: 'done', theme: 'know-myself', takeaway: 'Quiet mornings help' });
   expect(s.answers.map((a) => [a.answer, !!a.skipped])).toEqual([['Mornings, with tea', false], ['', true], ['That I like quiet', false]]);
+  // The small win: the first reflection is marked (in amber, kept for milestones).
+  expect(await screen.findByText(REFLECTION_HOME_COPY.milestone(1))).toBeTruthy();
   // Read mode: the title (editable) and the answers.
   expect(await screen.findByTestId('reflect-title')).toBeTruthy();
   expect(screen.getByText('Mornings, with tea')).toBeTruthy();
