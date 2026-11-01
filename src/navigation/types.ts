@@ -42,6 +42,9 @@ export type RootStackParamList = {
   habitBuilder: { openHabitId?: string; openDate?: string } | undefined;
   budget: { openBudgetId?: string } | undefined;
   quitHabit: { openHabitId?: string } | undefined;
+  // A session to open: to read, or to write in (Support starts one with a
+  // question for a feeling, then opens it here).
+  reflection: { openSessionId?: string; page?: 'read' | 'session' } | undefined;
   habitsHub: { initialMode?: 'build' | 'quit' } | undefined;
   discover: undefined;
   // Start at a section, resume where it was left, or from the beginning.

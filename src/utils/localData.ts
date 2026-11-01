@@ -21,6 +21,7 @@ import { cancelReminders } from './notifications';
 import { normalizeTags, normalizeTasks, normalizeTemplates } from './taskMigration';
 import { isLive, sectionsMeta } from '../data/sectionsMeta';
 import type { SectionId } from '../types/sections';
+import { useReflectionStore } from '../store/useReflectionStore';
 
 interface DataStore {
   getState: () => object;
@@ -54,6 +55,7 @@ export const LOCAL_DATA: Record<string, { store: DataStore; keys: string[]; pref
   budget: { store: useBudgetStore as never, keys: ['budgets', 'entries'] },
   quitHabit: { store: useQuitHabitsStore as never, keys: ['habits', 'tracks', 'feelingEntries', 'slips', 'cravingSessions'] },
   recap: { store: useRecapStore as never, keys: ['bestMoments'] },
+  reflection: { store: useReflectionStore as never, keys: ['sessions'], prefs: ['supportCardShownAt'] },
 };
 
 // A value as the current version expects it (see `normalize` above).

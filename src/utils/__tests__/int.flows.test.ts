@@ -31,6 +31,7 @@ import { dailyTrendPoints, datesInRange } from '../feelingsStats';
 import { describeFeelingSource, type FeelingSourceLookup } from '../feelingSource';
 import { periodStats, withoutHidden, buildHighlights, buildStory, shareableStoryCards, type RecapData } from '../recapStats';
 import { buildExport, exportedSections, LOCAL_DATA } from '../localData';
+import { useReflectionStore } from '../../store/useReflectionStore';
 import { startSettingsEffects } from '../settingsEffects';
 import { getCalendarWeekStart, setCalendarWeekStart, formatClockTime } from '../date';
 import { frequencyStreak } from '../habitFrequency';
@@ -92,6 +93,7 @@ const lookup = (): FeelingSourceLookup => ({
     const e = useJournalStore.getState().entries.find((x) => x.id === id);
     return e ? e.date : undefined;
   },
+  reflect: (id) => useReflectionStore.getState().sessions.find((x) => x.id === id)?.startedAt.slice(0, 10),
 });
 
 describe('INT-FEEL: feelings from every section reach the log, the graph and Analysis', () => {

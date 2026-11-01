@@ -7,6 +7,8 @@ import { useStudyStore } from '../store/useStudyStore';
 import { useJournalStore } from '../store/useJournalStore';
 import { formatDisplayDate } from '../utils/date';
 import type { FeelingSourceLookup } from '../utils/feelingSource';
+import { useReflectionStore } from '../store/useReflectionStore';
+import { localDateOf } from '../quit/journey';
 
 // Live names for every feature a feeling can be logged from — feeds
 // describeFeelingSource in the Feelings Log.
@@ -18,6 +20,7 @@ export function useFeelingSourceLookup(): FeelingSourceLookup {
   const skills = useSkillsStore((s) => s.skills);
   const studySessions = useStudyStore((s) => s.sessions);
   const journal = useJournalStore((s) => s.entries);
+  const reflections = useReflectionStore((s) => s.sessions);
 
   return {
     task: (id) => {
@@ -35,6 +38,10 @@ export function useFeelingSourceLookup(): FeelingSourceLookup {
     journal: (id) => {
       const e = journal.find((x) => x.id === id);
       return e ? formatDisplayDate(e.date) : undefined;
+    },
+    reflect: (id) => {
+      const s = reflections.find((x) => x.id === id);
+      return s ? formatDisplayDate(localDateOf(s.startedAt)) : undefined;
     },
   };
 }

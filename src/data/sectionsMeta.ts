@@ -120,11 +120,20 @@ export const sectionsMeta: SectionMeta[] = [
     icon: 'leaf-outline',
     status: 'live',
   },
+  // Working name; held until the owner's final review.
+  {
+    id: 'reflection',
+    title: 'Reflection',
+    tagline: 'A space to think with yourself',
+    icon: 'chatbubble-ellipses-outline',
+    status: 'held',
+  },
 ];
 
-const statusOf = new Map(sectionsMeta.map((m) => [m.id, m.status]));
-export const isLive = (id: SectionId): boolean => statusOf.get(id) === 'live';
+// Read from the list each time (a test can turn a held section on, as it
+// will be once it's live).
+export const isLive = (id: SectionId): boolean => sectionsMeta.find((m) => m.id === id)?.status === 'live';
 export const liveSections = (): SectionMeta[] => sectionsMeta.filter((m) => m.status === 'live');
 export const heldSectionIds = (): SectionId[] => sectionsMeta.filter((m) => m.status === 'held').map((m) => m.id);
 // A list of sections, without the held ones.
-export const onlyLive = <T extends string>(ids: T[]): T[] => ids.filter((id) => !statusOf.has(id as never) || isLive(id as never));
+export const onlyLive = <T extends string>(ids: T[]): T[] => ids.filter((id) => !sectionsMeta.some((m) => m.id === id) || isLive(id as never));

@@ -121,8 +121,8 @@ export function ItemFeelingSheet({
       />
 
       <View style={styles.actions}>
-        <PrimaryButton label="Skip" variant="outline" style={styles.action} onPress={onSkip} />
-        <PrimaryButton label="Save" style={styles.action} disabled={!zone} onPress={() => zone && onSave({ zone, reasonTags, note })} />
+        <PrimaryButton label="Skip" variant="outline" style={styles.action} onPress={onSkip} testID="feeling-sheet-skip" />
+        <PrimaryButton label="Save" style={styles.action} disabled={!zone} onPress={() => zone && onSave({ zone, reasonTags, note })} testID="feeling-sheet-save" />
       </View>
     </SheetModal>
   );

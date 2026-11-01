@@ -60,6 +60,7 @@ const ADD: Record<Exclude<SectionId, 'recap'>, (d: RecapData) => void> = {
   },
   songwriting: (d) => void d.songs.push({ id: 'so1', title: 'Song', createdAt: at('2026-10-22'), updatedAt: at('2026-10-22') } as never),
   mindGames: (d) => void d.gameResults.push({ id: 'g1', gameId: 'memory', difficulty: 'easy', score: 10, playedAt: at('2026-10-22') } as never),
+  reflection: () => undefined, // held, with no Recap part yet
 };
 
 test('RECAP-REG-001 every live section has exactly one Recap contributor, in one of the four areas', () => {

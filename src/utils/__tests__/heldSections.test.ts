@@ -30,13 +30,14 @@ const titleOf = (id: SectionId) => sectionsMeta.find((m) => m.id === id)!.title;
 // A held section's name, its route, or its singular ("Mind game").
 const mentions = (text: string, id: SectionId) => {
   const t = titleOf(id);
-  return new RegExp(`${t}|${t.replace(/s$/, '')}\\b|\\b${id}\\b`, 'i').test(text);
+  // A word of its own: "self-reflection" isn't the Reflection section.
+  return new RegExp(`(^|[^-\\w])(${t}|${t.replace(/s$/, '')}\\b|${id}\\b)`, 'i').test(text);
 };
 const heldIn = (text: string) => HELD.filter((id) => mentions(text, id));
 
-test('HELD-001 the registry: every section has a status; Songwriting and Mind Games are held for now', () => {
+test('HELD-001 the registry: every section has a status; Songwriting, Mind Games and Reflection (until the owner reviews it) are held', () => {
   for (const m of sectionsMeta) expect(['live', 'held']).toContain(m.status);
-  expect(HELD.sort()).toEqual(['mindGames', 'songwriting']);
+  expect([...HELD].sort()).toEqual(['mindGames', 'reflection', 'songwriting']);
 });
 
 test('HELD-002 Home: folders list only live sections, and every live one is reachable', () => {

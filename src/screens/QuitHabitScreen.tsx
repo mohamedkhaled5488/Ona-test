@@ -45,6 +45,7 @@ import { LongStayCheck, PacedBreathing, TOOL_VIEWS, ToolView, WhyLine } from './
 import { CravingMenu, HabitTypeChips, OwnToolView, ToolkitEntry, ToolkitOffer, ToolkitStage } from './QuitToolkit';
 import { DEFAULT_TOOL, TOOLKIT_COPY, findTool, needsSubstanceNote } from '../quit/toolkit';
 import { openSection } from '../navigation/navigationRef';
+import { SupportLink } from '../components/SupportLink';
 
 // "1 day", "5 days".
 const dayCount = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -184,15 +185,6 @@ function SoftFeelingOffer({ habit, source }: { habit: QuitHabit; source: Feeling
 // right. No shame and no reset: it's marked on the journey, the journey's day
 // count carries on, and starting a new chapter is an option afterwards, never
 // the default. Crisis and support lines are one tap away.
-function SupportLink() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  return (
-    <Pressable onPress={() => openSection('settings', { page: 'safety' })} accessibilityRole="link" hitSlop={8} style={styles.supportLink}>
-      <Ionicons name="call-outline" size={14} color={colors.inkSoft} />
-      <Caption> Need to talk to someone now? Support lines</Caption>
-    </Pressable>
-  );
-}
 
 export const SLIP_COPY = {
   title: 'Slips happen',
@@ -1217,13 +1209,6 @@ const styles = themedStyles(() => ({
     textAlign: 'center',
     marginTop: spacing.sm,
     fontFamily: fonts.bodyMedium,
-  },
-  supportLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginTop: spacing.lg,
-    minHeight: 44,
   },
   ratingRow: {
     flexDirection: 'row',

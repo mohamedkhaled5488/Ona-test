@@ -31,6 +31,7 @@ function lookup(): FeelingSourceLookup {
     quitHabit: () => undefined,
     skill: () => undefined,
     study: () => undefined,
+    reflect: () => undefined,
   };
 }
 

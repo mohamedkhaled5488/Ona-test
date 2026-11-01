@@ -14,7 +14,8 @@ export type SectionId =
   | 'skills'
   | 'habitBuilder'
   | 'budget'
-  | 'quitHabit';
+  | 'quitHabit'
+  | 'reflection';
 
 // live: shipped. held: built but not in this release; it doesn't exist for
 // the person (see data/sectionsMeta.ts). Its data stays on the phone.
@@ -449,12 +450,13 @@ export interface PersonalFeeling {
 // reuse all of feelingsStats.ts unchanged, instead of duplicating that logic.
 // Every place outside Identify the Feeling that a feeling can be logged
 // from. One list, so tests can check every source (feelingSourcesContract).
-export const FEELING_SOURCE_KINDS = ['habit', 'quitHabit', 'skill', 'study', 'task', 'book', 'journal'] as const;
+export const FEELING_SOURCE_KINDS = ['habit', 'quitHabit', 'skill', 'study', 'task', 'book', 'journal', 'reflect'] as const;
 
 export interface FeelingSource {
   kind: (typeof FEELING_SOURCE_KINDS)[number];
   refId: string; // the habit/skill id this feeling was logged against
-  // Tasks: which day of the task, and whether it was felt before starting or after finishing.
+  // Tasks: which day of the task, and whether it was felt before starting or
+  // after finishing. A reflection: before or after the session.
   date?: string;
   phase?: 'before' | 'after';
   // Quit: the urge or slip entry (QuitFeelingEntry) this feeling belongs to.
@@ -842,3 +844,56 @@ export interface QuitFeelingEntry {
   urgePassed?: boolean;
   createdAt: string; // ISO datetime
 }
+
+// --- Reflection (a deep session with yourself) ---
+// The questions come from src/content (ids); the text as asked is kept with
+// the answer, so an old session reads the same after the content changes.
+export type ReflectMode = 'guided' | 'ask' | 'free';
+export type ReflectDepth = 'light' | 'medium' | 'deep';
+export type ReflectLength = 'short' | 'medium' | 'long';
+
+export interface ReflectFollowUp {
+  id: string; // the follow-up's content id
+  question: string;
+  answer: string;
+}
+
+export interface ReflectAnswer {
+  id: string;
+  questionId?: string; // unset: the person's own question
+  question: string;
+  answer: string;
+  stage?: 'arrive' | 'explore' | 'deepen' | 'close';
+  depth?: ReflectDepth;
+  skipped?: boolean;
+  later?: boolean; // "Come back later": offered again before the end
+  followUp?: ReflectFollowUp;
+  followUpDeclined?: boolean;
+  favorite?: boolean;
+  answeredAt?: string;
+  againOf?: string; // "Answer this again": the answer this one revisits
+}
+
+export interface ReflectSession {
+  id: string;
+  mode: ReflectMode;
+  theme?: string; // a content theme id (guided; ask, if one was chosen)
+  depth?: ReflectDepth;
+  length?: ReflectLength;
+  title: string; // editable
+  status: 'draft' | 'done';
+  startedAt: string;
+  updatedAt: string;
+  endedAt?: string;
+  seconds: number; // time spent on the session's pages
+  answers: ReflectAnswer[];
+  position: number; // the answer on screen
+  takeaway?: string;
+  tags: string[];
+  feelingBefore?: string; // Feelings log ids (source "reflect")
+  feelingAfter?: string;
+  favorite?: boolean;
+  redoOf?: string; // a question set done again
+  conflictCopyOf?: string; // set by sync: the other phone's version (sync/engine.ts)
+}
+

@@ -36,6 +36,7 @@ import { SETTINGS_SECTIONS, type SettingsSectionId } from '../screens/settings/p
 import { currentScheme } from '../theme/runtime';
 import { sensitiveScreen } from '../hooks/useScreenPrivacy';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
+import { ReflectionScreen } from '../screens/ReflectionScreen';
 import { getStartScreen } from './startScreen';
 import { navigationRef } from './navigationRef';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
@@ -93,6 +94,7 @@ const screenComponents = {
   habitBuilder: HabitBuilderScreen,
   budget: BudgetScreen,
   quitHabit: sensitiveScreen(QuitHabitScreen, 'quitHabit'),
+  reflection: sensitiveScreen(ReflectionScreen, 'reflection'),
 } as const;
 
 // Recap owns its own stack registration ('Main' below), so it's the one

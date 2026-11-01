@@ -17,7 +17,7 @@ import { navigationRef } from '../navigation/navigationRef';
 
 const ROUTES: (keyof RootStackParamList)[] = [
   'Main', 'welcome', 'planBuilder', 'dailyPlanning', 'taskEditor', 'planningInsights', 'journaling', 'catchAThought', 'studySession',
-  'dietPlanning', 'songwriting', 'mindGames', 'moodCheck', 'sleep', 'book', 'skills', 'habitBuilder', 'budget', 'quitHabit', 'habitsHub',
+  'dietPlanning', 'songwriting', 'mindGames', 'moodCheck', 'sleep', 'book', 'skills', 'habitBuilder', 'budget', 'quitHabit', 'reflection', 'habitsHub',
   'discover', 'discoverTour', 'journalWrite', 'planDetail', 'planStepDetail', 'settings', 'signIn',
 ];
 

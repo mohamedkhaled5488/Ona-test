@@ -97,7 +97,7 @@ test('CONF-002 a journal entry edited on two phones: both versions are kept, on 
     expect(texts).toEqual(['Quiet day, and a call with Mum', 'Quiet day, then a walk']);
     expect(p.list<Entry>(J).find((e) => e.text === 'Quiet day, and a call with Mum')!.conflictCopyOf).toBe('j1');
   }
-  expect([...KEEP_BOTH].sort()).toEqual(['book.quotes', 'catchAThought.thoughts', 'journaling.entries', 'songwriting.songs']);
+  expect([...KEEP_BOTH].sort()).toEqual(['book.quotes', 'catchAThought.thoughts', 'journaling.entries', 'reflection.sessions', 'songwriting.songs']);
 });
 
 test('CONF-003 deleted on one phone, edited on the other first: the edit comes back, nothing lost', async () => {
