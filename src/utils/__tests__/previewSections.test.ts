@@ -27,6 +27,18 @@ test('PREVIEW-002 the personal build\'s list turns on exactly those three; Songw
   expect(m.heldSectionIds().sort()).toEqual(['mindGames', 'songwriting']);
 });
 
+test('PREVIEW-004 the personal build shows them on Home: cards in the Reflect folder (found on the first preview APK: on, but no card)', () => {
+  process.env.EXPO_PUBLIC_PREVIEW_SECTIONS = 'reflection,letters,support';
+  const { folders } = require('../../data/folders') as typeof import('../../data/folders');
+  expect(folders.find((f) => f.id === 'reflect')!.sections).toEqual(['journaling', 'moodCheck', 'sleep', 'reflection', 'letters', 'support']);
+});
+
+test('PREVIEW-005 without the list, the Reflect folder is as before', () => {
+  delete process.env.EXPO_PUBLIC_PREVIEW_SECTIONS;
+  const { folders } = require('../../data/folders') as typeof import('../../data/folders');
+  expect(folders.find((f) => f.id === 'reflect')!.sections).toEqual(['journaling', 'moodCheck', 'sleep']);
+});
+
 test('PREVIEW-003 only the personal profile sets it: testers, the store and the test builds never preview', () => {
   expect(eas.build.personal.env?.EXPO_PUBLIC_PREVIEW_SECTIONS).toBe('reflection,letters,support');
   for (const [name, profile] of Object.entries(eas.build)) {

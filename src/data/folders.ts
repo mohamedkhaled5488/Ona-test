@@ -1,4 +1,5 @@
 import type { FolderId, SectionId } from '../types/sections';
+import { onlyLive } from './sectionsMeta';
 
 export interface FolderMeta {
   id: FolderId;
@@ -37,7 +38,8 @@ export const folders: FolderMeta[] = [
     title: 'Reflect',
     tagline: 'Write it down, name what you feel, wind down',
     icon: 'book-outline',
-    sections: ['journaling', 'moodCheck', 'sleep'],
+    // Reflection, Letters and Support: listed once live (held until then).
+    sections: onlyLive<SectionId | 'habits'>(['journaling', 'moodCheck', 'sleep', 'reflection', 'letters', 'support']),
   },
   {
     id: 'grow',

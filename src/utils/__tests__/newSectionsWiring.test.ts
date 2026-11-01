@@ -12,6 +12,7 @@ jest.mock('../../data/sectionsMeta', () => {
 });
 
 import { SETTINGS_SECTIONS } from '../../screens/settings/pages';
+import { folders } from '../../data/folders';
 import { PLAN_COMPARISON, FREE_CAPS, FREE_REFLECT_THEMES } from '../../config/plans';
 import { TOUR } from '../../discover/content';
 import { generateDemoData } from '../../demo/generate';
@@ -34,6 +35,8 @@ beforeEach(async () => {
 });
 
 test('WIRE-001 every new section is in Settings (its own page or its reminders), the plan table, the tour and the export', () => {
+  // On Home: a card in the Reflect folder.
+  expect(folders.find((f) => f.id === 'reflect')!.sections).toEqual(expect.arrayContaining(['reflection', 'letters', 'support']));
   expect(SETTINGS_SECTIONS).toEqual(expect.arrayContaining(['reflection', 'support']));
   expect(liveNotificationFeatures()).toEqual(expect.arrayContaining(['letters', 'support', 'reflection']));
   for (const id of NEW) {
