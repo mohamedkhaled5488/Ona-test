@@ -8,7 +8,7 @@ name: Personal APK
 # Not for testers (docs/building.md).
 #
 # Needs one repository secret holding an Expo access token (expo.dev →
-# Account settings → Access tokens): ONASECET (the owner's name for it), or
+# Account settings → Access tokens): ONA (the owner's name for it), ONASECET, or
 # MO, or EXPO_TOKEN.
 on:
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
-          token: ${{ secrets.ONASECET || secrets.MO || secrets.EXPO_TOKEN }}
+          token: ${{ secrets.ONA || secrets.ONASECET || secrets.MO || secrets.EXPO_TOKEN }}
 
       - name: The Expo token works
         run: eas whoami
