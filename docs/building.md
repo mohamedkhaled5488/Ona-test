@@ -59,6 +59,8 @@ Before starting one: push, wait for both runs, then `npm run check:ci` (the same
 
 `eas build -p android --profile personal` builds the same APK as `preview`, with the same CI and E2E rule, but without the staging run (the build log says so). It's for the owner's own phones while staging isn't set up (owner, 2026-10-27). Don't give it to testers: tester builds stay on `preview`.
 
+It also shows Reflection, Letters to Myself and Support for this feeling before they're live, so the owner can try them (`EXPO_PUBLIC_PREVIEW_SECTIONS` in `eas.json`, owner, 2026-11-01). No other build sets it (previewSections.test.ts); Songwriting and Mind Games can't be previewed.
+
 When the Expo plan has no builds left that month: GitHub → Actions → **Personal APK** → Run workflow (optionally a commit that passed CI and E2E). It runs `eas build --local` on GitHub with the same signing key and app settings from Expo, so it installs over the Ona on the phone; the APK is in the run's artifacts. It needs a repository secret with an Expo access token (expo.dev → Account settings → Access tokens): `ONASECET` (set up), `MO` or `EXPO_TOKEN`.
 
 ## Real-account tests on staging

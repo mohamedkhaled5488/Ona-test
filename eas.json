@@ -35,7 +35,8 @@
     "personal": {
       "extends": "preview",
       "env": {
-        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a"
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a",
+        "EXPO_PUBLIC_PREVIEW_SECTIONS": "reflection,letters,support"
       }
     },
     "production": {

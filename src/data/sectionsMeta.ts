@@ -146,10 +146,20 @@ export const sectionsMeta: SectionMeta[] = [
   },
 ];
 
+// The owner's own APK (EAS profile "personal") can show held sections before
+// they're live, to try them on a phone: EXPO_PUBLIC_PREVIEW_SECTIONS, set only
+// in that profile (eas.json; previewSections.test.ts checks no other build
+// sets it). Only these may be previewed; Songwriting and Mind Games never.
+export const PREVIEWABLE: SectionId[] = ['reflection', 'letters', 'support'];
+const previewed = (): string[] => (process.env.EXPO_PUBLIC_PREVIEW_SECTIONS ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
+
 // Read from the list each time (a test can turn a held section on, as it
 // will be once it's live).
-export const isLive = (id: SectionId): boolean => sectionsMeta.find((m) => m.id === id)?.status === 'live';
-export const liveSections = (): SectionMeta[] => sectionsMeta.filter((m) => m.status === 'live');
-export const heldSectionIds = (): SectionId[] => sectionsMeta.filter((m) => m.status === 'held').map((m) => m.id);
+export const isLive = (id: SectionId): boolean => {
+  const status = sectionsMeta.find((m) => m.id === id)?.status;
+  return status === 'live' || (status === 'held' && PREVIEWABLE.includes(id) && previewed().includes(id));
+};
+export const liveSections = (): SectionMeta[] => sectionsMeta.filter((m) => isLive(m.id));
+export const heldSectionIds = (): SectionId[] => sectionsMeta.filter((m) => !isLive(m.id)).map((m) => m.id);
 // A list of sections, without the held ones.
 export const onlyLive = <T extends string>(ids: T[]): T[] => ids.filter((id) => !sectionsMeta.some((m) => m.id === id) || isLive(id as never));
