@@ -190,6 +190,195 @@
       "text": "Is there something you would like to keep from it?",
       "reviewed": false,
       "sensitivity": "standard"
+    },
+    {
+      "id": "follow.decision.01",
+      "themes": [
+        "decision"
+      ],
+      "text": "Which option felt lighter as you wrote?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.decision.02",
+      "themes": [
+        "decision"
+      ],
+      "text": "What would help you feel sure?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.decision.03",
+      "themes": [
+        "decision"
+      ],
+      "text": "What would you do if you had to choose today?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.relationships.01",
+      "themes": [
+        "relationships"
+      ],
+      "text": "What would you like them to know?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.relationships.02",
+      "themes": [
+        "relationships"
+      ],
+      "text": "What do you need from this relationship?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.relationships.03",
+      "themes": [
+        "relationships"
+      ],
+      "text": "What small thing could you do about it?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.work.01",
+      "themes": [
+        "work"
+      ],
+      "text": "What would make this a little easier?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.work.02",
+      "themes": [
+        "work"
+      ],
+      "text": "Who could help with this?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.work.03",
+      "themes": [
+        "work"
+      ],
+      "text": "Does this fit what matters to you?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.fears.01",
+      "themes": [
+        "fears"
+      ],
+      "text": "How likely is this, really?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.fears.02",
+      "themes": [
+        "fears"
+      ],
+      "text": "What would help you feel a little safer?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.fears.03",
+      "themes": [
+        "fears"
+      ],
+      "text": "Who could you share this with?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.review.01",
+      "themes": [
+        "review"
+      ],
+      "text": "What made that possible?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.review.02",
+      "themes": [
+        "review"
+      ],
+      "text": "What would you do differently?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.review.03",
+      "themes": [
+        "review"
+      ],
+      "text": "What do you want to remember about it?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.avoiding.01",
+      "themes": [
+        "avoiding"
+      ],
+      "text": "What would the first small step be?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.avoiding.02",
+      "themes": [
+        "avoiding"
+      ],
+      "text": "What would make it easier to start?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.avoiding.03",
+      "themes": [
+        "avoiding"
+      ],
+      "text": "What would you lose by waiting longer?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.becoming.01",
+      "themes": [
+        "becoming"
+      ],
+      "text": "What is one way you already live this?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.becoming.02",
+      "themes": [
+        "becoming"
+      ],
+      "text": "What would help you keep going?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.becoming.03",
+      "themes": [
+        "becoming"
+      ],
+      "text": "Who could walk alongside you?",
+      "reviewed": false,
+      "sensitivity": "standard"
     }
   ],
   "closing": {

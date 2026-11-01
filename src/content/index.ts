@@ -9,6 +9,13 @@ import knowMyself from './reflect/know-myself.json';
 import gratitude from './reflect/gratitude.json';
 import values from './reflect/values.json';
 import lettingGo from './reflect/letting-go.json';
+import decisionQuestions from './reflect/decision.json';
+import relationshipsQuestions from './reflect/relationships.json';
+import workQuestions from './reflect/work.json';
+import fearsQuestions from './reflect/fears.json';
+import reviewQuestions from './reflect/review.json';
+import avoidingQuestions from './reflect/avoiding.json';
+import becomingQuestions from './reflect/becoming.json';
 import followUpsJson from './reflect/followUps.json';
 import lettersJson from './letters/letters.json';
 import lively from './support/lively.json';
@@ -24,7 +31,7 @@ import wordsLow from './support/words/low.json';
 import wordsOkay from './support/words/okay.json';
 
 export const REFLECT_THEMES = themesJson as ReflectTheme[];
-export const REFLECT_QUESTIONS = [...whereIAm, ...knowMyself, ...gratitude, ...values, ...lettingGo] as ReflectQuestion[];
+export const REFLECT_QUESTIONS = [...whereIAm, ...knowMyself, ...gratitude, ...values, ...lettingGo, ...decisionQuestions, ...relationshipsQuestions, ...workQuestions, ...fearsQuestions, ...reviewQuestions, ...avoidingQuestions, ...becomingQuestions] as ReflectQuestion[];
 export const FOLLOW_UPS = followUpsJson.followUps as FollowUp[];
 export const REFLECT_CLOSING = followUpsJson.closing as ClosingCopy;
 

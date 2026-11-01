@@ -32,7 +32,7 @@
     "line": "Think a choice through, slowly",
     "opening": "You don't have to decide anything today. Just look at it from a few sides.",
     "closing": "Whatever you choose, you thought it through. That's worth something.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -41,7 +41,7 @@
     "line": "The people in your life, and you with them",
     "opening": "The people around us shape our days. Let's think about yours.",
     "closing": "Relationships keep changing, and so do we. Thank you for looking at yours honestly.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -50,7 +50,7 @@
     "line": "What you do, and what it means to you",
     "opening": "Work takes up a lot of life. Let's see what it's giving you, and what it's taking.",
     "closing": "Purpose doesn't have to be grand. It can be in how you spend an ordinary day.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -59,7 +59,7 @@
     "line": "Look at a worry from a safe distance",
     "opening": "Worries are often easier to look at when they're written down. Go at your own pace.",
     "closing": "You looked at something hard. You can put it down again now.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -86,7 +86,7 @@
     "line": "Look back over a stretch of time",
     "opening": "Let's look back over a stretch of time, gently, and see what it held.",
     "closing": "That was a stretch of your life. You lived it, and now you've looked at it.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -95,7 +95,7 @@
     "line": "A thing you keep putting off",
     "opening": "We all put some things off. Let's look at one, without judging it.",
     "closing": "Now you know a bit more about why it's been waiting. That often makes the next step easier.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -104,7 +104,7 @@
     "line": "A gentle look ahead",
     "opening": "Let's imagine a little ahead: not who you ought to be, just who you'd like to be.",
     "closing": "You don't have to get there all at once. Knowing the direction is a start.",
-    "written": false,
+    "written": true,
     "reviewed": false
   }
 ]

@@ -24,7 +24,7 @@ Updated 2026-11-01. What each spec asked for, where it stands, and what is open.
 | Turning them live: one line each in `src/data/sectionsMeta.ts` (`status: 'live'`); then the Settings words about sensitive areas name Reflection and Letters too | Claude, after the owner's yes | — |
 | Maestro flows for the three sections (Back key, a letter offered, Support for Low) | Claude, once live | No |
 | Plus "What tends to help you" (Support) in Feelings Analysis | Later, not now (owner, 2026-11-01) | No |
-| Reflection content: the five Essentials themes are written (Where I am, Know myself, Gratitude, Values, Letting go: 12 questions per depth each). The other seven themes (Plus) are not yet | Claude | No (unwritten themes are never offered) |
+| Reflection content: all twelve themes written (12 questions per depth each, 432 in all, with follow-ups) | Done; in the clinician review | No |
 | Real-account tests BE-REAL-012 and BE-ACC-007 (Reflection, Letters, Support through a real account, and with another account on the phone) | Added; its first run caught a wrong assumption in the test (a restored letter has an empty reminder list, not none), fixed | No |
 
 ## Earlier open items (unchanged)
