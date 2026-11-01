@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import type * as NotificationsType from 'expo-notifications';
 import type { AlarmSoundId } from '../types/sections';
 import { alarmSoundOptions } from '../data/alarmSounds';
-import { useSettingsStore, type NotificationFeature } from '../store/useSettingsStore';
+import { useSettingsStore, type NotificationFeature, DEFAULT_SETTINGS } from '../store/useSettingsStore';
 import { applyQuietHours, applyQuietHoursToDate } from './quietHours';
 import { reminderFireDate } from './date';
 import { isDemo } from './dataSpace';
@@ -179,7 +179,8 @@ function resolveSoundFile(soundId: AlarmSoundId | undefined): string | undefined
 }
 
 function featureOn(feature: NotificationFeature): boolean {
-  return useSettingsStore.getState().notify[feature];
+  // A switch added after the settings were saved: its default.
+  return useSettingsStore.getState().notify[feature] ?? DEFAULT_SETTINGS.notify[feature];
 }
 
 // Returns the scheduled notification ids (empty if nothing was scheduled).

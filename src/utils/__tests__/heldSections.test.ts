@@ -35,9 +35,9 @@ const mentions = (text: string, id: SectionId) => {
 };
 const heldIn = (text: string) => HELD.filter((id) => mentions(text, id));
 
-test('HELD-001 the registry: every section has a status; Songwriting, Mind Games and Reflection (until the owner reviews it) are held', () => {
+test('HELD-001 the registry: every section has a status; Songwriting, Mind Games, Reflection and Letters (until the owner reviews them) are held', () => {
   for (const m of sectionsMeta) expect(['live', 'held']).toContain(m.status);
-  expect([...HELD].sort()).toEqual(['mindGames', 'reflection', 'songwriting']);
+  expect([...HELD].sort()).toEqual(['letters', 'mindGames', 'reflection', 'songwriting']);
 });
 
 test('HELD-002 Home: folders list only live sections, and every live one is reachable', () => {

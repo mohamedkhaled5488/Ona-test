@@ -16,6 +16,7 @@ export const DEVICE_ONLY_FIELDS: Record<string, string[]> = {
   'dailyPlanning.tasks': ['notificationIds'],
   'habits.habits': ['reminderNotificationIds'],
   'skills.skills': ['reminderNotificationIds'],
+  'letters.letters': ['notificationIds'],
 };
 
 // Section keys that describe this phone right now, not the user's data.

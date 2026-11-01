@@ -83,7 +83,7 @@ export interface SyncResult {
 
 // Both versions are kept when two phones changed one of these: they're
 // someone's own words.
-export const KEEP_BOTH = new Set(['journaling.entries', 'catchAThought.thoughts', 'book.quotes', 'songwriting.songs', 'reflection.sessions']);
+export const KEEP_BOTH = new Set(['journaling.entries', 'catchAThought.thoughts', 'book.quotes', 'songwriting.songs', 'reflection.sessions', 'letters.letters']);
 
 // The copy's id: the original's, plus when it was made (never "-demo-").
 export const conflictCopyId = (id: string, now: number) => `${id}-v${now.toString(36)}`;

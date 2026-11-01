@@ -55,7 +55,8 @@ export interface ClosingCopy {
 }
 
 // --- Letters to Myself -----------------------------------------------------
-export type LetterKind = 'feeling' | 'doubt' | 'proud' | 'hardDay' | 'date';
+export type { LetterKind } from '../types/sections';
+import type { LetterKind } from '../types/sections';
 
 export interface LetterKindCopy {
   kind: LetterKind;

@@ -6,7 +6,12 @@
 jest.mock('../../utils/notifications', () => ({ ...jest.requireActual('../../utils/notifications'), cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []), getNotificationPermission: jest.fn(async () => ({ state: 'granted', canAskAgain: true })) }));
 jest.setTimeout(60_000);
 
-import { act, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
+import { UiProvider } from '../../components/UiProvider';
+import { LetterOfferHost, OFFER_DELAY_MS } from '../../letters/LetterOfferHost';
+import { useLettersStore } from '../../store/useLettersStore';
+import { logFeeling } from '../../feelings/logFeeling';
+import { LETTERS } from '../../content';
 import { resetAll } from '../../test-utils';
 import { renderScreen } from '../../test-utils/render';
 import { renderApp } from '../../test-utils/renderApp';
@@ -50,3 +55,19 @@ test('HELD-011 opening a held section does nothing: Ona stays where it was', asy
   for (const id of HELD) await act(async () => openSection(id as never));
   expect(app.route()).toEqual(before);
 });
+
+test('HELD-012 while Letters is held, a feeling logged never brings a letter offer (even with a matching letter)', async () => {
+  useLettersStore.setState({ letters: [{ id: 'l1', kind: 'feeling', zones: ['low'], feelingIds: [], text: 'Hi', createdAt: '2020-01-01T00:00:00.000Z', updatedAt: '2020-01-01T00:00:00.000Z', timesShown: 0 }] });
+  await render(
+    <UiProvider>
+      <LetterOfferHost />
+    </UiProvider>
+  );
+  await act(async () => {
+    logFeeling({ zone: 'low' });
+    await new Promise((r) => setTimeout(r, OFFER_DELAY_MS + 50));
+  });
+  expect(screen.queryByText(LETTERS.offer)).toBeNull();
+  expect(useLettersStore.getState().offeredFor).toBeUndefined();
+});
+

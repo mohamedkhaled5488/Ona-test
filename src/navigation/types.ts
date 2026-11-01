@@ -1,4 +1,4 @@
-import type { FeelingSource, FeelingZone } from '../types/sections';
+import type { FeelingSource, FeelingZone, LetterKind } from '../types/sections';
 import type { SettingsParams } from '../screens/settings/pages';
 
 // The bottom tab navigator — Home (Recap) + the 4 folders. See the Ona
@@ -45,6 +45,9 @@ export type RootStackParamList = {
   // A session to open: to read, or to write in (Support starts one with a
   // question for a feeling, then opens it here).
   reflection: { openSessionId?: string; page?: 'read' | 'session' } | undefined;
+  // A letter to read, or a new one to write (of a kind, or from a
+  // reflection's answer).
+  letters: { openLetterId?: string; write?: LetterKind; draftText?: string; fromReflection?: string } | undefined;
   habitsHub: { initialMode?: 'build' | 'quit' } | undefined;
   discover: undefined;
   // Start at a section, resume where it was left, or from the beginning.

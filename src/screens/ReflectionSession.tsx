@@ -18,6 +18,8 @@ import { REFLECT_CLOSING } from '../content';
 import { DEPTH_LABEL, LENGTH_LABEL, defaultTitle, followUpFor, laterAnswers, offerQuestion, planSession, swapFor, themeById, writtenThemes } from '../reflect/questions';
 import { pastAnswers, questionKey } from '../reflect/revisit';
 import { formatDisplayDate } from '../utils/date';
+import { isLive } from '../data/sectionsMeta';
+import { openSection } from '../navigation/navigationRef';
 import type { ReflectDepth, ReflectLength, ReflectSession } from '../types/sections';
 
 const accent = sectionAccents.reflection;
@@ -373,8 +375,29 @@ export function ClosingStage({ sessionId, onSaved, onGoTo }: { sessionId: string
       <SectionHeading>{REFLECT_COPY.tags}</SectionHeading>
       <TextInput value={tags} onChangeText={setTags} placeholder={REFLECT_COPY.tagsPlaceholder} accessibilityLabel={REFLECT_COPY.tags} />
       {nothing && <Caption>{REFLECT_COPY.nothingYet}</Caption>}
+      {!nothing && isLive('letters') && <LetterFromAnswer session={session} />}
       <PrimaryButton label={REFLECT_COPY.save} onPress={() => (session.feelingAfter ? save() : setAskLeaving(true))} testID="reflect-save" />
       <SupportLink />
+    </View>
+  );
+}
+
+// "Turn one of today's answers into a letter": pick an answer, and Letters
+// opens a new letter with it as the start (still the person's to change).
+function LetterFromAnswer({ session }: { session: ReflectSession }) {
+  const [open, setOpen] = useState(false);
+  const answered = session.answers.filter((a) => a.answer.trim());
+  return (
+    <View style={styles.follow}>
+      <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.link} testID="reflect-to-letter">
+        <Caption style={{ color: accent }}>{REFLECT_CLOSING.letterOffer}</Caption>
+      </Pressable>
+      {open &&
+        answered.map((a) => (
+          <Pressable key={a.id} onPress={() => openSection('letters', { draftText: a.answer.trim(), fromReflection: session.id })} accessibilityRole="button" style={styles.link}>
+            <Caption numberOfLines={2}>{a.answer.trim()}</Caption>
+          </Pressable>
+        ))}
     </View>
   );
 }

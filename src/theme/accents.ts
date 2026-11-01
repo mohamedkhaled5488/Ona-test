@@ -21,5 +21,6 @@ export const sectionAccents: Record<SectionId, string> = {
   habitBuilder: '#6E7F91', // slate blue-gray — steady, unshowy consistency; distinct from the blue/indigo/teal family already in use
   budget: '#4E9A7A', // money-green, distinct from dietPlanning's fresher green and skills' olive
   reflection: '#8C7BA8', // dusk violet: quiet, inward
+  letters: '#B88A6A', // warm paper
   quitHabit: '#7A9E8E', // soft sage — calm, self-compassionate, deliberately not clinical or alarm-toned
 };

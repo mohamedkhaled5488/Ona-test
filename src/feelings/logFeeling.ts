@@ -15,6 +15,7 @@ import { logTaskFeeling } from '../utils/taskFeelings';
 import { logJournalFeeling } from './fromSections';
 import { todayISO } from '../utils/date';
 import type { FeelingSource, FeelingZone } from '../types/sections';
+import { feelingLogged } from '../letters/offerBus';
 
 export interface LogFeelingInput {
   zone: FeelingZone;
@@ -26,8 +27,15 @@ export interface LogFeelingInput {
   source?: FeelingSource;
 }
 
-// Returns the Feelings log entry's id.
+// Returns the Feelings log entry's id. Tells the letter offer a feeling was
+// logged (letters/LetterOfferHost.tsx).
 export function logFeeling(input: LogFeelingInput): string {
+  const id = save(input);
+  feelingLogged(id);
+  return id;
+}
+
+function save(input: LogFeelingInput): string {
   const { source } = input;
   if (source?.kind === 'task') {
     const id = logTaskFeeling({

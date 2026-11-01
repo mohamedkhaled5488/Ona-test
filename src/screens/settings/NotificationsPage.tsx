@@ -26,6 +26,7 @@ const FEATURES: { id: NotificationFeature; label: string; explain: string }[] = 
   { id: 'studyEnd', label: 'Study session end', explain: 'When a focus block or break ends, even if your phone is locked' },
   { id: 'sleep', label: 'Bedtime and wake-up reminders', explain: 'The ones you set up in Sleep' },
   { id: 'weeklyStory', label: 'Weekly "Your week in Ona" story', explain: 'Evening of the first day of your week' },
+  { id: 'letters', label: 'Dated letters to yourself', explain: 'On the day a letter waits for, if you asked. Never its words' },
 ];
 
 function useNotificationPermission() {

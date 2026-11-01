@@ -15,7 +15,8 @@ export type SectionId =
   | 'habitBuilder'
   | 'budget'
   | 'quitHabit'
-  | 'reflection';
+  | 'reflection'
+  | 'letters';
 
 // live: shipped. held: built but not in this release; it doesn't exist for
 // the person (see data/sectionsMeta.ts). Its data stays on the phone.
@@ -894,6 +895,34 @@ export interface ReflectSession {
   feelingAfter?: string;
   favorite?: boolean;
   redoOf?: string; // a question set done again
+  conflictCopyOf?: string; // set by sync: the other phone's version (sync/engine.ts)
+}
+
+// --- Letters to Myself ---
+// Written when calm, offered (never opened without a choice) after the person
+// logs a matching feeling, or waiting on a chosen date (letters/delivery.ts).
+export type LetterKind = 'feeling' | 'doubt' | 'proud' | 'hardDay' | 'date';
+
+export interface Letter {
+  id: string;
+  kind: LetterKind;
+  zones: FeelingZone[]; // "To me, when I feel…": any of these colours
+  feelingIds: string[]; // or any of these specific feelings
+  deliverOn?: string; // 'date': the day it waits for
+  remind?: boolean; // 'date': also a notification that day (no words, no feeling)
+  notificationIds?: string[]; // this phone only (sync/records.ts DEVICE_ONLY_FIELDS)
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+  paused?: boolean; // kept, not offered
+  hidden?: boolean; // "Hide this letter for now"
+  // Offered even when the feeling is very strong. Off unless the person
+  // chooses it ("Don't show this when the feeling is very strong" is on).
+  showWhenIntense?: boolean;
+  timesShown: number;
+  lastShownAt?: string;
+  deliveredAt?: string; // a 'date' letter, opened
+  fromReflection?: string; // written from a reflection's answer (session id)
   conflictCopyOf?: string; // set by sync: the other phone's version (sync/engine.ts)
 }
 

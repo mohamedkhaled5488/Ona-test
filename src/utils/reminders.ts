@@ -14,6 +14,7 @@ import { CHANNEL_VERSION, cancelReminders, deleteLegacyChannels, scheduleAt, sch
 import { isDemo } from './dataSpace';
 import { isLive } from '../data/sectionsMeta';
 import type { SectionId } from '../types/sections';
+import { resyncLetterReminders } from '../letters/reminders';
 
 export async function syncWeeklyStoryReminder(): Promise<void> {
   const { weeklyStoryNotificationIds, notify, weekStartsOn, set } = useSettingsStore.getState();
@@ -29,6 +30,7 @@ export const NOTIFICATION_SECTION: Record<NotificationFeature, SectionId> = {
   sleep: 'sleep',
   studyEnd: 'studySession',
   weeklyStory: 'recap',
+  letters: 'letters',
 };
 export const liveNotificationFeatures = (): NotificationFeature[] => (Object.keys(NOTIFICATION_SECTION) as NotificationFeature[]).filter((f) => isLive(NOTIFICATION_SECTION[f]));
 
@@ -58,6 +60,9 @@ export async function resyncFeature(feature: NotificationFeature): Promise<void>
       return;
     case 'weeklyStory':
       await syncWeeklyStoryReminder();
+      return;
+    case 'letters':
+      await resyncLetterReminders();
       return;
   }
 }

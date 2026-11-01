@@ -128,6 +128,14 @@ export const sectionsMeta: SectionMeta[] = [
     icon: 'chatbubble-ellipses-outline',
     status: 'held',
   },
+  // Working name; held until the owner's final review.
+  {
+    id: 'letters',
+    title: 'Letters to Myself',
+    tagline: 'Words from you, for the days you need them',
+    icon: 'mail-outline',
+    status: 'held',
+  },
 ];
 
 // Read from the list each time (a test can turn a held section on, as it
