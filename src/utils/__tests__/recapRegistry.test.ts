@@ -5,7 +5,7 @@
 // leave Home with "Hide sensitive areas on Home". IDs: docs/test-cases/integration.md (RECAP-REG-*)
 jest.mock('../notifications', () => ({ cancelReminders: jest.fn(async () => {}), scheduleReminder: jest.fn(async () => []), scheduleTaskReminders: jest.fn(async () => []) }));
 
-import { sectionsMeta } from '../../data/sectionsMeta';
+import { isLive, liveSections } from '../../data/sectionsMeta';
 import { RECAP_CONTRIBUTORS, areaTiles, contributorFor, recapSentence, sectionRecaps, visibleContributors, type RecapContext } from '../../recap/registry';
 import { AREA_SECTIONS, periodStats, shareableStoryCards, buildStory, type RecapData } from '../recapStats';
 import { quitJourneySeries } from '../habitStats';
@@ -62,11 +62,11 @@ const ADD: Record<Exclude<SectionId, 'recap'>, (d: RecapData) => void> = {
   mindGames: (d) => void d.gameResults.push({ id: 'g1', gameId: 'memory', difficulty: 'easy', score: 10, playedAt: at('2026-10-22') } as never),
 };
 
-test('RECAP-REG-001 every section has exactly one Recap contributor, in one of the four areas', () => {
-  const sections = sectionsMeta.map((s) => s.id).filter((id) => id !== 'recap');
+test('RECAP-REG-001 every live section has exactly one Recap contributor, in one of the four areas', () => {
+  const sections = liveSections().map((s) => s.id).filter((id) => id !== 'recap');
   expect(RECAP_CONTRIBUTORS.map((c) => c.section).sort()).toEqual([...sections].sort());
   for (const c of RECAP_CONTRIBUTORS) expect({ section: c.section, inArea: AREA_SECTIONS[c.area].includes(c.section) }).toEqual({ section: c.section, inArea: true });
-  expect(Object.keys(ADD).sort()).toEqual([...sections].sort()); // and this test covers each one
+  expect(Object.keys(ADD).filter((s) => isLive(s as SectionId)).sort()).toEqual([...sections].sort()); // and this test covers each live one
 });
 
 test('RECAP-REG-002 with nothing logged, every section is empty and every area says so calmly', () => {
@@ -75,7 +75,7 @@ test('RECAP-REG-002 with nothing logged, every section is empty and every area s
   expect(areaTiles(c, [], false).every((t) => !t.hasData)).toBe(true);
 });
 
-describe.each(Object.entries(ADD) as [SectionId, (d: RecapData) => void][])('RECAP-REG-003 %s', (section, add) => {
+describe.each((Object.entries(ADD) as [SectionId, (d: RecapData) => void][]).filter(([s]) => isLive(s)))('RECAP-REG-003 %s', (section, add) => {
   test('logging something shows in Recap; deleting it takes it away', () => {
     const data = emptyData();
     add(data);
@@ -187,7 +187,7 @@ test('RECAP-REG-050 a month covers its last day (an entry on Oct 31 is in Octobe
 
 describe('RECAP-REG-050 the Home summary sentence comes from the registry', () => {
   test('RECAP-REG-050 each section with something this week is named, in registry order, with no list of its own', () => {
-    for (const [section, add] of Object.entries(ADD)) {
+    for (const [section, add] of Object.entries(ADD).filter(([s]) => isLive(s as SectionId))) {
       const data = emptyData();
       add(data);
       const title = contributorFor(section as SectionId)!.title;

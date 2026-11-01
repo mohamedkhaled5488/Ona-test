@@ -12,6 +12,8 @@ import { useSettingsStore, type NotificationFeature } from '../store/useSettings
 import { Platform } from 'react-native';
 import { CHANNEL_VERSION, cancelReminders, deleteLegacyChannels, scheduleAt, scheduleWeeklyStoryReminder } from './notifications';
 import { isDemo } from './dataSpace';
+import { isLive } from '../data/sectionsMeta';
+import type { SectionId } from '../types/sections';
 
 export async function syncWeeklyStoryReminder(): Promise<void> {
   const { weeklyStoryNotificationIds, notify, weekStartsOn, set } = useSettingsStore.getState();
@@ -19,7 +21,19 @@ export async function syncWeeklyStoryReminder(): Promise<void> {
   set('weeklyStoryNotificationIds', notify.weeklyStory ? await scheduleWeeklyStoryReminder(weekStartsOn) : []);
 }
 
+// The section each kind of reminder belongs to. A held section's reminders
+// aren't offered or scheduled (data/sectionsMeta.ts).
+export const NOTIFICATION_SECTION: Record<NotificationFeature, SectionId> = {
+  tasks: 'dailyPlanning',
+  habits: 'habitBuilder',
+  sleep: 'sleep',
+  studyEnd: 'studySession',
+  weeklyStory: 'recap',
+};
+export const liveNotificationFeatures = (): NotificationFeature[] => (Object.keys(NOTIFICATION_SECTION) as NotificationFeature[]).filter((f) => isLive(NOTIFICATION_SECTION[f]));
+
 export async function resyncFeature(feature: NotificationFeature): Promise<void> {
+  if (!isLive(NOTIFICATION_SECTION[feature])) return;
   switch (feature) {
     case 'tasks':
       await useDailyPlanningStore.getState().resyncAllReminders();
@@ -50,7 +64,7 @@ export async function resyncFeature(feature: NotificationFeature): Promise<void>
 
 // Quiet hours and the default sound affect everything already scheduled.
 export async function resyncAllReminders(): Promise<void> {
-  await Promise.all((['tasks', 'habits', 'sleep', 'studyEnd', 'weeklyStory'] as NotificationFeature[]).map(resyncFeature));
+  await Promise.all(liveNotificationFeatures().map(resyncFeature));
 }
 
 // ---------------------------------------------------------------------------

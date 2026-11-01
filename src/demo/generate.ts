@@ -43,6 +43,7 @@ import type {
 import { addDaysISO, weekdayOfISO } from '../utils/date';
 import { normalizeTask } from '../utils/taskMigration';
 import { songTypes } from '../data/songTypes';
+import { isLive } from '../data/sectionsMeta';
 
 export const DEMO_SEED = 'ona-demo-1';
 export const DEMO_DAYS = 56; // about eight weeks of history
@@ -800,8 +801,10 @@ export function generateDemoData(opts: GenerateOptions): DemoSections {
     catchAThought: { thoughts },
     studySession: { sessions: studySessions.reverse(), active: null, pendingSummary: null },
     dietPlanning: { plannedMeals: meals, favorites, groceryItems: groceries, currency },
-    songwriting: { songs },
-    mindGames: { results: gameResults },
+    // Held sections (data/sectionsMeta.ts) have no demo data: the demo shows
+    // only what this release has. Made above anyway, so the rest stays the same.
+    ...(isLive('songwriting') ? { songwriting: { songs } } : {}),
+    ...(isLive('mindGames') ? { mindGames: { results: gameResults } } : {}),
     feelings: { entries: feelingEntries, personalFeelings, bookmarks: ['peaceful-content', 'calm-rested'], guidanceVotes: {}, customReasonTags: ['Exercise'] },
     sleep: { logs: sleepLogs.reverse(), mix: sleepMix },
     book: { entries: [reading, finished], quotes, sessions: bookSessions.reverse() },

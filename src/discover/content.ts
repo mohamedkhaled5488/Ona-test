@@ -10,6 +10,8 @@
 // Games (held back from this launch's navigation).
 import type { RootStackParamList } from '../navigation/types';
 import { ESSENTIALS_NAME, PLUS_NAME, TRIAL_DAYS, TRIAL_NAME } from '../config/plans';
+import { isLive, sectionsMeta } from '../data/sectionsMeta';
+import type { SectionId } from '../types/sections';
 
 export type TourGroupId = 'welcome' | 'plan' | 'reflect' | 'grow' | 'learn' | 'recap' | 'data' | 'finish';
 
@@ -38,7 +40,7 @@ export interface TourSection {
   slides: Slide[];
 }
 
-export const TOUR: TourSection[] = [
+const ALL_TOUR: TourSection[] = [
   {
     id: 'welcome',
     group: 'welcome',
@@ -283,6 +285,9 @@ export const TOUR: TourSection[] = [
     slides: [{ key: 'finish-1', title: "That's Ona", body: 'Try it with sample data first, or start with your own. You can come back to this tour any time from Discover.', feature: 'finish', mock: 'finish' }],
   },
 ];
+
+// A held section (data/sectionsMeta.ts) has no slides.
+export const TOUR: TourSection[] = ALL_TOUR.filter((s) => !sectionsMeta.some((m) => m.id === s.id) || isLive(s.id as SectionId));
 
 export const GROUP_TITLES: Record<TourGroupId, string> = {
   welcome: 'Welcome',

@@ -1,6 +1,7 @@
 import { StackActions, createNavigationContainerRef } from '@react-navigation/native';
 import type { RootStackParamList } from './types';
 import type { SectionId } from '../types/sections';
+import { heldSectionIds } from '../data/sectionsMeta';
 
 // For the few things outside any screen that need to open one (the demo's
 // tour offer, the Discover tour's "Try it"), and for openSection below.
@@ -15,6 +16,8 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 // Waits for the navigator if it isn't ready (right after a switch between
 // your data and the demo it remounts).
 export function openSection(route: keyof RootStackParamList | SectionId, params?: object, tries = 40): void {
+  // A held section doesn't exist (data/sectionsMeta.ts): nothing to open.
+  if (heldSectionIds().includes(route as SectionId)) return;
   if (navigationRef.isReady()) {
     // Recap is Home.
     if (route === 'Main' || route === 'recap') navigationRef.navigate('Main' as never);

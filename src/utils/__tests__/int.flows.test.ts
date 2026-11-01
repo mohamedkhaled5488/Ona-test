@@ -30,7 +30,7 @@ import { sourceBreakdown, filterBySource, tagInsight } from '../feelingsInsights
 import { dailyTrendPoints, datesInRange } from '../feelingsStats';
 import { describeFeelingSource, type FeelingSourceLookup } from '../feelingSource';
 import { periodStats, withoutHidden, buildHighlights, buildStory, shareableStoryCards, type RecapData } from '../recapStats';
-import { buildExport, LOCAL_DATA } from '../localData';
+import { buildExport, exportedSections, LOCAL_DATA } from '../localData';
 import { startSettingsEffects } from '../settingsEffects';
 import { getCalendarWeekStart, setCalendarWeekStart, formatClockTime } from '../date';
 import { frequencyStreak } from '../habitFrequency';
@@ -300,7 +300,7 @@ describe('INT-EXP: export', () => {
     const h = useHabitsStore.getState().addHabit({ name: 'Walk', targetDays: 30 } as never);
     useHabitsStore.getState().setCheckIn(h, TODAY, true);
     const exp = buildExport(undefined, new Date());
-    for (const [section, { store, keys }] of Object.entries(LOCAL_DATA)) {
+    for (const [section, { store, keys }] of Object.entries(LOCAL_DATA).filter(([x]) => exportedSections().includes(x))) {
       const state = store.getState() as Record<string, unknown>;
       for (const k of keys) {
         const v = state[k];

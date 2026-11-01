@@ -18,6 +18,7 @@ Two tags:
 | E2E-006 | Offline | Use Ona with no network | Fresh install; airplane mode | Add a task in Daily Planning; close and reopen | "Written offline" | Task added and still there after relaunch | e2e | P0 | 05-offline-then-sync.yaml |
 | E2E-007 | Sync | Then sync | After E2E-002, same email; local stack | Settings → Account & Subscription → Sync now | – | No error; "Last synced" no longer "Not yet" | e2e | P0 | 05b-sync.yaml |
 | E2E-GUARD-001..005 | Test suite | Flows match the app | – | `npm test` | – | Right package; tags; subflows exist; every selector is in the source; the e2e build points at no real server and EAS skips `needs-backend` | unit | P1 | maestroFlows.test.ts |
+| E2E-HELD-001 | Held sections | Settings names only live sections | Fresh install | Settings → Sections → Recap (scroll to the end); Settings → Account & Subscription → Plan & usage (scroll to the end) | – | No "Mind Games" or "Songwriting" anywhere; the live sections are listed | e2e | P0 | 07-held-sections.yaml |
 
 ## On GitHub Actions (the chosen runner)
 

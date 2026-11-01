@@ -26,6 +26,7 @@ import { computePlanProgress, flattenSteps } from '../store/usePlanStore';
 import { addDaysISO } from './date';
 import { localDateOf } from '../quit/journey';
 import { METRICS, type MetricDef, type MetricId } from '../metrics/registry';
+import { heldSectionIds, onlyLive } from '../data/sectionsMeta';
 
 // The app's zone order, used wherever Recap lists feelings (never sorted by count).
 const RECAP_ZONE_ORDER: FeelingZone[] = ['lively', 'calm', 'tense', 'low', 'okay'];
@@ -40,11 +41,13 @@ export type DateRange = Pick<PatternsRange, 'start' | 'end'>;
 export type AreaId = 'plan' | 'reflect' | 'grow' | 'learn';
 export type EffortKind = 'study' | 'skills' | 'reading' | 'habits';
 
+// Only live sections (data/sectionsMeta.ts): a held one isn't in Recap,
+// its area pages or "Choose what Recap shows".
 export const AREA_SECTIONS: Record<AreaId, SectionId[]> = {
-  plan: ['planBuilder', 'dailyPlanning', 'dietPlanning', 'budget'],
-  reflect: ['journaling', 'moodCheck', 'sleep', 'catchAThought'],
-  grow: ['habitBuilder', 'quitHabit', 'skills'],
-  learn: ['book', 'studySession', 'songwriting', 'mindGames'],
+  plan: onlyLive<SectionId>(['planBuilder', 'dailyPlanning', 'dietPlanning', 'budget']),
+  reflect: onlyLive<SectionId>(['journaling', 'moodCheck', 'sleep', 'catchAThought']),
+  grow: onlyLive<SectionId>(['habitBuilder', 'quitHabit', 'skills']),
+  learn: onlyLive<SectionId>(['book', 'studySession', 'songwriting', 'mindGames']),
 };
 export const AREA_TITLES: Record<AreaId, string> = { plan: 'Plan', reflect: 'Reflect', grow: 'Grow', learn: 'Learn' };
 
@@ -64,7 +67,9 @@ const inRange = (date: string, r: DateRange) => date >= r.start && date <= r.end
 // Hidden sections — applied once, up front, so a hidden section can't leak
 // into any card, chart, highlight, story card or shared image.
 // ---------------------------------------------------------------------------
-export function withoutHidden(data: RecapData, hidden: SectionId[]): RecapData {
+export function withoutHidden(data: RecapData, chosen: SectionId[]): RecapData {
+  // Held sections are never shown, whatever was chosen.
+  const hidden = [...chosen, ...heldSectionIds()];
   // A check-in or session whose habit/skill was deleted on another phone
   // (and synced in after) isn't shown anywhere else, so it isn't counted here.
   const habitIds = new Set(data.habits.map((x) => x.id));

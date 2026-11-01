@@ -16,6 +16,7 @@ import { allTools } from '../quit/toolkit';
 import { countIn, metricPhrase, scopeWords, type MetricScope } from '../metrics/registry';
 import { formatMoney } from '../data/currencies';
 import { sectionAccents } from '../theme';
+import { isLive } from '../data/sectionsMeta';
 
 export type RecapOpen = { section: SectionId; params?: Record<string, string> } | { route: 'planDetail'; params: { planId: string } };
 export interface RecapRow {
@@ -76,7 +77,7 @@ const inRange = (date: string, s: PeriodStats) => date >= s.range.start && date 
 const recap = (section: SectionId, title: string, hasData: boolean, rows: RecapRow[], extra: Partial<SectionRecap> = {}): SectionRecap => ({ section, title, hasData, rows, items: [], notes: [], ...extra });
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-export const RECAP_CONTRIBUTORS: RecapContributor[] = [
+const ALL_CONTRIBUTORS: RecapContributor[] = [
   // --- Plan ---
   {
     section: 'dailyPlanning',
@@ -292,6 +293,9 @@ export const RECAP_CONTRIBUTORS: RecapContributor[] = [
     build: ({ stats }) => recap('mindGames', 'Mind Games', stats.gamesPlayed > 0, [{ label: 'Games played', value: String(stats.gamesPlayed), open: { section: 'mindGames' } }]),
   },
 ];
+
+// Held sections (data/sectionsMeta.ts) have no part in Recap.
+export const RECAP_CONTRIBUTORS: RecapContributor[] = ALL_CONTRIBUTORS.filter((c) => isLive(c.section));
 
 export const contributorFor = (section: SectionId) => RECAP_CONTRIBUTORS.find((c) => c.section === section);
 export const AREA_ORDER: AreaId[] = ['plan', 'reflect', 'grow', 'learn'];

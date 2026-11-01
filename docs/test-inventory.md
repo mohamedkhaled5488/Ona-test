@@ -72,7 +72,7 @@ U = unit/logic tests, C = component, I = integration (real stores and storage), 
 | Budget | **none** | – | – | – | – | Store 12%, export 0%; amounts, currencies, limits, savings goals |
 | Diet | **none** | – | – | – | – | Store 3%, dietStats 0%; costs, currency, grocery list |
 | Catch a Thought | **none** | – | – | – | – | Store 6% |
-| Songwriting / Mind Games | none | – | – | – | – | Held back from this launch's navigation; low priority |
+| Songwriting / Mind Games | held | – | – | – | – | Held: nowhere in the app (`status: 'held'` in data/sectionsMeta.ts; heldSections.test.ts) |
 | Recap | some | – | – | – | recapStats | recap.ts 20%; area pages, story, shared cards |
 | Settings | good | – | some | – | settingsStore, notificationSettings, securityTimeFormat, weekStartTheme | settingsEffects 0% (does a setting reach every screen?) |
 | Account / Plan & usage | strong | – | some | – | authStore, accountPrivacy, googleSignIn, entitlement, paywallBilling, planScreen, revenuecatWebhook | entitlementBootstrap 0%; no real backend (RLS, two devices) |

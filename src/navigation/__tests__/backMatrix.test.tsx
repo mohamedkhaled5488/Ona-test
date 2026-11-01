@@ -28,6 +28,7 @@ import { EXIT_HINT } from '../RootNavigator';
 import { usePlanStore } from '../../store/usePlanStore';
 import { useQuitHabitsStore } from '../../store/useQuitHabitsStore';
 import type { RootStackParamList } from '../types';
+import { heldSectionIds } from '../../data/sectionsMeta';
 
 let clock: ReturnType<typeof useClock>;
 beforeEach(async () => {
@@ -49,7 +50,8 @@ describe('1-2. every screen opened from Home goes back to Home', () => {
     ['budget', () => undefined], ['quitHabit', () => undefined], ['habitsHub', () => undefined], ['discover', () => undefined], ['discoverTour', () => ({})],
     ['journalWrite', () => ({ date: '2026-10-21' })], ['planDetail', () => ({ planId: plan().id })], ['settings', () => undefined], ['signIn', () => undefined],
   ];
-  test.each(cases)('NAV-001 %s: opened from Home, Back returns to Home', async (route, params) => {
+  // Held sections have no screen (heldSections.test.ts).
+  test.each(cases.filter(([r]) => !heldSectionIds().includes(r as never)))('NAV-001 %s: opened from Home, Back returns to Home', async (route, params) => {
     const app = await renderApp();
     await open(route, params());
     expect(app.route()).toMatchObject({ name: route, depth: 2 });

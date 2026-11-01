@@ -16,11 +16,16 @@ export type SectionId =
   | 'budget'
   | 'quitHabit';
 
+// live: shipped. held: built but not in this release; it doesn't exist for
+// the person (see data/sectionsMeta.ts). Its data stays on the phone.
+export type SectionStatus = 'live' | 'held';
+
 export interface SectionMeta {
   id: SectionId;
   title: string;
   tagline: string;
   icon: keyof typeof import('@expo/vector-icons/Ionicons').default.glyphMap;
+  status: SectionStatus;
 }
 
 // --- Navigation folders (see the Ona navigation restructure doc) ---

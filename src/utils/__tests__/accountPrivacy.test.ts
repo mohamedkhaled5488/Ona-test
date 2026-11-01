@@ -9,7 +9,7 @@ import { canUpload, syncGate, type SyncGateInput } from '../sync';
 import { capUsage, computeEntitlement } from '../entitlement';
 import { forcedSnapshot } from '../../hooks/useEntitlement';
 import { useEntitlementStore } from '../../store/useEntitlementStore';
-import { buildExport, wipeLocalData, LOCAL_DATA, restoreSampleData } from '../localData';
+import { buildExport, exportedSections, wipeLocalData, LOCAL_DATA, restoreSampleData } from '../localData';
 import { ALLOWED_EVENTS, setAnalyticsTransport, track, type OutgoingEvent } from '../analytics';
 import { FREE_CAPS } from '../../config/plans';
 import { useSettingsStore, DEFAULT_SETTINGS } from '../../store/useSettingsStore';
@@ -163,8 +163,9 @@ describe('export and delete on this device', () => {
   test('the export contains every section and exactly the stored records', () => {
     const data = buildExport(undefined, new Date('2026-10-06T10:00:00Z'));
     expect(data.format).toBe('ona-export');
-    expect(Object.keys(data.sections).sort()).toEqual(Object.keys(LOCAL_DATA).sort());
-    for (const [section, { store, keys }] of Object.entries(LOCAL_DATA)) {
+    // Every section but the held ones (heldSections.test.ts).
+    expect(Object.keys(data.sections).sort()).toEqual(exportedSections().sort());
+    for (const [section, { store, keys }] of Object.entries(LOCAL_DATA).filter(([x]) => exportedSections().includes(x))) {
       const state = store.getState() as Record<string, unknown>;
       for (const key of keys) expect(JSON.stringify(data.sections[section][key])).toBe(JSON.stringify(state[key]));
     }

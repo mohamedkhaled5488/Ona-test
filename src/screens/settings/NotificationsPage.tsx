@@ -13,7 +13,7 @@ import {
   sendTestNotification,
   type PermissionState,
 } from '../../utils/notifications';
-import { resyncAllReminders, resyncFeature } from '../../utils/reminders';
+import { liveNotificationFeatures, resyncAllReminders, resyncFeature } from '../../utils/reminders';
 import { spacing } from '../../theme';
 import { formatClockTime } from '../../utils/date';
 import { themedStyles } from '../../theme/runtime';
@@ -100,7 +100,7 @@ export function NotificationsPage() {
       </Group>
 
       <Group title="What can notify you" footer="Ona never sends engagement or 'we miss you' notifications. Nothing arrives unless you turned it on.">
-        {FEATURES.map((f) => (
+        {FEATURES.filter((f) => liveNotificationFeatures().includes(f.id)).map((f) => (
           <ToggleRow key={f.id} label={f.label} explain={f.explain} value={notify[f.id]} onChange={(on) => void toggleFeature(f.id, on)} />
         ))}
       </Group>

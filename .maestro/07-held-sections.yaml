@@ -1,0 +1,35 @@
+# E2E-HELD-001 Held sections don't exist for the person (owner, 2026-11-01:
+# Settings still mentioned Mind Games). On a real phone: the Recap section
+# list in Settings and the Plan & usage table name only live sections.
+# Unit and screen checks: heldSections.test.ts, heldSectionsSettings.test.tsx.
+appId: app.ona
+tags:
+  - core
+---
+- runFlow: subflows/fresh-start.yaml
+- tapOn:
+    id: "home-settings"
+
+# Settings → Sections → Recap: "Choose what Recap shows".
+- tapOn: "Sections"
+- tapOn: "Recap"
+- assertVisible: "Choose what Recap shows"
+- assertVisible: "Journaling"
+- scrollUntilVisible:
+    element: "Study Session"
+    direction: DOWN
+- assertNotVisible: ".*(Mind Games|Songwriting).*"
+- scroll
+- assertNotVisible: ".*(Mind Games|Songwriting).*"
+
+# Settings → Account & Subscription → Plan & usage: the comparison table.
+- pressKey: back
+- pressKey: back
+- tapOn: "Account & Subscription"
+- tapOn: "Plan & usage"
+- scrollUntilVisible:
+    element: "Support and crisis resources"
+    direction: DOWN
+- assertNotVisible: ".*(Mind Games|Songwriting).*"
+- scroll
+- assertNotVisible: ".*(Mind Games|Songwriting).*"

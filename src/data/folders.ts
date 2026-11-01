@@ -15,8 +15,8 @@ export interface FolderMeta {
 // navigation restructure doc. Catch a Feeling or Idea lives inside Journaling
 // (a header link there, not its own card) and Habit Builder + Quit a Habit
 // are combined into one "Habits" card with a Build/Quit mode switch.
-// Songwriting and Mind Games are fully built but intentionally held back from
-// this launch's navigation — not listed in any folder here.
+// Held sections (status in data/sectionsMeta.ts) are never listed here
+// (heldSections.test.ts).
 // Card metadata for the 'habits' pseudo-section (see FolderMeta above).
 export const habitsCardMeta = {
   title: 'Habits',

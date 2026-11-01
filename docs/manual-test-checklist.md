@@ -130,7 +130,8 @@ Do these on the new build after installing it **over** the previous APK (to chec
 | MAN-082 | Exact timing (FIX-18) | Android 12+: phone Settings → Apps → Special access → Alarms & reminders | Ona is listed; with it off, reminders still arrive (maybe a little late) | | | |
 | MAN-083 | Changing the default sound (FIX-18) | Set two task reminders on the default sound; change the default sound in Settings | Both reminders arrive with the new sound | | | |
 | MAN-084 | Quit in Recap (FIX-19) | Start a Quit journey; ride out one urge; open Home → Recap → this week | Quit shows days on the journey and urges ridden out; a slip reads "a new chapter" | | | |
-| MAN-085 | Every section in Recap (FIX-19) | Add one thing in Budget, Songwriting, Mind Games and Catch a Thought; open Recap | Each appears with its own tile; no "best", "most" or "busiest" anywhere | | | |
+| MAN-085 | Every section in Recap (FIX-19) | Add one thing in Budget and Catch a Thought; open Recap | Each appears with its own tile; no "best", "most" or "busiest" anywhere | | | |
+| MAN-121 | Held sections are nowhere | Go through Home's four folders, Discover and the tour, every Settings page (Sections → each, Recap's list, Notifications, Plan & usage), Demo mode's Recap, and an export file | No "Mind Games" or "Songwriting" anywhere | | | |
 | MAN-086 | Hide sensitive areas (FIX-19) | Settings → Hide sensitive areas on Home; then share a Recap story | Feelings and Quit are off Home and out of the story; still in their own sections | | | |
 | MAN-087 | Feelings from every section (FIX-20) | Log a feeling from a task, a habit, a skill session, Quit, a journal entry and Identify the Feeling | All six show in the feelings log, the graph, Analysis and Recap, with where they came from | | | |
 | MAN-088 | Feelings survive a reinstall (FIX-17, FIX-20) | Signed in: do MAN-087, close Ona, wait 10 s, uninstall, reinstall, sign in | All six feelings come back without tapping Sync now | | | |

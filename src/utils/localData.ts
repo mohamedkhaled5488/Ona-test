@@ -19,6 +19,8 @@ import { useQuitHabitsStore } from '../store/useQuitHabitsStore';
 import { useRecapStore } from '../store/useRecapStore';
 import { cancelReminders } from './notifications';
 import { normalizeTags, normalizeTasks, normalizeTemplates } from './taskMigration';
+import { isLive, sectionsMeta } from '../data/sectionsMeta';
+import type { SectionId } from '../types/sections';
 
 interface DataStore {
   getState: () => object;
@@ -107,9 +109,15 @@ export function collectPhotoUris(): string[] {
 
 // `photos`: undefined leaves photos out; otherwise a map of uri → embedded
 // data (a data: URI) — anything missing from the map keeps its original uri.
+// The sections in an export: all but the held ones.
+export const exportedSections = (): string[] => Object.keys(LOCAL_DATA).filter((section) => !sectionsMeta.some((m) => m.id === section) || isLive(section as SectionId));
+
 export function buildExport(photos?: Record<string, string>, now: Date = new Date()): DataExport {
   const sections: DataExport['sections'] = {};
   for (const [section, { store, keys }] of Object.entries(LOCAL_DATA)) {
+    // A held section isn't in the file (data/sectionsMeta.ts); its data stays
+    // on the phone, and is in the export again once the section is live.
+    if (!exportedSections().includes(section)) continue;
     const state = store.getState() as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const key of keys) out[key] = mapPhotos(state[key], photos ? (uri) => photos[uri] ?? uri : null);

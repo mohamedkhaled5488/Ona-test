@@ -12,6 +12,9 @@
 // - Prices and periods come from the store; no price or percentage here.
 // - The trial is the full Plus experience for TRIAL_DAYS days, no card.
 
+import { isLive, onlyLive } from '../data/sectionsMeta';
+import type { SectionId } from '../types/sections';
+
 export const TRIAL_DAYS = 30;
 
 // The names, everywhere (Plan & usage, the plans sheet, banners, locked
@@ -104,27 +107,35 @@ export interface ComparisonRow {
   plus: string;
   // What makes this row true in code (checked by plansConfig.test.ts).
   enforces: { cap?: CapId; plus?: PlusFeatureId[] };
+  // The sections it's about: a row for held sections only isn't shown.
+  sections?: SectionId[];
 }
 
-export const PLAN_COMPARISON: ComparisonRow[] = [
+// Sections with nothing limited, named in one row (only the live ones).
+const UNLIMITED_SECTIONS: [SectionId, string][] = [['studySession', 'Study'], ['songwriting', 'Songwriting'], ['mindGames', 'Mind Games'], ['catchAThought', 'Catch a Thought']];
+
+const ALL_ROWS: ComparisonRow[] = [
   { feature: 'Every section, on this phone', free: 'Yes', plus: 'Yes', enforces: {} },
   { feature: 'Sync across devices', free: 'No (getting your data back is always included)', plus: 'Yes', enforces: { plus: ['sync'] } },
   { feature: 'Home (Recap)', free: 'All your totals, full history', plus: 'Cross-section insights, shareable story, time-invested chart, custom ranges', enforces: { plus: ['recapInsights', 'recapStory', 'recapTimeChart', 'recapCustomRange'] } },
-  { feature: 'Identify the Feeling', free: 'Wheel, guidance, log and graph (full history), basic analysis', plus: 'Compare periods, pattern cards', enforces: { plus: ['feelingsCompare', 'feelingsPatterns'] } },
-  { feature: 'Plan Builder', free: `Up to ${FREE_CAPS.activePlans} active plans (archived don't count)`, plus: 'Unlimited', enforces: { cap: 'activePlans' } },
-  { feature: 'Daily Planning', free: `Tasks, tags, reminders, up to ${FREE_CAPS.taskTemplates} templates`, plus: 'Planning insights, unlimited templates', enforces: { cap: 'taskTemplates', plus: ['planningInsights'] } },
-  { feature: 'Journaling', free: 'Unlimited entries', plus: 'On this day', enforces: { plus: ['journalOnThisDay'] } },
-  { feature: 'Habits', free: `Up to ${FREE_CAPS.buildHabits} active habits, basic analysis`, plus: 'Unlimited, full analysis', enforces: { cap: 'buildHabits', plus: ['habitAnalysisFull'] } },
-  { feature: 'Quit a Habit', free: 'Unlimited, with the journey and urge tools', plus: 'Full journey analysis', enforces: { plus: ['quitAnalysisFull'] } },
-  { feature: 'Skills', free: `Up to ${FREE_CAPS.skills} skills, sessions and gallery`, plus: 'Unlimited, skill journey', enforces: { cap: 'skills', plus: ['skillJourney'] } },
-  { feature: 'Sleep', free: `Wind-down, sleep log, ${FREE_SLEEP_SOUNDS} sounds`, plus: 'All sounds and mixes', enforces: { plus: ['sleepAllSounds'] } },
-  { feature: 'Book', free: `Up to ${FREE_CAPS.activeBooks} books at a time, quotes`, plus: 'Unlimited, quote resurfacing', enforces: { cap: 'activeBooks', plus: ['bookResurfacing'] } },
-  { feature: 'Budget', free: `${FREE_CAPS.budgets} budget, full history`, plus: 'Multiple budgets', enforces: { cap: 'budgets' } },
-  { feature: 'Diet', free: 'Plan up to next week (past weeks stay)', plus: 'Plan further ahead', enforces: { cap: 'dietWeeksAhead' } },
+  { feature: 'Identify the Feeling', free: 'Wheel, guidance, log and graph (full history), basic analysis', plus: 'Compare periods, pattern cards', enforces: { plus: ['feelingsCompare', 'feelingsPatterns'] }, sections: ['moodCheck'] },
+  { feature: 'Plan Builder', free: `Up to ${FREE_CAPS.activePlans} active plans (archived don't count)`, plus: 'Unlimited', enforces: { cap: 'activePlans' }, sections: ['planBuilder'] },
+  { feature: 'Daily Planning', free: `Tasks, tags, reminders, up to ${FREE_CAPS.taskTemplates} templates`, plus: 'Planning insights, unlimited templates', enforces: { cap: 'taskTemplates', plus: ['planningInsights'] }, sections: ['dailyPlanning'] },
+  { feature: 'Journaling', free: 'Unlimited entries', plus: 'On this day', enforces: { plus: ['journalOnThisDay'] }, sections: ['journaling'] },
+  { feature: 'Habits', free: `Up to ${FREE_CAPS.buildHabits} active habits, basic analysis`, plus: 'Unlimited, full analysis', enforces: { cap: 'buildHabits', plus: ['habitAnalysisFull'] }, sections: ['habitBuilder', 'quitHabit'] },
+  { feature: 'Quit a Habit', free: 'Unlimited, with the journey and urge tools', plus: 'Full journey analysis', enforces: { plus: ['quitAnalysisFull'] }, sections: ['quitHabit'] },
+  { feature: 'Skills', free: `Up to ${FREE_CAPS.skills} skills, sessions and gallery`, plus: 'Unlimited, skill journey', enforces: { cap: 'skills', plus: ['skillJourney'] }, sections: ['skills'] },
+  { feature: 'Sleep', free: `Wind-down, sleep log, ${FREE_SLEEP_SOUNDS} sounds`, plus: 'All sounds and mixes', enforces: { plus: ['sleepAllSounds'] }, sections: ['sleep'] },
+  { feature: 'Book', free: `Up to ${FREE_CAPS.activeBooks} books at a time, quotes`, plus: 'Unlimited, quote resurfacing', enforces: { cap: 'activeBooks', plus: ['bookResurfacing'] }, sections: ['book'] },
+  { feature: 'Budget', free: `${FREE_CAPS.budgets} budget, full history`, plus: 'Multiple budgets', enforces: { cap: 'budgets' }, sections: ['budget'] },
+  { feature: 'Diet', free: 'Plan up to next week (past weeks stay)', plus: 'Plan further ahead', enforces: { cap: 'dietWeeksAhead' }, sections: ['dietPlanning'] },
   { feature: 'Export', free: 'Your data (JSON/CSV), always', plus: 'PDF exports', enforces: { plus: ['pdfExports'] } },
-  { feature: 'Study, Songwriting, Mind Games, Catch a Thought', free: 'Everything', plus: 'Everything', enforces: {} },
+  { feature: onlyLive(UNLIMITED_SECTIONS.map(([id]) => id)).map((id) => UNLIMITED_SECTIONS.find(([x]) => x === id)![1]).join(', '), free: 'Everything', plus: 'Everything', enforces: {}, sections: UNLIMITED_SECTIONS.map(([id]) => id) },
   { feature: 'Support and crisis resources', free: 'Always', plus: 'Always', enforces: {} },
 ];
+
+// Held sections (data/sectionsMeta.ts) aren't in the table or the store text.
+export const PLAN_COMPARISON: ComparisonRow[] = ALL_ROWS.filter((r) => !r.sections || r.sections.some(isLive));
 
 // For the App Store / Play listing and the terms: generated, never typed twice.
 export function planDescriptionText(): string {

@@ -234,7 +234,7 @@ describe('the other sections', () => {
     expect(photos).toEqual(expect.arrayContaining([IMAGES.sketchEarly, IMAGES.sketchLatest]));
   });
 
-  test('Study, Sleep, Book, Budget, Diet, Songs, Games, Thoughts, Recap all have data', () => {
+  test('Study, Sleep, Book, Budget, Diet, Thoughts, Recap all have data (none for held sections)', () => {
     expect(get<unknown[]>(d, 'studySession', 'sessions').length).toBeGreaterThanOrEqual(5);
     expect(get<unknown[]>(d, 'sleep', 'logs').length).toBeGreaterThanOrEqual(8);
     expect(get<unknown[]>(d, 'sleep', 'mix').length).toBeGreaterThan(0);
@@ -245,8 +245,9 @@ describe('the other sections', () => {
     const month = get<{ budgetId: string; date: string; amount: number }[]>(d, 'budget', 'entries').filter((e) => e.budgetId === 'budget-demo-month' && e.date >= '2026-10-01');
     expect(month.reduce((s, e) => s + e.amount, 0) / 1200).toBeGreaterThanOrEqual(0.8); // a gentle "getting close" warning
     expect(get<unknown[]>(d, 'dietPlanning', 'plannedMeals').length).toBeGreaterThanOrEqual(21);
-    expect(get<{ status: string }[]>(d, 'songwriting', 'songs').map((s) => s.status)).toEqual(['finished', 'in-progress']);
-    expect(get<unknown[]>(d, 'mindGames', 'results').length).toBeGreaterThanOrEqual(5);
+    // Held sections (Songwriting, Mind Games) have no demo data.
+    expect(d.songwriting).toBeUndefined();
+    expect(d.mindGames).toBeUndefined();
     const thoughts = get<{ promotedTo?: string }[]>(d, 'catchAThought', 'thoughts');
     expect(thoughts).toHaveLength(10);
     expect(thoughts.filter((t) => t.promotedTo).length).toBeGreaterThanOrEqual(2);

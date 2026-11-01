@@ -29,7 +29,7 @@ import { HabitBuilderScreen } from '../screens/HabitBuilderScreen';
 import { BudgetScreen } from '../screens/BudgetScreen';
 import { QuitHabitScreen } from '../screens/QuitHabitScreen';
 import { HabitsHubScreen } from '../screens/HabitsHubScreen';
-import { sectionsMeta } from '../data/sectionsMeta';
+import { liveSections } from '../data/sectionsMeta';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AuthScreen } from '../screens/AuthScreen';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from '../screens/settings/pages';
@@ -96,8 +96,9 @@ const screenComponents = {
 } as const;
 
 // Recap owns its own stack registration ('Main' below), so it's the one
-// sectionsMeta entry excluded from this auto-registered list.
-const stackSections = sectionsMeta.filter((s) => s.id !== 'recap');
+// sectionsMeta entry excluded from this auto-registered list. Held sections
+// have no screen at all (data/sectionsMeta.ts).
+const stackSections = liveSections().filter((s) => s.id !== 'recap');
 
 const tabIcons: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
   home: 'grid-outline',
