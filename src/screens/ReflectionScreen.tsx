@@ -34,6 +34,8 @@ import { ClosingStage, REFLECT_COPY, SessionStage, SetupStage, draftLine } from 
 import { useSettingsStore } from '../store/useSettingsStore';
 import { isPlusNow } from '../plans/access';
 import { Tappable } from '../components/Tappable';
+import { usePlusAction } from '../components/PlusGate';
+import { exportReflectionAsPdf } from '../utils/reflectionExport';
 
 const accent = sectionAccents.reflection;
 
@@ -60,6 +62,7 @@ export const REFLECTION_HOME_COPY = {
   deleteConfirm: 'Delete this reflection? Its answers go too.',
   again: 'Answer this again',
   rename: 'Title',
+  pdf: 'Export as PDF',
   lockTitle: 'Keep your reflections private?',
   lockLine: 'Reflection and Letters can sit behind your Journaling PIN. Off unless you turn it on.',
   lockYes: 'Set it up',
@@ -284,7 +287,8 @@ function ReadPage({ sessionId, justSaved, onEdit, onStart, onDeleted }: { sessio
   const session = useReflectionStore((s) => s.sessions.find((x) => x.id === sessionId));
   const sessions = useReflectionStore((s) => s.sessions);
   const store = useReflectionStore();
-  const { requestDelete } = useUi();
+  const { requestDelete, showToast } = useUi();
+  const plusAction = usePlusAction();
   const [title, setTitle] = useState(session?.title ?? '');
   if (!session) return <Caption>{REFLECTION_HOME_COPY.libraryEmpty}</Caption>;
   const theme = themeById(session.theme);
@@ -367,6 +371,15 @@ function ReadPage({ sessionId, justSaved, onEdit, onStart, onDeleted }: { sessio
         />
         <PrimaryButton label={REFLECTION_HOME_COPY.redo} variant="outline" onPress={redo} style={styles.flex} />
       </View>
+      <PrimaryButton
+        label={REFLECTION_HOME_COPY.pdf}
+        variant="outline"
+        testID="reflect-pdf"
+        onPress={plusAction('pdfExports', async () => {
+          const result = await exportReflectionAsPdf(session);
+          if (!result.ok && result.reason) showToast({ message: result.reason });
+        })}
+      />
       <Tappable
         onPress={() => {
           const copy = session;

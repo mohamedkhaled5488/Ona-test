@@ -107,3 +107,23 @@ test('WIRE-030 Essentials mode: five reflection themes with unlimited sessions; 
 test('WIRE-040 nothing about them can reach analytics: no event on the allowlist names them', () => {
   expect(ALLOWED_EVENTS.filter((e) => /reflect|letter|support|session|feeling/i.test(e))).toEqual([]);
 });
+
+test('WIRE-050 a reflection as a PDF (Plus): title, date and theme, the take-away, every answered question and follow-up; skipped ones left out; words escaped', () => {
+  const { buildReflectionHtml } = require('../reflectionExport') as typeof import('../reflectionExport');
+  const html = buildReflectionHtml({
+    id: 'r1', mode: 'guided', theme: 'know-myself', title: 'Me & <mornings>', status: 'done', startedAt: '2026-10-28T19:00:00.000Z', updatedAt: '2026-10-28T19:30:00.000Z', seconds: 900, position: 2, tags: [], takeaway: 'Protect mornings',
+    answers: [
+      { id: 'a', question: 'When do you feel most like yourself?', answer: 'Early.\n\nWith coffee.', followUp: { id: 'f', question: 'What helps?', answer: 'Quiet' } },
+      { id: 'b', question: 'Skipped one?', answer: '', skipped: true },
+    ],
+  });
+  expect(html).toContain('Me &amp; &lt;mornings&gt;');
+  expect(html).toContain('Know myself');
+  expect(html).toContain('15 min');
+  expect(html).toContain('Protect mornings');
+  expect(html).toContain('Early.</p><p>With coffee.');
+  expect(html).toContain('What helps?');
+  expect(html).not.toContain('Skipped one?');
+  expect(PLAN_COMPARISON.find((r) => r.sections?.includes('reflection'))!.enforces.plus).toContain('pdfExports');
+});
+

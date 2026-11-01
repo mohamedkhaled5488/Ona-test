@@ -23,6 +23,7 @@ Updated 2026-11-01. What each spec asked for, where it stands, and what is open.
 | `ona-design-philosophy.md`: not in the repo; the work followed the rules in the spec | Owner to share | No |
 | Turning them live: one line each in `src/data/sectionsMeta.ts` (`status: 'live'`); then the Settings words about sensitive areas name Reflection and Letters too | Claude, after the owner's yes | — |
 | Maestro flows for the three sections (Back key, a letter offered, Support for Low) | Claude, once live | No |
+| Reflection PDF export (Plus) | Done | No |
 | Plus "What tends to help you" (Support) in Feelings Analysis | Later, not now (owner, 2026-11-01) | No |
 | Reflection content: all twelve themes written (12 questions per depth each, 432 in all, with follow-ups) | Done; in the clinician review | No |
 | Real-account tests BE-REAL-012 and BE-ACC-007 (Reflection, Letters, Support through a real account, and with another account on the phone) | Added; its first run caught a wrong assumption in the test (a restored letter has an empty reminder list, not none), fixed | No |

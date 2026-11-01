@@ -141,7 +141,7 @@ const ALL_ROWS: ComparisonRow[] = [
   { feature: 'Diet', free: 'Plan up to next week (past weeks stay)', plus: 'Plan further ahead', enforces: { cap: 'dietWeeksAhead' }, sections: ['dietPlanning'] },
   { feature: 'Export', free: 'Your data (JSON/CSV), always', plus: 'PDF exports', enforces: { plus: ['pdfExports'] } },
   { feature: onlyLive(UNLIMITED_SECTIONS.map(([id]) => id)).map((id) => UNLIMITED_SECTIONS.find(([x]) => x === id)![1]).join(', '), free: 'Everything', plus: 'Everything', enforces: {}, sections: UNLIMITED_SECTIONS.map(([id]) => id) },
-  { feature: 'Reflection', free: 'As many sessions as you like, 5 themes', plus: 'Every theme, earlier answers side by side', enforces: { plus: ['reflectAllThemes', 'reflectAnswerAgain'] }, sections: ['reflection'] },
+  { feature: 'Reflection', free: 'As many sessions as you like, 5 themes', plus: 'Every theme, earlier answers side by side, PDF export', enforces: { plus: ['reflectAllThemes', 'reflectAnswerAgain', 'pdfExports'] }, sections: ['reflection'] },
   { feature: 'Letters to Myself', free: `Up to ${FREE_CAPS.activeLetters} active letters (paused ones stay)`, plus: 'Unlimited', enforces: { cap: 'activeLetters' }, sections: ['letters'] },
   { feature: 'Support for this feeling', free: 'Everything, always', plus: 'Everything, always', enforces: {}, sections: ['support'] },
   { feature: 'Support and crisis resources', free: 'Always', plus: 'Always', enforces: {} },
