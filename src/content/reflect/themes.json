@@ -23,7 +23,7 @@
     "line": "What you care about, when it's quiet",
     "opening": "Under the busy days there are a few things you care about. Let's find them.",
     "closing": "Those are yours. You can come back to them whenever a choice feels hard.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -68,7 +68,7 @@
     "line": "Something you're ready to set down",
     "opening": "Some things are heavy to keep carrying. Let's see which ones.",
     "closing": "Letting go is usually slow. Today you took a step.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {
@@ -77,7 +77,7 @@
     "line": "Notice what's going right",
     "opening": "Hard things tend to get our attention first. Let's give the good things a turn.",
     "closing": "Those good things were there all along. Now you've written them down.",
-    "written": false,
+    "written": true,
     "reviewed": false
   },
   {

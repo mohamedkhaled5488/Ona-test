@@ -1,19 +1,196 @@
 {
   "followUps": [
-    { "id": "follow.any.01", "themes": [], "text": "What would you say to a friend who wrote this?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.any.02", "themes": [], "text": "What's the smallest honest next step?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.any.03", "themes": [], "text": "Is there something you're not saying here?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.any.04", "themes": [], "text": "Where do you notice this in your body?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.any.05", "themes": [], "text": "Is there something underneath this answer?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.any.06", "themes": [], "text": "What would help with this, even a little?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.any.07", "themes": [], "text": "If this answer were a letter to you, what would you write back?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.any.08", "themes": [], "text": "Which part of what you wrote feels most true?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.where-i-am.01", "themes": ["where-i-am"], "text": "Is this new, or has it been here a while?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.where-i-am.02", "themes": ["where-i-am"], "text": "What would make this a bit lighter this week?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.where-i-am.03", "themes": ["where-i-am"], "text": "How would you like this to look a month from now?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.know-myself.01", "themes": ["know-myself"], "text": "When did you first notice this about yourself?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.know-myself.02", "themes": ["know-myself"], "text": "Does this feel like you, or like what you were taught to be?", "reviewed": false, "sensitivity": "standard" },
-    { "id": "follow.know-myself.03", "themes": ["know-myself"], "text": "Who in your life sees this side of you?", "reviewed": false, "sensitivity": "standard" }
+    {
+      "id": "follow.any.01",
+      "themes": [],
+      "text": "What would you say to a friend who wrote this?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.any.02",
+      "themes": [],
+      "text": "What's the smallest honest next step?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.any.03",
+      "themes": [],
+      "text": "Is there something you're not saying here?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.any.04",
+      "themes": [],
+      "text": "Where do you notice this in your body?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.any.05",
+      "themes": [],
+      "text": "Is there something underneath this answer?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.any.06",
+      "themes": [],
+      "text": "What would help with this, even a little?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.any.07",
+      "themes": [],
+      "text": "If this answer were a letter to you, what would you write back?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.any.08",
+      "themes": [],
+      "text": "Which part of what you wrote feels most true?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.where-i-am.01",
+      "themes": [
+        "where-i-am"
+      ],
+      "text": "Is this new, or has it been here a while?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.where-i-am.02",
+      "themes": [
+        "where-i-am"
+      ],
+      "text": "What would make this a bit lighter this week?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.where-i-am.03",
+      "themes": [
+        "where-i-am"
+      ],
+      "text": "How would you like this to look a month from now?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.know-myself.01",
+      "themes": [
+        "know-myself"
+      ],
+      "text": "When did you first notice this about yourself?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.know-myself.02",
+      "themes": [
+        "know-myself"
+      ],
+      "text": "Does this feel like you, or like what you were taught to be?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.know-myself.03",
+      "themes": [
+        "know-myself"
+      ],
+      "text": "Who in your life sees this side of you?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.gratitude.01",
+      "themes": [
+        "gratitude"
+      ],
+      "text": "Who could you tell about this?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.gratitude.02",
+      "themes": [
+        "gratitude"
+      ],
+      "text": "How could you make a little more room for this?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.gratitude.03",
+      "themes": [
+        "gratitude"
+      ],
+      "text": "What does this say about what matters to you?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.values.01",
+      "themes": [
+        "values"
+      ],
+      "text": "Where did this value come from?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.values.02",
+      "themes": [
+        "values"
+      ],
+      "text": "When did you last live this fully?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.values.03",
+      "themes": [
+        "values"
+      ],
+      "text": "What makes this hard to live by?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.letting-go.01",
+      "themes": [
+        "letting-go"
+      ],
+      "text": "What would be different tomorrow if you put this down?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.letting-go.02",
+      "themes": [
+        "letting-go"
+      ],
+      "text": "What helps you loosen your grip, even a little?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    },
+    {
+      "id": "follow.letting-go.03",
+      "themes": [
+        "letting-go"
+      ],
+      "text": "Is there something you would like to keep from it?",
+      "reviewed": false,
+      "sensitivity": "standard"
+    }
   ],
   "closing": {
     "takeaway": "What do I take away?",

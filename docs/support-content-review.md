@@ -16,13 +16,13 @@ Intensity is the feeling sheet's 1 (a little) to 5 (very).
 |---|---|---|---|---|
 | Where I am right now | A look at today, without fixing anything | No need to sum anything up. Just notice where you are today. | That's where you are, for now. It doesn't have to be anywhere else. | written |
 | Know myself | Questions about you, from you | Questions about you, from you. There are no wrong answers here, only your own. | You know yourself a little better than you did a few questions ago. That counts. | written |
-| Values and what matters | What you care about, when it's quiet | Under the busy days there are a few things you care about. Let's find them. | Those are yours. You can come back to them whenever a choice feels hard. | not yet |
+| Values and what matters | What you care about, when it's quiet | Under the busy days there are a few things you care about. Let's find them. | Those are yours. You can come back to them whenever a choice feels hard. | written |
 | A decision I'm facing | Think a choice through, slowly | You don't have to decide anything today. Just look at it from a few sides. | Whatever you choose, you thought it through. That's worth something. | not yet |
 | Relationships | The people in your life, and you with them | The people around us shape our days. Let's think about yours. | Relationships keep changing, and so do we. Thank you for looking at yours honestly. | not yet |
 | Work and purpose | What you do, and what it means to you | Work takes up a lot of life. Let's see what it's giving you, and what it's taking. | Purpose doesn't have to be grand. It can be in how you spend an ordinary day. | not yet |
 | Fears and worries | Look at a worry from a safe distance | Worries are often easier to look at when they're written down. Go at your own pace. | You looked at something hard. You can put it down again now. | not yet |
-| Letting go | Something you're ready to set down | Some things are heavy to keep carrying. Let's see which ones. | Letting go is usually slow. Today you took a step. | not yet |
-| Gratitude and what's working | Notice what's going right | Hard things tend to get our attention first. Let's give the good things a turn. | Those good things were there all along. Now you've written them down. | not yet |
+| Letting go | Something you're ready to set down | Some things are heavy to keep carrying. Let's see which ones. | Letting go is usually slow. Today you took a step. | written |
+| Gratitude and what's working | Notice what's going right | Hard things tend to get our attention first. Let's give the good things a turn. | Those good things were there all along. Now you've written them down. | written |
 | A month or year in review | Look back over a stretch of time | Let's look back over a stretch of time, gently, and see what it held. | That was a stretch of your life. You lived it, and now you've looked at it. | not yet |
 | Something I'm avoiding | A thing you keep putting off | We all put some things off. Let's look at one, without judging it. | Now you know a bit more about why it's been waiting. That often makes the next step easier. | not yet |
 | Who I want to become | A gentle look ahead | Let's imagine a little ahead: not who you ought to be, just who you'd like to be. | You don't have to get there all at once. Knowing the direction is a start. | not yet |
@@ -121,6 +121,147 @@ Intensity is the feeling sheet's 1 (a little) to 5 (very).
 - ☐ What does the kindest version of you look like on an ordinary day? _(deepen)_
 - ☐ What do you know about yourself now that you didn't before? _(close)_
 
+### Values and what matters
+
+**Light**
+
+- ☐ What did you do today that felt like you? _(arrive)_
+- ☐ What do you care about that most people around you may not know? _(arrive)_
+- ☐ Which three words describe how you want to treat people? _(explore)_
+- ☐ What do you admire in someone you know? _(explore)_
+- ☐ What would you happily spend a free Saturday on? _(explore)_
+- ☐ What makes you feel proud of yourself, even quietly? _(explore)_
+- ☐ What matters more to you: comfort, adventure, connection, or calm? Why that one? _(explore)_
+- ☐ What kind of friend do you try to be? _(explore)_
+- ☐ What would you like your home to feel like? _(explore)_
+- ☐ When did you last say no to something because it did not fit you? _(deepen)_
+- ☐ Which value would you like to give a little more room this week? _(close)_
+- ☐ What is one small way to live that value tomorrow? _(close)_
+
+**Medium**
+
+- ☐ Where in your week does your time go, and does that match what matters to you? _(arrive)_
+- ☐ What do you keep coming back to, whatever else changes? _(arrive)_
+- ☐ Which choice are you proudest of, because it was true to you? _(explore)_
+- ☐ What do you want people to feel after spending time with you? _(explore)_
+- ☐ Which value do you sometimes put aside to keep the peace? _(explore)_
+- ☐ What would you defend, even if it cost you something? _(explore)_
+- ☐ What does a good day look like for you, in your own words? _(explore)_
+- ☐ Which values did you grow up with, and which have you chosen yourself? _(explore)_
+- ☐ Where do you feel a gap between what you value and how you live? _(explore)_
+- ☐ If you had to drop one commitment, which would you miss least, and what does that tell you? _(deepen)_
+- ☐ What are you saying yes to that might be a no, if you were honest? _(deepen)_
+- ☐ Which value do you want to lead with this month? _(close)_
+
+**Deep**
+
+- ☐ What do you want your life to have stood for? _(arrive)_
+- ☐ What would you still do if no one ever knew? _(arrive)_
+- **[heavy]** ☐ When have you acted against what you value? What was going on for you then? _(explore)_
+- ☐ Which of your values is hardest to live by, and why that one? _(explore)_
+- ☐ What do you want the people closest to you to know you stood for? _(explore)_
+- ☐ Which values have you borrowed from others that no longer fit? _(explore)_
+- ☐ What would you change if your values were steering, not your worries? _(explore)_
+- ☐ What do you hold on to, however tired you are? _(explore)_
+- ☐ Where are two of your values pulling against each other right now? _(explore)_
+- ☐ Imagine yourself looking back years from now. Which choices would you want to have made? _(deepen)_
+- ☐ What would living closer to your values cost you, and what would it give you? _(deepen)_
+- ☐ What is one value you want to protect this year? _(close)_
+
+### Letting go
+
+**Light**
+
+- ☐ What's one small thing you could stop worrying about today? _(arrive)_
+- ☐ What's taking up space in your head that doesn't need to? _(arrive)_
+- ☐ Which item on your to-do list could you drop without much happening? _(explore)_
+- ☐ What would you like to put down for this evening? _(explore)_
+- ☐ Is there a small annoyance you're still carrying from this week? _(explore)_
+- ☐ What standard are you holding yourself to that could be a little gentler? _(explore)_
+- ☐ What could you give yourself permission not to do? _(explore)_
+- ☐ What's a habit of thought you'd like to let go of? _(explore)_
+- ☐ What would feel lighter if you said it out loud, or wrote it down? _(explore)_
+- ☐ What would help you put this down, even for a while? _(deepen)_
+- ☐ What's one thing you're choosing to leave behind today? _(close)_
+- ☐ How do you want to feel once it is put down? _(close)_
+
+**Medium**
+
+- ☐ What are you holding on to that has stopped helping you? _(arrive)_
+- ☐ Which worry keeps returning, even when nothing changes? _(arrive)_
+- ☐ What would happen if you let this be good enough? _(explore)_
+- ☐ Which expectation of others are you ready to soften? _(explore)_
+- ☐ What plan are you still following that no longer fits? _(explore)_
+- ☐ Which role do you play that feels heavy now? _(explore)_
+- ☐ What would letting go of control look like here, in one small way? _(explore)_
+- ☐ What are you keeping just in case? Is that still needed? _(explore)_
+- ☐ Which comparison with others would you like to set down? _(explore)_
+- ☐ What does holding on give you, and what does it cost? _(deepen)_
+- ☐ If you let this go, what might take its place? _(deepen)_
+- ☐ What's one small step towards letting it go? _(close)_
+
+**Deep**
+
+- ☐ What are you ready to let go of, even if part of you is not? _(arrive)_
+- ☐ What would you put down if you knew you were allowed? _(arrive)_
+- **[heavy]** ☐ Is there a version of your life you are grieving? What was it? _(explore)_
+- ☐ Which old story about yourself is ready to end? _(explore)_
+- **[heavy]** ☐ Is there someone you are ready to forgive, perhaps yourself? What would that mean, and not mean? _(explore)_
+- **[heavy]** ☐ What are you still carrying that was never yours to carry? _(explore)_
+- **[heavy]** ☐ What would you say goodbye to, if you could say it gently? _(explore)_
+- ☐ What does it feel like in your body when you hold on to this? _(explore)_
+- ☐ Who would you be without this weight? _(explore)_
+- ☐ What would you want to keep from this, even as you let the rest go? _(deepen)_
+- ☐ What kindness would make letting go a little easier? _(deepen)_
+- ☐ What do you want to remember about this moment of setting something down? _(close)_
+
+### Gratitude and what's working
+
+**Light**
+
+- ☐ What's one small thing that went right today? _(arrive)_
+- ☐ What are you glad you have right now, even if it is ordinary? _(arrive)_
+- ☐ Who made your week a little easier, even in a tiny way? _(explore)_
+- ☐ What did you enjoy eating, hearing or seeing lately? _(explore)_
+- ☐ What's something you use every day that you'd miss? _(explore)_
+- ☐ Which part of your home feels most like yours? _(explore)_
+- ☐ What made you laugh recently? _(explore)_
+- ☐ What is working well enough that you rarely think about it? _(explore)_
+- ☐ What did your body let you do today? _(explore)_
+- ☐ What would you like to thank yourself for this week? _(deepen)_
+- ☐ If you could keep one moment from this week, which would it be? _(close)_
+- ☐ What will you look out for tomorrow? _(close)_
+
+**Medium**
+
+- ☐ What's going better than it was a few months ago? _(arrive)_
+- ☐ What are you taking for granted that you would hate to lose? _(arrive)_
+- ☐ Who has quietly helped you without being asked? _(explore)_
+- ☐ What did you learn recently that you are glad to know? _(explore)_
+- ☐ Which habit or routine is serving you well right now? _(explore)_
+- ☐ What hard thing turned out to give you something useful? _(explore)_
+- ☐ What's a place that has been good to you? _(explore)_
+- ☐ Which of your strengths got you through something lately? _(explore)_
+- ☐ What would you tell someone you are thankful for, if you were sure they would not feel awkward? _(explore)_
+- ☐ What is working in your life that you would like more of? _(deepen)_
+- ☐ How could you say thank you to someone this week, in your own way? _(deepen)_
+- ☐ What do you want to remember about what is going right? _(close)_
+
+**Deep**
+
+- ☐ What are you grateful for that you find hard to say out loud? _(arrive)_
+- ☐ Which ordinary days would you miss most if they changed? _(arrive)_
+- ☐ Who shaped who you are, in ways you are glad of? _(explore)_
+- **[heavy]** ☐ What did a difficult time teach you that you still use? _(explore)_
+- ☐ What are you thankful for in yourself that took years to grow? _(explore)_
+- **[heavy]** ☐ Is there someone you never got to thank? What would you say? _(explore)_
+- ☐ What gives your life meaning on an ordinary Tuesday? _(explore)_
+- ☐ What would you like to be thanked for, one day? _(explore)_
+- ☐ Where do you find beauty without looking for it? _(explore)_
+- ☐ How does gratitude change the way you see a hard part of your life right now? _(deepen)_
+- ☐ What do you have now that a younger you hoped for? _(deepen)_
+- ☐ What is one thing you want to carry forward from all of this? _(close)_
+
 ### Follow-ups
 
 - ☐ What would you say to a friend who wrote this?
@@ -137,6 +278,15 @@ Intensity is the feeling sheet's 1 (a little) to 5 (very).
 - ☐ When did you first notice this about yourself? _(know-myself)_
 - ☐ Does this feel like you, or like what you were taught to be? _(know-myself)_
 - ☐ Who in your life sees this side of you? _(know-myself)_
+- ☐ Who could you tell about this? _(gratitude)_
+- ☐ How could you make a little more room for this? _(gratitude)_
+- ☐ What does this say about what matters to you? _(gratitude)_
+- ☐ Where did this value come from? _(values)_
+- ☐ When did you last live this fully? _(values)_
+- ☐ What makes this hard to live by? _(values)_
+- ☐ What would be different tomorrow if you put this down? _(letting-go)_
+- ☐ What helps you loosen your grip, even a little? _(letting-go)_
+- ☐ Is there something you would like to keep from it? _(letting-go)_
 
 ### Closing and notes
 

@@ -6,6 +6,9 @@ import type { ClosingCopy, FollowUp, HardModeCopy, LettersCopy, ReflectQuestion,
 import themesJson from './reflect/themes.json';
 import whereIAm from './reflect/where-i-am.json';
 import knowMyself from './reflect/know-myself.json';
+import gratitude from './reflect/gratitude.json';
+import values from './reflect/values.json';
+import lettingGo from './reflect/letting-go.json';
 import followUpsJson from './reflect/followUps.json';
 import lettersJson from './letters/letters.json';
 import lively from './support/lively.json';
@@ -21,7 +24,7 @@ import wordsLow from './support/words/low.json';
 import wordsOkay from './support/words/okay.json';
 
 export const REFLECT_THEMES = themesJson as ReflectTheme[];
-export const REFLECT_QUESTIONS = [...whereIAm, ...knowMyself] as ReflectQuestion[];
+export const REFLECT_QUESTIONS = [...whereIAm, ...knowMyself, ...gratitude, ...values, ...lettingGo] as ReflectQuestion[];
 export const FOLLOW_UPS = followUpsJson.followUps as FollowUp[];
 export const REFLECT_CLOSING = followUpsJson.closing as ClosingCopy;
 
