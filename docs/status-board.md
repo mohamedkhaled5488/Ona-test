@@ -17,12 +17,13 @@ Updated 2026-11-01. What each spec asked for, where it stands, and what is open.
 
 | Item | Owner | Blocks? |
 |---|---|---|
-| Clinician or psychologist review of all content (`docs/support-content-review.md`): most of all the danger card and its phrases, hard-feeling mode, every [heavy] piece, Low and Tense, the heaviest words, Deep questions | Owner to arrange | **Blocks** turning these sections live (not a tester build without them) |
-| Names: "Reflection" is too ordinary a word (it is also the Reflect folder's name); proposal "Ask Myself". "Support for this feeling" or "Help with this feeling". "Letters to Myself" | Owner | Blocks going live |
+| Clinician or psychologist review of all content (`docs/support-content-review.md`): most of all the danger card and its phrases, hard-feeling mode, every [heavy] piece, Low and Tense, the heaviest words, Deep questions | Owner is finding the reviewer (the one item that gates switching on all three) | **Blocks** turning these sections live |
+| Names: "Letters to Myself" confirmed (2026-11-01). Reflection and Support still on working names | Owner | Blocks going live |
+| Interpretations approved (2026-11-01): hard-feeling mode at strength 4–5; the quiet offer after Low and Tense only; Support's memory on the phone only; text-only letters; no Save/Discard dialog in Reflection. The doubt and pride word lists for letters: shown, waiting for approval | Owner | No |
 | `ona-design-philosophy.md`: not in the repo; the work followed the rules in the spec | Owner to share | No |
 | Turning them live: one line each in `src/data/sectionsMeta.ts` (`status: 'live'`); then the Settings words about sensitive areas name Reflection and Letters too | Claude, after the owner's yes | — |
 | Maestro flows for the three sections (Back key, a letter offered, Support for Low) | Claude, once live | No |
-| Plus "What tends to help you" (Support) in Feelings Analysis | Not built; decide whether to build it | No |
+| Plus "What tends to help you" (Support) in Feelings Analysis | Later, not now (owner, 2026-11-01) | No |
 | Reflection content: the five Essentials themes are written (Where I am, Know myself, Gratitude, Values, Letting go: 12 questions per depth each). The other seven themes (Plus) are not yet | Claude | No (unwritten themes are never offered) |
 | Real-account test BE-REAL-012 (Reflection, Letters, Support through a real account) | Added; its first run caught a wrong assumption in the test (a restored letter has an empty reminder list, not none), fixed | No |
 
