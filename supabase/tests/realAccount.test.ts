@@ -263,7 +263,7 @@ test('BE-REAL-005 two phones: edits and deletes in every section on one reach th
   // the seed the same whatever the calendar says). A change to the Demo
   // generator can change these; then update them here.
   expect(edited).toBe(14); // 15 before held sections (Songwriting, Mind Games) left the seed
-  expect(deleted).toBe(24);
+  expect(deleted).toBe(22); // 24 before held sections left the seed
   await sync();
   const onB = phoneRecords();
   await freshPhone(); // phone A again, fresh, or a third phone
@@ -474,7 +474,8 @@ test('BE-REAL-012 reflections and letters reach a fresh phone; Support\'s memory
   expect(useReflectionStore.getState().sessions.find((s) => s.id === sid)).toMatchObject({ status: 'done', takeaway: 'Protect mornings' });
   expect(useReflectionStore.getState().sessions.find((s) => s.id === sid)!.answers[0].answer).toBe('Quiet mornings');
   expect(useLettersStore.getState().letters.find((l) => l.id === lid)).toMatchObject({ text: 'Hello, future me', deliverOn: '2027-01-01' });
-  expect(useLettersStore.getState().letters.find((l) => l.id === lid)!.notificationIds).toBeUndefined();
+  // The reminder id stayed on the first phone; this one has none of its own yet.
+  expect(useLettersStore.getState().letters.find((l) => l.id === lid)!.notificationIds ?? []).toEqual([]);
   expect(useSupportStore.getState().votes).toEqual({});
 
   // Another account: nothing of these is visible to it (row-level security).

@@ -24,7 +24,7 @@ Updated 2026-11-01. What each spec asked for, where it stands, and what is open.
 | Maestro flows for the three sections (Back key, a letter offered, Support for Low) | Claude, once live | No |
 | Plus "What tends to help you" (Support) in Feelings Analysis | Not built; decide whether to build it | No |
 | Reflection content: more closing questions per theme and depth; the other ten themes' questions (12 per depth each) | Claude, after the tone review | Blocks the five Essentials themes having questions (only two of the five are written) |
-| Real-account test BE-REAL-012 (Reflection, Letters, Support through a real account) | Added; first CI result pending | No |
+| Real-account test BE-REAL-012 (Reflection, Letters, Support through a real account) | Added; its first run caught a wrong assumption in the test (a restored letter has an empty reminder list, not none), fixed | No |
 
 ## Earlier open items (unchanged)
 
@@ -39,4 +39,4 @@ Updated 2026-11-01. What each spec asked for, where it stands, and what is open.
 
 ## CI
 
-CI's backend job was red from 36eaccf (Part C) to f62162f: BE-REAL-005 pins the number of edited items from the seed, and removing the held sections' sample data changed it from 15 to 14. Not a bug in Ona; the count is updated. The app's own tests were green throughout.
+CI's backend job was red from 36eaccf (Part C) to f62162f: BE-REAL-005 pins the number of edited items from the seed, and removing the held sections' sample data changed them (15 edited to 14, 24 deleted to 22). Not a bug in Ona; the count is updated. The app's own tests were green throughout.
