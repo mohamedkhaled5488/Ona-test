@@ -67,7 +67,7 @@ describe('feelings from tasks and books', () => {
     expect(useFeelingsStore.getState().entries.length).toBe(before);
   });
 
-  it('keeps the entry when the task or book is deleted', () => {
+  it('deleting the task or book deletes its feeling (owner, 2026-11-14); one whose item is missing is still labelled honestly', () => {
     const taskId = newTask('Soon gone');
     const bookId = useReadingListStore.getState().addManualBook('Also gone', '', 'reading');
     const taskFeeling = useFeelingsStore.getState().addEntry('tense', [], undefined, undefined, { kind: 'task', refId: taskId });
@@ -75,14 +75,10 @@ describe('feelings from tasks and books', () => {
 
     useDailyPlanningStore.getState().deleteTask(taskId);
     useReadingListStore.getState().removeEntry(bookId);
+    expect(useFeelingsStore.getState().entries.filter((e) => e.id === taskFeeling || e.id === bookFeeling)).toEqual([]);
 
-    const entries = useFeelingsStore.getState().entries;
-    const t = entries.find((e) => e.id === taskFeeling)!;
-    const b = entries.find((e) => e.id === bookFeeling)!;
-    expect(t).toBeDefined();
-    expect(b).toBeDefined();
-    expect(describeFeelingSource(t.source, lookup())).toEqual({ text: 'From a deleted task', deleted: true });
-    expect(describeFeelingSource(b.source, lookup())).toEqual({ text: 'From a deleted book', deleted: true });
+    // A feeling whose task isn't on this phone (yet): never mislabelled.
+    expect(describeFeelingSource({ kind: 'task', refId: 'not-here' }, lookup())).toEqual({ text: 'From a deleted task', deleted: true });
   });
 
   it('labels plain check-ins with no source as nothing', () => {

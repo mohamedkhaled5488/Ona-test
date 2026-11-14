@@ -5,6 +5,7 @@ import { genId } from '../utils/id';
 import { daysBetweenISODates, todayISO } from '../utils/date';
 import { cancelReminders, scheduleReminder } from '../utils/notifications';
 import { frequencyStreak, shouldResurfaceWhyFor, nextScheduledDates, type FrequencyStreak } from '../utils/habitFrequency';
+import { removeFeelingsOf } from '../feelings/removeWithItem';
 
 export interface HabitInput {
   name: string;
@@ -84,6 +85,7 @@ export const useHabitsStore = create<HabitsState>()(
     deleteHabit: (id) => {
       const habit = get().habits.find((h) => h.id === id);
       if (habit) void cancelReminders(habit.reminderNotificationIds);
+      removeFeelingsOf('habit', id);
       set((state) => {
         state.habits = state.habits.filter((h) => h.id !== id);
         state.checkIns = state.checkIns.filter((c) => c.habitId !== id);

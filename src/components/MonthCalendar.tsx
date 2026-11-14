@@ -86,6 +86,10 @@ export function MonthCalendar({
               disabled={disabled || !onDayPress}
               onPress={() => onDayPress?.(date)}
               style={styles.dayCell}
+              accessibilityRole="button"
+              accessibilityLabel={new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              accessibilityState={{ disabled: disabled || !onDayPress }}
+              testID={`day-${date}`}
             >
               <View
                 style={[

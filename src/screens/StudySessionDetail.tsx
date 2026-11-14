@@ -17,6 +17,7 @@ import { useStudyStore } from '../store/useStudyStore';
 import { useFeelingsStore } from '../store/useFeelingsStore';
 import type { RootStackParamList } from '../navigation/types';
 import { themedStyles } from '../theme/runtime';
+import { feelingsSnapshot } from '../feelings/removeWithItem';
 
 
 
@@ -155,6 +156,7 @@ export function StudySessionDetail({
       onEdit={editing ? undefined : startEditing}
       onDelete={() => {
         const previous = useStudyStore.getState().sessions;
+        const feelings = feelingsSnapshot();
         requestDelete({
           message: 'Delete this study session and its notes? This can’t be undone.',
           toastMessage: 'Session deleted',
@@ -162,7 +164,7 @@ export function StudySessionDetail({
             deleteSession(session.id);
             onBack();
           },
-          restore: () => restoreSessions(previous),
+          restore: () => (restoreSessions(previous), feelings()),
         });
       }}
     >

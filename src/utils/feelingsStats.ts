@@ -132,10 +132,16 @@ export interface FeelingReasonGroup {
 // unlike topReasonTags (a flat, truncated ranking), this groups by feeling
 // word first so every word the user logged shows up, each with its own
 // reason tags underneath (both counts, never "caused by").
+// The key for a feeling noted with its colour only, in the Patterns list.
+export const zoneOnlyKey = (zone: FeelingZone) => `zone:${zone}`;
+export const zoneOfKey = (key: string): FeelingZone | undefined => (key.startsWith('zone:') ? (key.slice(5) as FeelingZone) : undefined);
+
 export function reasonBreakdownByFeeling(entries: FeelingCheckIn[]): FeelingReasonGroup[] {
   const byFeeling = new Map<string, { total: number; lastDate: string; reasonCounts: Map<string, number> }>();
   entries.forEach((e) => {
-    e.feelingIds.forEach((feelingId) => {
+    // A feeling noted with a colour only (most other sections' quick sheet)
+    // counts under its colour, so every feeling is in the list.
+    (e.feelingIds.length ? e.feelingIds : [zoneOnlyKey(e.zone)]).forEach((feelingId) => {
       if (!byFeeling.has(feelingId)) byFeeling.set(feelingId, { total: 0, lastDate: e.date, reasonCounts: new Map() });
       const group = byFeeling.get(feelingId)!;
       group.total += 1;

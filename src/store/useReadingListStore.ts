@@ -4,6 +4,7 @@ import type { Quote, ReadingListEntry, ReadingSession, ReadingStatus } from '../
 import { genId } from '../utils/id';
 import { dayOfYear, toISODate, todayISO } from '../utils/date';
 import { pagesBetween, percentFromPages, sanitizePageCount } from '../utils/bookProgress';
+import { removeFeelingsOf } from '../feelings/removeWithItem';
 
 export interface QuoteInput {
   text: string;
@@ -76,6 +77,7 @@ export const useReadingListStore = create<ReadingListState>()(
 
     removeEntry: (id) =>
       set((state) => {
+        removeFeelingsOf('book', id);
         state.entries = state.entries.filter((e) => e.id !== id);
         state.quotes = state.quotes.filter((q) => q.entryId !== id);
         state.sessions = state.sessions.filter((s) => s.entryId !== id);

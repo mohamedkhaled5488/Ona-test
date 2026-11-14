@@ -15,6 +15,7 @@ import type {
 import { genId } from '../utils/id';
 import { todayISO, addDaysISO, dayOfYear, toISODate } from '../utils/date';
 import { cancelReminders, scheduleReminder } from '../utils/notifications';
+import { removeFeelingsOf } from '../feelings/removeWithItem';
 
 export interface PracticeSessionInput {
   minutes: number;
@@ -135,6 +136,7 @@ export const useSkillsStore = create<SkillsState>()(
       deleteSkill: (id) => {
         const skill = get().skills.find((s) => s.id === id);
         if (skill) void cancelReminders(skill.reminderNotificationIds);
+        removeFeelingsOf('skill', id);
         set((state) => {
           state.skills = state.skills.filter((s) => s.id !== id);
           state.sessions = state.sessions.filter((s) => s.skillId !== id);

@@ -4,6 +4,7 @@ import type { AmbientSound, StudySession } from '../types/sections';
 import { mockStudySessions } from '../data/mockData';
 import { genId } from '../utils/id';
 import { toISODate } from '../utils/date';
+import { removeFeelingsOf } from '../feelings/removeWithItem';
 
 export interface StartSessionConfig {
   focusMinutes: number;
@@ -169,6 +170,7 @@ export const useStudyStore = create<StudyState>()(
 
     deleteSession: (id) =>
       set((state) => {
+        removeFeelingsOf('study', id);
         state.sessions = state.sessions.filter((s) => s.id !== id);
       }),
 

@@ -24,6 +24,8 @@ import { demoSeed, DEMO_SEED_VERSION } from '../demo/demoData';
 import { todayISO } from './date';
 import type { StartScreen } from '../navigation/startScreen';
 import { bringFeelingsTogether } from '../feelings/fromSections';
+import { removeOrphanFeelings } from '../feelings/removeWithItem';
+import { useAuthStore } from '../store/useAuthStore';
 
 type Storage = Pick<StateStorage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -97,6 +99,9 @@ export const CARRIED_INTO_DEMO = ['theme', 'accent', 'textSize', 'timeFormat', '
 function bringFeelingsTogetherSafely(): void {
   try {
     bringFeelingsTogether();
+    // A phone that doesn't sync has all its data here: feelings of deleted
+    // items go (a syncing phone does it after each finished sync).
+    if (!useAuthStore.getState().session) removeOrphanFeelings();
   } catch (e) {
     if (__DEV__) console.warn('[data] feelings', e);
   }

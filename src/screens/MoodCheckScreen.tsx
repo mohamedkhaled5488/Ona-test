@@ -68,8 +68,7 @@ import {
   type TrendDimension,
   type FeelingReasonGroup,
   type PatternsView,
-  type TagImpact,
-} from '../utils/feelingsStats';
+  type TagImpact, zoneOfKey } from '../utils/feelingsStats';
 import { sectionsMeta } from '../data/sectionsMeta';
 import { addDaysISO, addMonthsISO, todayISO, formatDisplayDate, formatMonthLabel } from '../utils/date';
 import type { RootStackParamList } from '../navigation/types';
@@ -759,6 +758,13 @@ function ZoneLegend({ isolatedZone, onToggle }: { isolatedZone: FeelingZone | nu
 
 const sortLabels: Record<'count' | 'alpha' | 'recent', string> = { count: 'Most used', alpha: 'A–Z', recent: 'Recent' };
 
+// A word's name, or a colour noted without a word: "Tense (no word chosen)".
+function nameOfBreakdownKey(key: string, personalFeelings: ReturnType<typeof useFeelingsStore.getState>['personalFeelings']): string {
+  const zone = zoneOfKey(key);
+  if (zone) return `${zoneMeta(zone).label} (no word chosen)`;
+  return findAnyFeeling(key, personalFeelings)?.name ?? key;
+}
+
 function ReasonsBreakdownCard({
   groups,
   sortMode,
@@ -776,7 +782,7 @@ function ReasonsBreakdownCard({
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const named = groups
-    .map((g) => ({ ...g, name: findAnyFeeling(g.feelingId, personalFeelings)?.name ?? g.feelingId }))
+    .map((g) => ({ ...g, name: nameOfBreakdownKey(g.feelingId, personalFeelings) }))
     .sort((a, b) => (sortMode === 'alpha' ? a.name.localeCompare(b.name) : sortMode === 'recent' ? b.lastDate.localeCompare(a.lastDate) : b.total - a.total));
 
   return (
@@ -796,7 +802,8 @@ function ReasonsBreakdownCard({
       ) : (
         named.map((g) => {
           const feeling = findAnyFeeling(g.feelingId, personalFeelings);
-          const meta = feeling ? zoneMeta(feeling.zone) : undefined;
+          const zoneOnly = zoneOfKey(g.feelingId);
+          const meta = feeling ? zoneMeta(feeling.zone) : zoneOnly ? zoneMeta(zoneOnly) : undefined;
           const isExpanded = expandedId === g.feelingId;
           return (
             <View key={g.feelingId} style={styles.breakdownWordBlock}>
@@ -911,7 +918,6 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
   const [view, setView] = useState<PatternsView>(() => useSettingsStore.getState().feelingsPatternsDefault);
   const [month, setMonth] = useState(todayISO());
   const [customRange, setCustomRange] = useState({ start: addDaysISO(todayISO(), -13), end: todayISO() });
-  const [pickingRangeField, setPickingRangeField] = useState<'start' | 'end' | null>(null);
   const [dimension, setDimension] = useState<TrendDimension>('pleasantness');
   const [smoothing, setSmoothing] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
@@ -1049,32 +1055,7 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
     <>
       {segmentedControl}
 
-      {view === 'custom' && (
-        <View style={styles.customRangeRow}>
-          <Pressable onPress={() => setPickingRangeField(pickingRangeField === 'start' ? null : 'start')} style={[styles.chip, pickingRangeField === 'start' && styles.chipActive]}>
-            <Caption style={pickingRangeField === 'start' ? styles.wordChipTextActive : undefined}>From {formatDisplayDate(customRange.start)}</Caption>
-          </Pressable>
-          <Pressable onPress={() => setPickingRangeField(pickingRangeField === 'end' ? null : 'end')} style={[styles.chip, pickingRangeField === 'end' && styles.chipActive]}>
-            <Caption style={pickingRangeField === 'end' ? styles.wordChipTextActive : undefined}>To {formatDisplayDate(customRange.end)}</Caption>
-          </Pressable>
-        </View>
-      )}
-      {view === 'custom' && pickingRangeField && (
-        <MonthCalendar
-          accent={colors.teal}
-          month={pickingRangeField === 'start' ? customRange.start : customRange.end}
-          onMonthChange={() => {}}
-          onDayPress={(date) => {
-            setCustomRange((prev) =>
-              pickingRangeField === 'start'
-                ? { start: date, end: date > prev.end ? date : prev.end }
-                : { end: date, start: date < prev.start ? date : prev.start }
-            );
-            setPickingRangeField(null);
-          }}
-          disableFuture={false}
-        />
-      )}
+      {view === 'custom' && <RangeCalendar customRange={customRange} setCustomRange={setCustomRange} />}
 
       {(view === 'month' || view === 'year') && (
         <View style={styles.chartNavRow}>
@@ -1254,9 +1235,10 @@ function ReasonEntriesStage({
 }) {
   const entries = useFeelingsStore((s) => s.entries);
   const personalFeelings = useFeelingsStore((s) => s.personalFeelings);
-  const feeling = findAnyFeeling(feelingId, personalFeelings);
+  const feeling = findAnyFeeling(feelingId, personalFeelings) ?? (zoneOfKey(feelingId) ? { name: nameOfBreakdownKey(feelingId, personalFeelings) } : undefined);
+  const zoneOnly = zoneOfKey(feelingId);
   const matches = entries
-    .filter((e) => e.feelingIds.includes(feelingId) && (e.reasonTags ?? []).includes(tag))
+    .filter((e) => (zoneOnly ? e.feelingIds.length === 0 && e.zone === zoneOnly : e.feelingIds.includes(feelingId)) && (e.reasonTags ?? []).includes(tag))
     .sort((a, b) => b.date.localeCompare(a.date));
 
   return (
@@ -1415,6 +1397,30 @@ function AnalysisRangePicker({
   customRange: { start: string; end: string };
   setCustomRange: (updater: (prev: { start: string; end: string }) => { start: string; end: string }) => void;
 }) {
+  return (
+    <>
+      <View style={styles.segmented}>
+        {(['all', 'week', 'month', 'custom'] as const).map((v) => (
+          <Pressable key={v} onPress={() => setView(v)} style={[styles.segment, view === v && styles.segmentActive]}>
+            <Caption style={view === v ? styles.segmentTextActive : undefined}>{v === 'all' ? 'All' : v === 'custom' ? 'Custom' : v[0].toUpperCase() + v.slice(1)}</Caption>
+          </Pressable>
+        ))}
+      </View>
+
+      {view === 'custom' && <RangeCalendar customRange={customRange} setCustomRange={setCustomRange} />}
+    </>
+  );
+}
+
+// The one way to pick a custom range, in Analysis and Patterns alike: tap the
+// first day, then the last; every day between fills in; months move.
+function RangeCalendar({
+  customRange,
+  setCustomRange,
+}: {
+  customRange: { start: string; end: string };
+  setCustomRange: (updater: (prev: { start: string; end: string }) => { start: string; end: string }) => void;
+}) {
   const [calendarMonth, setCalendarMonth] = useState(customRange.end);
   const [rangeAnchor, setRangeAnchor] = useState<string | null>(null);
 
@@ -1429,33 +1435,21 @@ function AnalysisRangePicker({
   };
 
   return (
-    <>
-      <View style={styles.segmented}>
-        {(['all', 'week', 'month', 'custom'] as const).map((v) => (
-          <Pressable key={v} onPress={() => setView(v)} style={[styles.segment, view === v && styles.segmentActive]}>
-            <Caption style={view === v ? styles.segmentTextActive : undefined}>{v === 'all' ? 'All' : v === 'custom' ? 'Custom' : v[0].toUpperCase() + v.slice(1)}</Caption>
-          </Pressable>
-        ))}
-      </View>
-
-      {view === 'custom' && (
-        <>
-          <Caption style={styles.customRangeHint}>
-            {rangeAnchor == null
-              ? `${formatDisplayDate(customRange.start)} – ${formatDisplayDate(customRange.end)} · tap a day to start a new range`
-              : `Pick the last day of the range (starting ${formatDisplayDate(rangeAnchor)})`}
-          </Caption>
-          <MonthCalendar
-            accent={colors.teal}
-            month={calendarMonth}
-            onMonthChange={setCalendarMonth}
-            getDayColor={(date) => (date >= customRange.start && date <= customRange.end ? colors.teal : undefined)}
-            onDayPress={handleDayPress}
-            disableFuture={false}
-          />
-        </>
-      )}
-    </>
+    <View testID="range-calendar">
+      <Caption style={styles.customRangeHint}>
+        {rangeAnchor == null
+          ? `${formatDisplayDate(customRange.start)} – ${formatDisplayDate(customRange.end)} · tap a day to start a new range`
+          : `Pick the last day of the range (starting ${formatDisplayDate(rangeAnchor)})`}
+      </Caption>
+      <MonthCalendar
+        accent={colors.teal}
+        month={calendarMonth}
+        onMonthChange={setCalendarMonth}
+        getDayColor={(date) => (date >= customRange.start && date <= customRange.end ? colors.teal : undefined)}
+        onDayPress={handleDayPress}
+        disableFuture={false}
+      />
+    </View>
   );
 }
 

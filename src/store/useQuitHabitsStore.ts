@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import type { FeelingZone, QuitCravingSession, QuitFeelingEntry, QuitHabit, QuitHabitType, QuitIfThenPlan, QuitSlip, QuitToolkit, QuitTrack } from '../types/sections';
 import { genId } from '../utils/id';
 import { daysBetweenISODates, todayISO } from '../utils/date';
+import { removeFeelingsOf } from '../feelings/removeWithItem';
 
 interface QuitHabitsState {
   habits: QuitHabit[];
@@ -102,7 +103,8 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
         if (h) h.replacementHabitId = habitId;
       }),
 
-    deleteQuitHabit: (id) =>
+    deleteQuitHabit: (id) => {
+      removeFeelingsOf('quitHabit', id);
       set((state) => {
         const trackIds = new Set(state.tracks.filter((t) => t.quitHabitId === id).map((t) => t.id));
         state.habits = state.habits.filter((h) => h.id !== id);
@@ -110,7 +112,8 @@ export const useQuitHabitsStore = create<QuitHabitsState>()(
         state.feelingEntries = state.feelingEntries.filter((e) => !trackIds.has(e.trackId));
         state.slips = state.slips.filter((x) => x.quitHabitId !== id);
         state.cravingSessions = state.cravingSessions.filter((x) => x.quitHabitId !== id);
-      }),
+      });
+    },
 
     addFeelingEntry: (trackId, feelingId, zone, note, isRelapseMoment, isResistedUrge, approach, urgePassed) => {
       const id = genId('quitfeeling');

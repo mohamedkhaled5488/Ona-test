@@ -23,6 +23,7 @@ import { normalizeTask } from '../utils/taskMigration';
 import { moveInDay, sortForDay } from '../utils/dayView';
 import { renameTaskTagInFeelings } from '../utils/taskFeelings';
 import { usePlanStore, selectStepAtPath } from './usePlanStore';
+import { removeFeelingsOf } from '../feelings/removeWithItem';
 
 export function resolveTaskTitle(task: DailyTask): string {
   if (!task.linkedPlan) return task.title;
@@ -605,6 +606,7 @@ export const useDailyPlanningStore = create<DailyPlanningState>()(
       deleteTask: (id) => {
         const task = findTask(get().tasks, id);
         if (task) void cancelReminders(task.notificationIds);
+        removeFeelingsOf('task', id);
         set((state) => {
           state.tasks = state.tasks.filter((t) => t.id !== id);
         });
@@ -614,6 +616,8 @@ export const useDailyPlanningStore = create<DailyPlanningState>()(
         const task = findTask(get().tasks, id);
         if (!task) return;
         if (task.repeat === 'none' || (scope === 'future' && date <= task.date)) return get().deleteTask(id);
+        // Earlier days keep their feelings; the deleted days' go.
+        removeFeelingsOf('task', id, (day) => (scope === 'this' ? day === date : day >= date));
         mutate(id, (t) => {
           if (scope === 'this') {
             if (!t.skippedDates.includes(date)) t.skippedDates.push(date);

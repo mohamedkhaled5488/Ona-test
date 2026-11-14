@@ -248,23 +248,23 @@ describe('INT-DEL: deleting something updates every place that referred to it', 
     expect(useFeelingsStore.getState().entries[0].reasonTags).toEqual(['Errands']);
   });
 
-  test('INT-DEL-002 a habit: its check-ins go; its feelings stay, labelled "From a deleted habit"; Recap stops counting it', () => {
+  test('INT-DEL-002 a habit: its check-ins and its feelings go (owner, 2026-11-14); Recap stops counting it', () => {
     const h = useHabitsStore.getState().addHabit({ name: 'Walk', targetDays: 30 } as never);
     useHabitsStore.getState().setCheckIn(h, TODAY, true);
     logItemFeeling({ source: { kind: 'habit', refId: h }, zone: 'calm' });
     useHabitsStore.getState().deleteHabit(h);
     expect(useHabitsStore.getState().checkIns).toEqual([]);
-    expect(describeFeelingSource(useFeelingsStore.getState().entries[0].source, lookup())).toEqual({ text: 'From a deleted habit', deleted: true });
+    expect(useFeelingsStore.getState().entries).toEqual([]);
     expect(periodStats(withoutHidden(recapData(), []), { start: '2026-10-12', end: TODAY }).habitCompletions).toBe(0);
   });
 
-  test('INT-DEL-003 a skill: its sessions go (and its Recap minutes); its feelings stay labelled', () => {
+  test('INT-DEL-003 a skill: its sessions (and its Recap minutes) and its feelings go', () => {
     const s = useSkillsStore.getState().addSkill('Guitar', '#000', 'musical-notes-outline', undefined, '2026-09-01');
     useSkillsStore.getState().addSession(s, { minutes: 30 });
     logItemFeeling({ source: { kind: 'skill', refId: s }, zone: 'lively' });
     useSkillsStore.getState().deleteSkill(s);
     expect(periodStats(recapData(), { start: '2026-10-12', end: TODAY }).minutes.skills).toBe(0);
-    expect(describeFeelingSource(useFeelingsStore.getState().entries[0].source, lookup())?.text).toBe('From a deleted skill');
+    expect(useFeelingsStore.getState().entries).toEqual([]);
   });
 
   test('INT-DEL-004 a book: its quotes and sessions go, and its reading minutes leave Recap', () => {
@@ -277,20 +277,20 @@ describe('INT-DEL: deleting something updates every place that referred to it', 
     expect(periodStats(recapData(), { start: '2026-10-12', end: TODAY }).minutes.reading).toBe(0);
   });
 
-  test('INT-DEL-005 a Quit habit: its tracks and moments go; feelings in the log stay, labelled', () => {
+  test('INT-DEL-005 a Quit habit: its tracks, moments and feelings go (found on a phone, 2026-11-14)', () => {
     const { habitId, trackId } = useQuitHabitsStore.getState().addQuitHabit('Scrolling', undefined);
     logItemFeeling({ source: { kind: 'quitHabit', refId: habitId, trackId, slip: false }, zone: 'tense' });
     useQuitHabitsStore.getState().deleteQuitHabit(habitId);
     expect(useQuitHabitsStore.getState().tracks).toEqual([]);
     expect(useQuitHabitsStore.getState().feelingEntries).toEqual([]);
-    expect(describeFeelingSource(useFeelingsStore.getState().entries[0].source, lookup())?.text).toBe('From a deleted quit habit');
+    expect(useFeelingsStore.getState().entries).toEqual([]);
   });
 
-  test('INT-DEL-006 a task with a feeling: the feeling stays in the log, labelled "From a deleted task"', () => {
+  test('INT-DEL-006 a task with a feeling: the feeling goes with it', () => {
     const task = useDailyPlanningStore.getState().addTask(TODAY, 'Dentist')!;
     logTaskFeeling({ taskId: task, date: TODAY, phase: 'after', zone: 'tense', feelingIds: [] });
     useDailyPlanningStore.getState().deleteTask(task);
-    expect(describeFeelingSource(useFeelingsStore.getState().entries[0].source, lookup())?.text).toBe('From a deleted task');
+    expect(useFeelingsStore.getState().entries).toEqual([]);
   });
 });
 

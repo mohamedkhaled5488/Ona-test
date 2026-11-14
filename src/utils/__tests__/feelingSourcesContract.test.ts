@@ -15,6 +15,9 @@ import { useQuitHabitsStore } from '../../store/useQuitHabitsStore';
 import { useDailyPlanningStore } from '../../store/useDailyPlanningStore';
 import { logFeeling } from '../../feelings/logFeeling';
 import { useJournalStore } from '../../store/useJournalStore';
+import { useStudyStore } from '../../store/useStudyStore';
+import { useReadingListStore } from '../../store/useReadingListStore';
+import { useReflectionStore } from '../../store/useReflectionStore';
 import { dailyTrendPoints, datesInRange, zoneCounts } from '../feelingsStats';
 import { filterBySource, overviewInsight, sourceBreakdown, tagInsight } from '../feelingsInsights';
 import { periodStats } from '../recapStats';
@@ -62,6 +65,10 @@ async function freshPhone() {
   useSkillsStore.setState({ skills: [makeSkill({ id: 'skill-1', name: 'Guitar' })] } as never);
   useQuitHabitsStore.setState({ habits: [makeQuitHabit({ id: 'quit-1', name: 'Scrolling' })], tracks: [makeTrack({ id: 'track-1', quitHabitId: 'quit-1', startDate: '2026-10-01' })] } as never);
   useDailyPlanningStore.setState({ tasks: [makeTask({ id: 'task-1', date: TODAY, title: 'Call the bank' })] } as never);
+  // Every source's item exists (a feeling of a deleted item goes with it).
+  useStudyStore.setState({ sessions: [{ id: 'study-1', date: TODAY, focusMinutes: 25 }] } as never);
+  useReadingListStore.setState({ entries: [{ id: 'book-1', book: { title: 'A book' }, status: 'reading' }] } as never);
+  useReflectionStore.setState({ sessions: [{ id: 'reflection-1', mode: 'free', title: 'Mine', status: 'done', startedAt: `${TODAY}T09:00:00.000Z`, updatedAt: `${TODAY}T09:00:00.000Z`, seconds: 0, position: 0, tags: [], answers: [] }] });
 }
 
 beforeEach(() => useClock(`${TODAY}T10:00`));

@@ -221,7 +221,7 @@ function WritePage({ page, onDirty, saveRef, onSaved }: { page: Extract<Page, { 
       {kind === 'date' && (
         <>
           <SectionHeading>{LETTERS_COPY.date}</SectionHeading>
-          <MonthCalendar accent={accent} month={month} onMonthChange={setMonth} onDayPress={(d) => touch(setDeliverOn)(d)} disablePast getDayColor={(d) => (d === deliverOn ? accent : undefined)} />
+          <MonthCalendar accent={accent} month={month} onMonthChange={setMonth} onDayPress={(d) => touch(setDeliverOn)(d)} disablePast disableFuture={false} getDayColor={(d) => (d === deliverOn ? accent : undefined)} />
           {deliverOn && <Caption>{formatDisplayDate(deliverOn)}</Caption>}
           <SettingSwitch label={LETTERS_COPY.remind} value={remind} onValueChange={touch(setRemind)} accent={accent} />
           <Caption>{LETTERS_COPY.remindNote}</Caption>

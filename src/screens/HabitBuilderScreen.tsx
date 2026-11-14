@@ -836,7 +836,7 @@ function FolderStage({
 
   const removeHabit = () => {
     requestDelete({
-      message: `Delete "${habit.name}" and its whole history? This can't be undone. Feelings you logged with it stay in your Feelings log.`,
+      message: `Delete "${habit.name}" and its whole history? Feelings you logged with it are deleted too. This can't be undone.`,
       perform: () => {
         deleteHabit(habitId);
         onBack();

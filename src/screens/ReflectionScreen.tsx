@@ -36,6 +36,7 @@ import { isPlusNow } from '../plans/access';
 import { Tappable } from '../components/Tappable';
 import { usePlusAction } from '../components/PlusGate';
 import { exportReflectionAsPdf } from '../utils/reflectionExport';
+import { feelingsSnapshot } from '../feelings/removeWithItem';
 
 const accent = sectionAccents.reflection;
 
@@ -59,7 +60,7 @@ export const REFLECTION_HOME_COPY = {
   edit: 'Keep writing',
   redo: 'Do these questions again',
   delete: 'Delete this reflection',
-  deleteConfirm: 'Delete this reflection? Its answers go too.',
+  deleteConfirm: 'Delete this reflection? Its answers, and the feelings noted with it, go too.',
   again: 'Answer this again',
   rename: 'Title',
   pdf: 'Export as PDF',
@@ -383,13 +384,17 @@ function ReadPage({ sessionId, justSaved, onEdit, onStart, onDeleted }: { sessio
       <Tappable
         onPress={() => {
           const copy = session;
+          const feelings = feelingsSnapshot();
           requestDelete({
             message: REFLECTION_HOME_COPY.deleteConfirm,
             perform: () => {
               store.deleteSession(sessionId);
               onDeleted();
             },
-            restore: () => useReflectionStore.setState((s) => ({ sessions: [...s.sessions, copy] })),
+            restore: () => {
+              useReflectionStore.setState((s) => ({ sessions: [...s.sessions, copy] }));
+              feelings();
+            },
           });
         }}
         accessibilityRole="button"

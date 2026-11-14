@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { ReflectAnswer, ReflectDepth, ReflectLength, ReflectMode, ReflectSession } from '../types/sections';
 import { genId } from '../utils/id';
+import { removeFeelingsOf } from '../feelings/removeWithItem';
 
 export interface PlannedQuestion {
   questionId?: string;
@@ -208,10 +209,12 @@ export const useReflectionStore = create<ReflectionState>()(
           const a = s.answers.find((x) => x.id === answerId);
           if (a) a.favorite = !a.favorite || undefined;
         }),
-      deleteSession: (sessionId) =>
+      deleteSession: (sessionId) => {
+        removeFeelingsOf('reflect', sessionId);
         set((state) => {
           state.sessions = state.sessions.filter((s) => s.id !== sessionId);
-        }),
+        });
+      },
     };
   })
 );

@@ -51,6 +51,7 @@ import type { DailyTask, FeelingZone, TaskDifficulty, TaskEvaluation, TaskRepeat
 import { TaskFeelingSheet, DIFFICULTY } from './dailyPlanning/TaskFeelingSheet';
 import { linkedEntry, shouldAskFeeling, type FeelingPhase } from '../utils/taskFeelings';
 import { themedStyles } from '../theme/runtime';
+import { feelingsSnapshot } from '../feelings/removeWithItem';
 
 const evaluationMeta: Record<TaskEvaluation, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   well: { label: 'Went well', icon: 'happy-outline', color: '#4F9B82' },
@@ -968,7 +969,11 @@ export function DailyPlanningScreen() {
 
   const snapshot = () => {
     const previous = useDailyPlanningStore.getState().tasks;
-    return () => useDailyPlanningStore.getState().restoreTasks(previous);
+    const feelings = feelingsSnapshot();
+    return () => {
+      useDailyPlanningStore.getState().restoreTasks(previous);
+      feelings();
+    };
   };
 
   const confirmDelete = (task: DailyTask, date = selectedDate) => {

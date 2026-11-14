@@ -599,7 +599,7 @@ function FolderStage({
 
   const removeSkill = () => {
     requestDelete({
-      message: `Delete "${skill.name}" and every session logged for it? This can't be undone. Feelings you logged with it stay in your Feelings log. (Archiving keeps everything instead.)`,
+      message: `Delete "${skill.name}" and every session logged for it? Feelings you logged with it are deleted too. This can't be undone. (Archiving keeps everything instead.)`,
       perform: () => {
         deleteSkill(skillId);
         onBack();

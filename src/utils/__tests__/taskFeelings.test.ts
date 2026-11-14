@@ -136,11 +136,10 @@ describe('editing or deleting in either place updates the other', () => {
     expect(linkedEntry(task(taskId), DAY, 'after', feelings().entries)?.zone).toBe('calm');
   });
 
-  test('deleting the task keeps the feeling, labelled as from a deleted task', () => {
+  test('deleting the task deletes its feeling too (owner, 2026-11-14)', () => {
     logTaskFeeling({ taskId, date: DAY, phase: 'after', zone: 'calm' });
     plan().deleteTask(taskId);
-    expect(feelings().entries).toHaveLength(1);
-    expect(describeFeelingSource(feelings().entries[0].source, { task: () => undefined } as never)).toEqual({ text: 'From a deleted task', deleted: true });
+    expect(feelings().entries).toHaveLength(0);
   });
 
   test('a feeling logged before v2 (no link on the task) is still found', () => {

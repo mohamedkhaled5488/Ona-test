@@ -669,7 +669,7 @@ function JourneyStage({
 
   const removeHabit = () => {
     requestDelete({
-      message: `Delete "${habit.name}" and its whole journey, every track and urge? This can't be undone. Feelings you noted stay in your Feelings log.`,
+      message: `Delete "${habit.name}" and its whole journey, every track and urge? Feelings you noted with it are deleted too. This can't be undone.`,
       perform: () => {
         deleteQuitHabit(habitId);
         onBack();
