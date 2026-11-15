@@ -1,6 +1,6 @@
 import type { FeelingCheckIn, FeelingZone } from '../types/sections';
 import { safeguardFeelingIds, reasonTagOptions, zoneMeta, findFeeling } from '../data/feelingsWheel';
-import { addDaysISO, addMonthsISO, daysBetweenISODates, getMonthGrid, weekdayOfISO } from './date';
+import { addDaysISO, addMonthsISO, daysBetweenISODates, getMonthGrid, toISODate, weekdayOfISO } from './date';
 
 // Calendar days from a to b (the same rule as date.ts).
 export function daysBetweenISO(a: string, b: string): number {
@@ -196,6 +196,49 @@ export interface TrendPoint {
   date: string; // the ISO date to open when tapped (a day, or the 1st of a month)
   score: number;
   zone: FeelingZone;
+}
+
+// One dot per logged feeling (found on a phone, 2026-11-15: the graph only
+// drew one averaged point per day, so a second feeling that day, or a mixed
+// day, never showed as what was logged). Its place: its day's slot, nudged by
+// the time it was logged (morning left, evening right) so feelings of one day
+// sit side by side in order; a feeling with no time of its own that day (a
+// journal page written for another day) sits in the middle. In month slots
+// (Year, long custom ranges), its place within its month.
+export interface FeelingDot {
+  key: string; // the feeling's id
+  x: number; // in domain units (a slot is one day, or one month)
+  score: number;
+  zone: FeelingZone;
+  date: string;
+}
+
+export function feelingDots(entries: FeelingCheckIn[], start: string, end: string, granularity: 'day' | 'month', dimension: TrendDimension = 'pleasantness'): FeelingDot[] {
+  const map = scoreMapFor(dimension);
+  return entries
+    .filter((e) => e.date >= start && e.date <= end)
+    .map((e) => {
+      let x: number;
+      if (granularity === 'day') {
+        const at = new Date(e.createdAt);
+        const sameDay = !isNaN(at.getTime()) && toISODate(at) === e.date;
+        const frac = sameDay ? (at.getHours() * 60 + at.getMinutes()) / 1440 : 0.5;
+        x = daysBetweenISO(start, e.date) + (frac - 0.5) * 0.7;
+      } else {
+        const [y, m, d] = e.date.split('-').map(Number);
+        const days = new Date(y, m, 0).getDate();
+        x = monthsBetweenISO(start, e.date) + ((d - 0.5) / days - 0.5) * 0.8;
+      }
+      return { key: e.id, x, score: map[e.zone], zone: e.zone, date: e.date };
+    })
+    .sort((a, b) => a.x - b.x);
+}
+
+// With dots, a slot's tooltip says how many feelings it holds (its average
+// isn't a feeling anyone logged).
+export function dotCountLabel(dots: FeelingDot[], slot: number): string {
+  const n = dots.filter((d) => Math.round(d.x) === slot).length;
+  return n === 1 ? '1 feeling' : `${n} feelings`;
 }
 
 // One point per day that has at least one check-in (days with none are

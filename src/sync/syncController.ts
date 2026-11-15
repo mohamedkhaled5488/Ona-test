@@ -208,8 +208,9 @@ export function syncNow(): Promise<SyncOutcome> {
       // Journal entries or Quit moments from another phone: their feelings into
       // the Feelings log (sent with the next sync).
       if (result.changedCollections.some((c) => c === 'journaling.entries' || c === 'quitHabit.feelingEntries' || c === 'feelings.entries')) bringFeelingsTogether();
-      // A whole sync is in: feelings of items deleted anywhere go too.
-      if (result.changedCollections.length) removeOrphanFeelings();
+      // A whole sync is in: feelings of items deleted anywhere (or before
+      // deletes took their feelings) go too.
+      removeOrphanFeelings();
       return { ok: true, pulled: result.pulled, pushed: result.pushed, ...(canUpload(gate) ? {} : { downloadOnly: true }) };
     } catch (e) {
       const message = e instanceof OtherAccountError ? e.message : `Couldn't sync: ${e instanceof Error ? e.message : String(e)}`;

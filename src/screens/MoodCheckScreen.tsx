@@ -68,7 +68,7 @@ import {
   type TrendDimension,
   type FeelingReasonGroup,
   type PatternsView,
-  type TagImpact, zoneOfKey } from '../utils/feelingsStats';
+  type TagImpact, zoneOfKey, feelingDots } from '../utils/feelingsStats';
 import { sectionsMeta } from '../data/sectionsMeta';
 import { addDaysISO, addMonthsISO, todayISO, formatDisplayDate, formatMonthLabel } from '../utils/date';
 import type { RootStackParamList } from '../navigation/types';
@@ -1026,6 +1026,8 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
     return String(Number(addDaysISO(start, index).slice(-2)));
   };
 
+  // Every logged feeling in the period, as its own dot (the line is the average).
+  const dots = feelingDots(chartEntries, start, end, granularity, dimension);
   const breakdownGroups = reasonBreakdownByFeeling(chartEntries);
 
   const handlePointPress = (point: PositionedPoint) => {
@@ -1119,8 +1121,14 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
             onPointPress={handlePointPress}
             isolatedZone={isolatedZone}
             comparePoints={positionedComparePoints}
+            dots={dots}
           />
         </React.Suspense>
+        {dots.length > 0 && (
+          <Caption style={styles.graphKey} testID="patterns-graph-key">
+            {dots.length === 1 ? '1 feeling' : `${dots.length} feelings`} in this period. Each dot is one you logged; the line is the {granularity === 'day' ? "day's" : "month's"} average.
+          </Caption>
+        )}
         {!fullscreen && (
           <Pressable
             hitSlop={8}
@@ -2211,6 +2219,10 @@ const styles = themedStyles(() => ({
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  graphKey: {
+    marginTop: spacing.xs,
+    color: colors.inkSoft,
   },
   customRangeHint: {
     marginBottom: spacing.sm,

@@ -17,7 +17,7 @@ jest.mock('../../data/sectionsMeta', () => {
 jest.mock('react', () => ({ ...jest.requireActual('react'), lazy: () => () => null }));
 jest.setTimeout(60_000);
 
-import { screen } from '@testing-library/react-native';
+import { act, screen } from '@testing-library/react-native';
 import { resetAll, useClock, restoreClock } from '../../test-utils';
 import { renderScreen } from '../../test-utils/render';
 import { MoodCheckScreen } from '../MoodCheckScreen';
@@ -77,3 +77,17 @@ test('PHONE-1114-003 a dated letter: a future day can be picked, today too; past
   expect(screen.getByTestId('day-2026-11-13').props.accessibilityState?.disabled).toBe(true);
   expect(screen.getByTestId('day-2026-11-14').props.accessibilityState?.disabled).toBe(false);
 });
+
+test('PHONE-1115-001 the graph shows every feeling at once: logged anywhere while Patterns is open, the count of dots goes up immediately', async () => {
+  useSettingsStore.setState({ feelingsPatternsDefault: 'week' } as never);
+  logFeeling({ zone: 'calm' });
+  const r = await renderScreen('moodCheck', MoodCheckScreen);
+  await r.user.press(await screen.findByText('Patterns'));
+  expect(screen.getByTestId('patterns-graph-key').props.children.join('')).toMatch(/^1 feeling in this period/);
+  await act(async () => {
+    logFeeling({ source: { kind: 'quitHabit', refId: 'q', trackId: 't' }, zone: 'tense' });
+    logFeeling({ source: { kind: 'study', refId: 's' }, zone: 'tense' });
+  });
+  expect(screen.getByTestId('patterns-graph-key').props.children.join('')).toMatch(/^3 feelings in this period/);
+});
+

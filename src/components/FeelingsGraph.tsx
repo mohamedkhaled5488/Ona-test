@@ -8,7 +8,7 @@ import { colors } from '../theme';
 import { zoneMeta } from '../data/feelingsWheel';
 import { formatDisplayDate } from '../utils/date';
 import type { FeelingZone } from '../types/sections';
-import type { TrendPoint } from '../utils/feelingsStats';
+import { dotCountLabel, type FeelingDot, type TrendPoint } from '../utils/feelingsStats';
 import { themedStyles } from '../theme/runtime';
 
 // The graph, rebuilt on Skia (via Victory Native XL) instead of react-native-svg
@@ -90,6 +90,9 @@ export interface FeelingsGraphProps {
   variant?: 'line' | 'bars';
   // Shaded spans behind the data, in domain-index units (e.g. plateau periods).
   bands?: { start: number; end: number; color: string }[];
+  // Every logged feeling as its own dot (Feelings Patterns). With dots, the
+  // points are the average line only: lighter, no dots of their own.
+  dots?: FeelingDot[];
 }
 
 export function FeelingsGraph({
@@ -108,6 +111,7 @@ export function FeelingsGraph({
   emptyText = 'No check-ins in this period yet.',
   variant = 'line',
   bands,
+  dots,
 }: FeelingsGraphProps) {
   const { state: transformState } = useChartTransformState();
   const { state: pressState, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
@@ -145,7 +149,7 @@ export function FeelingsGraph({
     transformState.matrix.value = skiaScale(1, 1);
   };
 
-  if (points.length === 0) {
+  if (points.length === 0 && !dots?.length) {
     return (
       <View style={[styles.empty, { height }]}>
         <Caption style={styles.emptyText}>{emptyText}</Caption>
@@ -253,19 +257,24 @@ export function FeelingsGraph({
                       p1={{ x: a.x ?? 0, y: a.y ?? 0 }}
                       p2={{ x: b.x ?? 0, y: b.y ?? 0 }}
                       color={dimmed ? colors.inkSoft : lineColor ?? pointColor(points[idx], colors.teal)}
-                      strokeWidth={2.5}
-                      opacity={dimmed ? 0.3 : 1}
+                      strokeWidth={dots ? 2 : 2.5}
+                      opacity={dimmed ? 0.3 : dots ? 0.45 : 1}
                     />
                   );
                 })
               )}
 
-              {variant === 'line' && points.map((p, i) => {
+              {variant === 'line' && !dots && points.map((p, i) => {
                 const pt = pts[i];
                 const r = p.radius ?? 5;
                 if (!pt || r <= 0) return null;
                 const dimmed = isDimmed(p.zone);
                 return <Circle key={p.key} cx={pt.x ?? 0} cy={pt.y ?? 0} r={r} color={dimmed ? colors.inkSoft : pointColor(p, colors.teal)} opacity={dimmed ? 0.35 : 1} />;
+              })}
+
+              {dots?.map((d) => {
+                const dimmed = isDimmed(d.zone);
+                return <Circle key={`dot-${d.key}`} cx={xScale(d.x)} cy={yScale(d.score)} r={5} color={dimmed ? colors.inkSoft : zoneMeta(d.zone).accent} opacity={dimmed ? 0.35 : 1} />;
               })}
             </>
           );
@@ -276,7 +285,7 @@ export function FeelingsGraph({
           <View pointerEvents="none" style={styles.tooltip}>
             <Caption style={styles.tooltipText}>{formatDisplayDate(hoverPoint.date)}</Caption>
             <Caption style={[styles.tooltipText, { color: pointColor(hoverPoint, colors.white) }]}>
-              {hoverPoint.label ?? (hoverPoint.zone ? zoneMeta(hoverPoint.zone).label : '')}
+              {dots ? dotCountLabel(dots, hoverPoint.domainIndex) : hoverPoint.label ?? (hoverPoint.zone ? zoneMeta(hoverPoint.zone).label : '')}
             </Caption>
           </View>
         )}
