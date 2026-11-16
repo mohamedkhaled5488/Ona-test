@@ -89,5 +89,6 @@ test('PHONE-1115-001 the graph shows every feeling at once: logged anywhere whil
     logFeeling({ source: { kind: 'study', refId: 's' }, zone: 'tense' });
   });
   expect(screen.getByTestId('patterns-graph-key').props.children.join('')).toMatch(/^3 feelings in this period/);
+  expect(screen.getByTestId('patterns-graph-key').props.children.join('')).toMatch(/joined in the order you logged them\.$/);
 });
 

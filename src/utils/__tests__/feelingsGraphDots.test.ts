@@ -6,7 +6,7 @@
 // order it was logged; the line is the average. Also run with
 // TZ=Pacific/Auckland and America/Los_Angeles in CI (a day is the phone's).
 // IDs: docs/test-cases/integration.md (GRAPH-*)
-import { dailyTrendPoints, datesInRange, dotCountLabel, feelingDots, patternsNaturalRange } from '../feelingsStats';
+import { dailyTrendPoints, datesInRange, dotCountLabel, dotSegments, feelingDots, patternsNaturalRange } from '../feelingsStats';
 import type { FeelingCheckIn, FeelingZone } from '../../types/sections';
 
 // A feeling logged at a local time on a local day.
@@ -68,3 +68,16 @@ test('GRAPH-006 Energy as well as Pleasantness: the dot\'s height is its own fee
   expect(p.score).toBeLessThan(0); // unpleasant
   expect(e.score).toBeGreaterThan(0); // high energy
 });
+
+test('GRAPH-007 one line joins every dot, in the order logged, across days with none between (owner, 2026-11-16)', () => {
+  const entries = [at('c', 'tense', '2026-11-15', 21), at('a', 'calm', '2026-11-10', 9), at('b1', 'low', '2026-11-12', 8), at('b2', 'lively', '2026-11-12', 18)];
+  const dots = feelingDots(entries, WEEK.start, WEEK.end, 'day');
+  const segs = dotSegments(dots);
+  expect(segs.map(([x, y]) => `${x.key}->${y.key}`)).toEqual(['a->b1', 'b1->b2', 'b2->c']);
+  expect(segs).toHaveLength(dots.length - 1);
+  // Each piece goes left to right (never back in time).
+  for (const [x, y] of segs) expect(y.x).toBeGreaterThan(x.x);
+  expect(dotSegments([])).toEqual([]);
+  expect(dotSegments(dots.slice(0, 1))).toEqual([]);
+});
+

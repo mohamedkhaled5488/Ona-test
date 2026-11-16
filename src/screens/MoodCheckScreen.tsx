@@ -1122,11 +1122,12 @@ function PatternsStage({ onBack, onOpenDate, onOpenReason }: { onBack: () => voi
             isolatedZone={isolatedZone}
             comparePoints={positionedComparePoints}
             dots={dots}
+            showAverage={smoothing}
           />
         </React.Suspense>
         {dots.length > 0 && (
           <Caption style={styles.graphKey} testID="patterns-graph-key">
-            {dots.length === 1 ? '1 feeling' : `${dots.length} feelings`} in this period. Each dot is one you logged; the line is the {granularity === 'day' ? "day's" : "month's"} average.
+            {dots.length === 1 ? '1 feeling' : `${dots.length} feelings`} in this period. Each dot is one you logged, joined in the order you logged them{smoothing ? `; the soft line is the ${granularity === 'day' ? "day's" : "month's"} average, smoothed` : ''}.
           </Caption>
         )}
         {!fullscreen && (

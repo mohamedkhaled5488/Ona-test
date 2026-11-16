@@ -8,7 +8,7 @@ import { colors } from '../theme';
 import { zoneMeta } from '../data/feelingsWheel';
 import { formatDisplayDate } from '../utils/date';
 import type { FeelingZone } from '../types/sections';
-import { dotCountLabel, type FeelingDot, type TrendPoint } from '../utils/feelingsStats';
+import { dotCountLabel, dotSegments, type FeelingDot, type TrendPoint } from '../utils/feelingsStats';
 import { themedStyles } from '../theme/runtime';
 
 // The graph, rebuilt on Skia (via Victory Native XL) instead of react-native-svg
@@ -90,9 +90,12 @@ export interface FeelingsGraphProps {
   variant?: 'line' | 'bars';
   // Shaded spans behind the data, in domain-index units (e.g. plateau periods).
   bands?: { start: number; end: number; color: string }[];
-  // Every logged feeling as its own dot (Feelings Patterns). With dots, the
-  // points are the average line only: lighter, no dots of their own.
+  // Every logged feeling as its own dot (Feelings Patterns), joined by one
+  // line in the order logged. With dots, the points draw nothing of their own
+  // (they still carry the tap), unless showAverage: then their line too,
+  // lighter (the Smooth switch).
   dots?: FeelingDot[];
+  showAverage?: boolean;
 }
 
 export function FeelingsGraph({
@@ -112,6 +115,7 @@ export function FeelingsGraph({
   variant = 'line',
   bands,
   dots,
+  showAverage = false,
 }: FeelingsGraphProps) {
   const { state: transformState } = useChartTransformState();
   const { state: pressState, isActive } = useChartPressState({ x: 0, y: { y: 0 } });
@@ -245,7 +249,7 @@ export function FeelingsGraph({
                   });
                 })}
 
-              {variant === 'line' && runs.map((run, ri) =>
+              {variant === 'line' && (!dots || showAverage) && runs.map((run, ri) =>
                 run.slice(0, -1).map((idx, j) => {
                   const a = pts[idx];
                   const b = pts[run[j + 1]];
@@ -271,6 +275,21 @@ export function FeelingsGraph({
                 const dimmed = isDimmed(p.zone);
                 return <Circle key={p.key} cx={pt.x ?? 0} cy={pt.y ?? 0} r={r} color={dimmed ? colors.inkSoft : pointColor(p, colors.teal)} opacity={dimmed ? 0.35 : 1} />;
               })}
+
+              {dots &&
+                dotSegments(dots).map(([a, b]) => {
+                  const dimmed = isDimmed(a.zone) || isDimmed(b.zone);
+                  return (
+                    <SkLine
+                      key={`join-${a.key}-${b.key}`}
+                      p1={{ x: xScale(a.x), y: yScale(a.score) }}
+                      p2={{ x: xScale(b.x), y: yScale(b.score) }}
+                      color={dimmed ? colors.inkSoft : zoneMeta(a.zone).accent}
+                      strokeWidth={2}
+                      opacity={dimmed ? 0.25 : 0.8}
+                    />
+                  );
+                })}
 
               {dots?.map((d) => {
                 const dimmed = isDimmed(d.zone);

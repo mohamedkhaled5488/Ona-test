@@ -234,6 +234,14 @@ export function feelingDots(entries: FeelingCheckIn[], start: string, end: strin
     .sort((a, b) => a.x - b.x);
 }
 
+// The line through the dots: each dot joined to the next, in the order the
+// feelings were logged, across days with none between (owner, 2026-11-16: "a
+// line between every dot, over all"). Each piece takes its first dot's colour.
+export function dotSegments(dots: FeelingDot[]): [FeelingDot, FeelingDot][] {
+  const sorted = [...dots].sort((a, b) => a.x - b.x);
+  return sorted.slice(1).map((d, i) => [sorted[i], d]);
+}
+
 // With dots, a slot's tooltip says how many feelings it holds (its average
 // isn't a feeling anyone logged).
 export function dotCountLabel(dots: FeelingDot[], slot: number): string {
